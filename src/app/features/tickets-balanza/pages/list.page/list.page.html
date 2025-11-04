@@ -1,0 +1,227 @@
+<div class="tickets-wrap container-fluid">
+  <!-- Migas -->
+  <nav class="mb-2" aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item">
+        <a routerLink="/">
+          <i class="bi bi-house-door me-1"></i> Inicio
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <i class="bi bi-diagram-3 me-1"></i> Gestión de pesadas
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        <i class="bi bi-receipt me-1"></i> Ticket de balanza
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Título + acción -->
+  <div class="header-line d-flex align-items-center mb-3">
+    <h1 class="h4 mb-0">
+      <i class="bi bi-list-check me-2"></i> Ticket de balanza – Listado
+    </h1>
+    <div class="ms-auto">
+      <a class="btn btn-success btn-lg px-4" routerLink="/tickets-balanza/nuevo">
+        <i class="bi bi-plus-lg me-2"></i> Nuevo Ticket
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filter-card mb-3">
+    <div class="row g-3 align-items-end">
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Sede de operación</label>
+        <div class="position-relative">
+          <i class="bi bi-building input-leading"></i>
+          <select class="form-select form-select-lg ps-5" [(ngModel)]="filtro.sede">
+            <option value="">(Todas)</option>
+            <option *ngFor="let s of sedes" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Operación</label>
+        <div class="position-relative">
+          <i class="bi bi-box-seam input-leading"></i>
+          <select class="form-select form-select-lg ps-5" [(ngModel)]="filtro.operacion">
+            <option value="">(Todas)</option>
+            <option *ngFor="let o of operaciones" [value]="o">{{ o }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label">Desde</label>
+        <div class="position-relative">
+          <i class="bi bi-calendar-date input-leading"></i>
+          <input type="date" class="form-control form-control-lg ps-5" [(ngModel)]="filtro.desde" />
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label">Hasta</label>
+        <div class="position-relative">
+          <i class="bi bi-calendar-date input-leading"></i>
+          <input type="date" class="form-control form-control-lg ps-5" [(ngModel)]="filtro.hasta" />
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Número de ticket</label>
+        <div class="position-relative">
+          <i class="bi bi-upc-scan input-leading"></i>
+          <input class="form-control form-control-lg ps-5" placeholder="TKTP-0000001" [(ngModel)]="filtro.numero" />
+        </div>
+      </div>
+
+      <div class="col-auto">
+        <button class="btn btn-primary btn-lg" (click)="filtrar()">
+          <i class="bi bi-funnel me-2"></i> Filtrar
+        </button>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-outline-secondary btn-lg" (click)="limpiar()">
+          <i class="bi bi-eraser me-2"></i> Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 table-sticky">
+        <thead>
+          <tr>
+            <th><i class="bi bi-hash me-1"></i> Número de ticket</th>
+            <th><i class="bi bi-geo-alt me-1"></i> Sede de operación</th>
+            <th><i class="bi bi-calendar-event me-1"></i> Fecha</th>
+            <th><i class="bi bi-clipboard-data me-1"></i> Operación</th>
+            <th class="text-end"><i class="bi bi-graph-up me-1"></i> Peso bruto</th>
+            <th class="text-end"><i class="bi bi-box-arrow-down me-1"></i> Peso tara</th>
+            <th class="text-end"><i class="bi bi-percent me-1"></i> % Merma</th>
+            <th class="text-end"><i class="bi bi-clipboard-check me-1"></i> Peso neto</th>
+            <th><i class="bi bi-flag me-1"></i> Estado</th>
+            <th><i class="bi bi-check2-circle me-1"></i> Activo</th>
+            <th class="text-center"><i class="bi bi-three-dots"></i></th>
+          </tr>
+        </thead>
+
+        <tbody *ngIf="pagedRows.length; else empty">
+          <tr *ngFor="let r of pagedRows">
+            <td><a class="link-primary" [routerLink]="['/tickets-balanza', r.id]">{{ r.id }}</a></td>
+            <td>{{ r.sede }}</td>
+            <td>{{ r.fecha | date:'dd/MM/yyyy' }}</td>
+            <td class="text-truncate" style="max-width: 380px">{{ r.operacion }}</td>
+            <td class="text-end">{{ r.brutoKg | number:'1.2-2' }}</td>
+            <td class="text-end">{{ r.taraKg  | number:'1.2-2' }}</td>
+            <td class="text-end">{{ r.mermaPct | number:'1.2-2' }}%</td>
+            <td class="text-end fw-semibold">{{ r.netoKg | number:'1.2-2' }}</td>
+            <td>
+              <span class="badge estado"
+                    [ngClass]="{
+                      'estado--registro':    r.estado==='EN REGISTRO',
+                      'estado--cerrada':     r.estado==='CERRADA',
+                      'estado--anulada':     r.estado==='ANULADA',
+                      'estado--evaluacion':  r.estado==='EN EVALUACIÓN'
+                    }">
+                <i class="bi" [ngClass]="{
+                  'bi-hourglass-split': r.estado==='EN REGISTRO',
+                  'bi-check-circle':    r.estado==='CERRADA',
+                  'bi-x-octagon':       r.estado==='ANULADA',
+                  'bi-search':          r.estado==='EN EVALUACIÓN'
+                }"></i>
+                {{ r.estado }}
+              </span>
+            </td>
+            <td>
+              <span class="badge rounded-pill" [class.text-bg-success]="r.activo" [class.text-bg-secondary]="!r.activo">
+                <i class="bi" [ngClass]="r.activo ? 'bi-check-lg' : 'bi-dash-lg'"></i>
+                {{ r.activo ? 'Sí' : 'No' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="dropstart">
+                <button class="btn btn-ghost btn-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a class="dropdown-item" [routerLink]="['/tickets-balanza', r.id]">
+                      <i class="bi bi-eye me-2"></i> Ver
+                    </a>
+                  </li>
+                  <li>
+                    <button class="dropdown-item" type="button">
+                      <i class="bi bi-pencil-square me-2"></i> Editar
+                    </button>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button class="dropdown-item text-danger" type="button">
+                      <i class="bi bi-x-octagon me-2"></i> Anular
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sin resultados -->
+    <ng-template #empty>
+      <div class="alert alert-light border rounded-3 my-3">
+        <i class="bi bi-inbox me-2"></i> Sin resultados
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Acciones inferiores -->
+  <div class="footer-actions d-flex align-items-center gap-2 mt-3">
+    <button class="btn btn-success btn-sm" (click)="exportExcel()">
+      <i class="bi bi-file-earmark-excel me-1"></i> Exportar a Excel
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" (click)="exportPDF()">
+      <i class="bi bi-filetype-pdf me-1"></i> Exportar a PDF
+    </button>
+
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <span class="small text-muted"><i class="bi bi-list-ol me-1"></i>Mostrar</span>
+      <select class="form-select form-select-sm" style="width:90px" [(ngModel)]="pageSize" (ngModelChange)="changePageSize()">
+        <option [value]="5">5</option>
+        <option [value]="10">10</option>
+        <option [value]="20">20</option>
+      </select>
+
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item" [class.disabled]="page===1">
+            <button class="page-link" (click)="prev()"><i class="bi bi-chevron-double-left"></i></button>
+          </li>
+
+          <li *ngFor="let p of pagesToShow()"
+              class="page-item"
+              [class.active]="p===page"
+              [class.disabled]="p==='…'">
+            <button class="page-link" *ngIf="p!=='…'; else dots" (click)="goTo(p)">{{ p }}</button>
+            <ng-template #dots><span class="page-link">…</span></ng-template>
+          </li>
+
+          <li class="page-item" [class.disabled]="page===totalPages">
+            <button class="page-link" (click)="next()"><i class="bi bi-chevron-double-right"></i></button>
+          </li>
+        </ul>
+      </nav>
+
+      <span class="small ms-2 text-muted">
+        <i class="bi bi-journal-text me-1"></i> Página {{ page }} de {{ totalPages }} ({{ totalItems }} ítems)
+      </span>
+    </div>
+  </div>
+</div>

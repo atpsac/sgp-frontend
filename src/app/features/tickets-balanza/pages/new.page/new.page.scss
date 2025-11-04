@@ -1,0 +1,133 @@
+/* ======= Tema Azul ======= */
+.page-blue {
+  --blue-from: #0062ff;
+  --blue-to:   #003eb0;
+  --ring: rgba(0, 98, 255, .16);
+  --border: rgba(148, 163, 184, .25);
+  --muted: #64748b;
+}
+
+.w-300 { width: 300px; }
+.bg-gradient {
+  background: linear-gradient(180deg, var(--blue-from), var(--blue-to)) !important;
+}
+
+/* ======= STEP CARDS (Grandes) ======= */
+.stepcards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
+  gap: .9rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 1200px) {
+  .stepcards { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .stepcards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .stepcards { grid-template-columns: 1fr; }
+}
+
+.stepcard {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 14px 14px 14px;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .04);
+}
+.stepcard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 98, 255, .35);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, .06);
+}
+.stepcard.is-active {
+  border-color: rgba(0, 98, 255, .6);
+  box-shadow: 0 20px 52px rgba(0, 98, 255, .12);
+}
+.stepcard.is-done::after {
+  content: " ";
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,98,255,.06), rgba(0,62,176,.06));
+  border-radius: 16px;
+  pointer-events: none;
+}
+
+.stepcard__index {
+  position: absolute; top: 10px; right: 12px;
+  font-weight: 700; color: var(--muted); font-size: .9rem;
+}
+.stepcard__icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1.35rem;
+  background: linear-gradient(180deg, var(--blue-from), var(--blue-to));
+  box-shadow: 0 12px 28px rgba(0, 98, 255, .18);
+}
+.stepcard__body { display: grid; gap: 6px; align-content: center; }
+.stepcard__title { font-weight: 700; color: #0f172a; }
+.stepcard__state {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .8rem; font-weight: 600;
+  padding: .25rem .55rem; border-radius: 999px;
+  background: #eef2ff; color: #3b5bdb;
+}
+.state--active { background: #e7f0ff; color: #1d4ed8; }
+.state--done   { background: #e8f5ff; color: #0369a1; }
+.state--todo   { background: #f1f5f9; color: #475569; }
+
+/* ======= Secciones (cards) ======= */
+.section-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1rem 1.1rem 1.2rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .04);
+  margin-bottom: 1rem;
+}
+.section-head {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .25rem 0 .75rem;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: .9rem;
+}
+.section-head i {
+  width: 36px; height: 36px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  background: linear-gradient(180deg, var(--blue-from), var(--blue-to));
+  box-shadow: 0 10px 24px rgba(0, 98, 255, .18);
+}
+.section-head h6 { margin: 0; font-weight: 700; }
+
+/* ======= Inputs grandes con icono leading ======= */
+.input-leading {
+  position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+  color: #7c8aa0; font-size: 1rem; pointer-events: none;
+}
+.form-control-lg, .form-select-lg { border-radius: .9rem; }
+.form-control:focus, .form-select:focus {
+  border-color: var(--blue-from);
+  box-shadow: 0 0 0 .2rem var(--ring);
+}
+
+/* ======= Botones ======= */
+.btn-primary {
+  background: linear-gradient(180deg, var(--blue-from), var(--blue-to));
+  border: 0;
+}
+.btn-primary:hover, .btn-primary:focus { filter: brightness(0.98); }
+.btn-outline-secondary { border-radius: .7rem; }
+.btn, .form-control, .form-select { border-radius: .75rem; }
+
+/* ======= Tabla documentos ======= */
+.table thead th { white-space: nowrap; }
+.table tbody tr:hover { background: rgba(0, 98, 255, .03); }

@@ -1,0 +1,408 @@
+<form class="container-fluid page-blue" [formGroup]="form" novalidate>
+
+  <!-- MIGAS -->
+  <nav class="mb-3" aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-0">
+      <li class="breadcrumb-item">
+        <a routerLink="/"><i class="bi bi-house-door me-1"></i> Inicio</a>
+      </li>
+      <li class="breadcrumb-item"><i class="bi bi-diagram-3 me-1"></i> Gestión de pesadas</li>
+      <li class="breadcrumb-item active"><i class="bi bi-receipt me-1"></i> Nuevo ticket</li>
+    </ol>
+  </nav>
+
+  <!-- TÍTULO + AVANCE -->
+  <div class="d-flex align-items-center gap-3 mb-3">
+    <h1 class="h4 mb-0"><i class="bi bi-file-plus me-2"></i> Ticket de balanza — Nuevo</h1>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <div class="progress w-300">
+        <div class="progress-bar bg-gradient" role="progressbar" [style.width.%]="progressPct"
+             [attr.aria-valuenow]="progressPct" aria-valuemin="0" aria-valuemax="100">
+          {{ progressPct }}%
+        </div>
+      </div>
+      <span class="text-muted small">Paso <b>{{ step }}</b> de {{ maxStep }}</span>
+    </div>
+  </div>
+
+  <!-- STEP CARDS (Grandes) -->
+  <div class="stepcards">
+    <button
+      *ngFor="let lbl of stepLabels; index as i"
+      type="button"
+      class="stepcard"
+      [class.is-active]="stepState(i)==='active'"
+      [class.is-done]="stepState(i)==='done'"
+      (click)="goTo(i+1)"
+    >
+      <span class="stepcard__index">{{ i+1 }}</span>
+
+      <div class="stepcard__icon">
+        <i class="bi" [ngClass]="stepIcons[i]"></i>
+      </div>
+
+      <div class="stepcard__body">
+        <div class="stepcard__title">{{ lbl }}</div>
+        <div class="stepcard__state" [ngClass]="'state--' + stepState(i)">
+          <i class="bi" [ngClass]="{
+            'bi-check2-circle': stepState(i)==='done',
+            'bi-dot': stepState(i)==='active',
+            'bi-dash': stepState(i)==='todo'
+          }"></i>
+          {{ stepState(i)==='done' ? 'Completado' : (stepState(i)==='active' ? 'En progreso' : 'Pendiente') }}
+        </div>
+      </div>
+    </button>
+  </div>
+
+  <!-- PASO 1 -->
+  <section *ngIf="step===1" class="section-card">
+    <div class="section-head">
+      <i class="bi bi-gear-wide-connected"></i>
+      <h6>Datos de operación</h6>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Fecha de emisión</label>
+        <div class="position-relative">
+          <i class="bi bi-calendar-date input-leading"></i>
+          <input type="date" class="form-control form-control-lg ps-5" formControlName="fechaEmision">
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Sede de operación</label>
+        <div class="position-relative">
+          <i class="bi bi-building input-leading"></i>
+          <select class="form-select form-select-lg ps-5" formControlName="sede">
+            <option value="">Seleccione…</option>
+            <option *ngFor="let s of sedes" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label">Operación</label>
+        <div class="position-relative">
+          <i class="bi bi-box-seam input-leading"></i>
+          <select class="form-select form-select-lg ps-5" formControlName="operacion">
+            <option value="">Seleccione…</option>
+            <option *ngFor="let o of operaciones" [value]="o">{{ o }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-primary btn-lg px-4" type="button" (click)="next()">
+        Siguiente <i class="bi bi-arrow-right-short ms-1"></i>
+      </button>
+    </div>
+  </section>
+
+  <!-- PASO 2 -->
+  <section *ngIf="step===2" [formGroup]="form.controls.origenDestino" class="section-card">
+    <div class="section-head">
+      <i class="bi bi-arrow-left-right"></i>
+      <h6>Origen / Destino</h6>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Sede de origen</label>
+        <div class="position-relative">
+          <i class="bi bi-geo-alt input-leading"></i>
+          <select class="form-select form-select-lg ps-5" formControlName="sedeOrigen">
+            <option value="">Seleccione…</option>
+            <option *ngFor="let s of sedes" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Sede de destino</label>
+        <div class="position-relative">
+          <i class="bi bi-flag input-leading"></i>
+          <select class="form-select form-select-lg ps-5" formControlName="sedeDestino">
+            <option value="">Seleccione…</option>
+            <option *ngFor="let s of sedes" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-lg" type="button" (click)="prev()">
+        <i class="bi bi-arrow-left-short me-1"></i> Volver
+      </button>
+      <button class="btn btn-primary btn-lg" type="button" (click)="next()">
+        Siguiente <i class="bi bi-arrow-right-short ms-1"></i>
+      </button>
+    </div>
+  </section>
+
+  <!-- PASO 3 -->
+  <section *ngIf="step===3" class="section-card">
+    <div class="section-head">
+      <i class="bi bi-files"></i>
+      <h6>Documentos relacionados</h6>
+      <button class="btn btn-primary ms-auto" type="button" (click)="toggleAddDoc()" *ngIf="!addDocOpen">
+        <i class="bi bi-plus-lg me-1"></i> Agregar
+      </button>
+    </div>
+
+    <!-- Panel agregar doc -->
+    <div *ngIf="addDocOpen" class="card border-0 shadow-sm mb-3">
+      <div class="card-header text-white bg-primary d-flex align-items-center">
+        <strong><i class="bi bi-file-earmark-plus me-2"></i>Agregar documento relacionado</strong>
+        <button class="btn-close btn-close-white ms-auto" type="button" (click)="toggleAddDoc()"></button>
+      </div>
+
+      <div class="card-body">
+        <div [formGroup]="docTmp" class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">Socio de negocio</label>
+            <div class="position-relative">
+              <i class="bi bi-person-badge input-leading"></i>
+              <select class="form-select form-select-lg ps-5" formControlName="socio">
+                <option *ngFor="let s of socios" [value]="s">{{ s }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Tipo</label>
+            <select class="form-select form-select-lg" formControlName="tipo">
+              <option *ngFor="let t of tiposDoc" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Documento</label>
+            <select class="form-select form-select-lg" formControlName="documento">
+              <option *ngFor="let d of documentosCat" [value]="d">{{ d }}</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Fecha</label>
+            <input type="date" class="form-control form-control-lg" formControlName="fecha">
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Serie</label>
+            <input class="form-control form-control-lg" formControlName="serie">
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Número</label>
+            <input class="form-control form-control-lg" formControlName="numero">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Peso bruto (Kg)</label>
+            <input type="number" class="form-control form-control-lg text-end" formControlName="brutoKg">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Peso neto (Kg)</label>
+            <input type="number" class="form-control form-control-lg text-end" formControlName="netoKg">
+          </div>
+
+          <div class="col-12">
+            <button class="btn btn-primary" type="button" (click)="addDocumento()">
+              <i class="bi bi-check2 me-1"></i> Agregar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla docs -->
+    <div class="table-responsive">
+      <table class="table align-middle table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Socio</th>
+            <th>Tipo</th>
+            <th>Documento</th>
+            <th>Fecha</th>
+            <th>Serie</th>
+            <th>Número</th>
+            <th class="text-end">Bruto (Kg)</th>
+            <th class="text-end">Neto (Kg)</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody *ngIf="documentosFA.length; else emptyDocs">
+          <tr *ngFor="let d of documentosFA.controls; index as i">
+            <td>{{ i + 1 | number:'2.0-0' }}</td>
+            <td>{{ d.value.socio }}</td>
+            <td>{{ d.value.tipo }}</td>
+            <td>{{ d.value.documento }}</td>
+            <td>{{ d.value.fecha | date:'dd/MM/yyyy' }}</td>
+            <td>{{ d.value.serie }}</td>
+            <td>{{ d.value.numero }}</td>
+            <td class="text-end">{{ d.value.brutoKg | number:'1.2-2' }}</td>
+            <td class="text-end">{{ d.value.netoKg  | number:'1.2-2' }}</td>
+            <td>
+              <button class="btn btn-outline-danger btn-sm" type="button" (click)="removeDocumento(i)">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyDocs>
+        <div class="alert alert-light border mb-0">Sin documentos agregados.</div>
+      </ng-template>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-lg" type="button" (click)="prev()">
+        <i class="bi bi-arrow-left-short me-1"></i> Volver
+      </button>
+      <button class="btn btn-primary btn-lg" type="button" (click)="next()">
+        Siguiente <i class="bi bi-arrow-right-short ms-1"></i>
+      </button>
+    </div>
+  </section>
+
+  <!-- PASO 4 -->
+  <section *ngIf="step===4" [formGroup]="form.controls.transporte" class="section-card">
+    <div class="section-head">
+      <i class="bi bi-truck"></i>
+      <h6>Datos del transporte</h6>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Transportista</label>
+        <div class="position-relative">
+          <i class="bi bi-building-gear input-leading"></i>
+          <select class="form-select form-select-lg ps-5" formControlName="transportista">
+            <option value="">Seleccione…</option>
+            <option *ngFor="let t of transportistas" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">RUC</label>
+        <input class="form-control form-control-lg" formControlName="ruc">
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <label class="form-label">Conductor</label>
+        <div class="position-relative">
+          <i class="bi bi-person-vcard input-leading"></i>
+          <select class="form-select form-select-lg ps-5" formControlName="conductor">
+            <option value="">Seleccione…</option>
+            <option *ngFor="let c of conductores" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">DNI</label>
+        <input class="form-control form-control-lg" formControlName="dni">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Licencia</label>
+        <input class="form-control form-control-lg" formControlName="licencia">
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-3">
+        <label class="form-label">Vehículo</label>
+        <select class="form-select form-select-lg" formControlName="vehiculo">
+          <option value="">Seleccione…</option>
+          <option *ngFor="let v of vehiculos" [value]="v">{{ v }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Tráiler</label>
+        <select class="form-select form-select-lg" formControlName="trailer">
+          <option value="">Seleccione…</option>
+          <option *ngFor="let t of trailers" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-lg" type="button" (click)="prev()">
+        <i class="bi bi-arrow-left-short me-1"></i> Volver
+      </button>
+      <button class="btn btn-primary btn-lg" type="button" (click)="next()">
+        Siguiente <i class="bi bi-arrow-right-short ms-1"></i>
+      </button>
+    </div>
+  </section>
+
+  <!-- PASO 5 -->
+  <section *ngIf="step===5" class="section-card">
+    <div class="section-head">
+      <i class="bi bi-clipboard-check"></i>
+      <h6>Detalle del Ticket</h6>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="fs-5 mb-3">¿Desea guardar el ticket de balanza?</div>
+        <div class="d-flex justify-content-center gap-3">
+          <button class="btn btn-primary btn-lg px-4" type="button" (click)="openConfirmSave()">
+            <i class="bi bi-save me-1"></i> Guardar
+          </button>
+          <button class="btn btn-outline-secondary btn-lg px-4" type="button" (click)="prev()">Cancelar</button>
+        </div>
+        <div class="mt-3">
+          <button class="btn btn-link text-danger p-0" type="button" (click)="cancelarYReiniciar()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reiniciar borrador
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Acceso rápido -->
+  <div class="mt-4 d-flex gap-2">
+    <a class="btn btn-outline-secondary" routerLink="/tickets-balanza">
+      <i class="bi bi-arrow-left me-1"></i> Volver al listado
+    </a>
+  </div>
+</form>
+
+<!-- MODAL: Confirmar guardado -->
+<div class="modal fade" id="confirmSaveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header text-white bg-primary">
+        <h6 class="modal-title"><i class="bi bi-save me-2"></i>Guardar Ticket de balanza</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">¿Desea guardar el ticket de balanza?</div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" data-bs-dismiss="modal" (click)="guardarTicket()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Éxito -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center py-5">
+        <div class="display-6 mb-2 text-primary">✔</div>
+        <div class="fw-semibold mb-3">Ticket de balanza generado - TKB000001</div>
+        <a class="btn btn-primary" routerLink="/tickets-balanza" data-bs-dismiss="modal">Continuar</a>
+      </div>
+    </div>
+  </div>
+</div>

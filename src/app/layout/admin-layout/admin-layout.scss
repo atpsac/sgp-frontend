@@ -1,0 +1,40 @@
+/* src/app/layout/admin-layout.scss */
+
+/* El contenedor general ocupa toda la altura de la ventana
+   y organiza header, body (sidebar+main) y footer en columna */
+.layout-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* La zona central crece para ocupar el espacio entre header y footer */
+.layout-body {
+  flex: 1 1 auto;
+  display: flex;
+
+  /* Importante para que el overflow de los hijos funcione en flexbox */
+  min-height: 0;
+}
+
+/* Sidebar fijo en ancho, con scroll propio si es necesario */
+.sidebar {
+  flex: 0 0 240px;         /* ancho fijo */
+  border-right: 1px solid var(--bs-border-color);
+  overflow: auto;          /* scroll interno si el menú es largo */
+  background: #f8f9fa;     /* opcional */
+}
+
+/* Área principal ocupa el resto y puede scrollear su contenido */
+.main {
+  flex: 1 1 auto;
+  padding: 1rem;
+  overflow: auto;          /* scroll del contenido */
+  min-width: 0;            /* evita desbordes con tablas */
+}
+
+/* Footer pegado abajo por estar al final del flex-column */
+.app-footer {
+  /* opcional: fondo para diferenciar */
+  background-color: #fff;
+}

@@ -1,0 +1,178 @@
+.topbar {
+  height: 58px;
+  padding: 0 1.25rem;
+  background: linear-gradient(90deg, #0062ff 0%, #003eb0 100%);
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+/* 👇 ESTE BLOQUE DEBE MEDIR LO MISMO QUE TU SIDEBAR */
+.topbar__left {
+  width: 240px; /* coincide con .sidebar */
+  min-height: 58px;
+  transition: width 0.25s ease;
+}
+
+.topbar__left--collapsed {
+  width: 72px; /* coincide con .sidebar--collapsed */
+  justify-content: center;
+}
+
+.brand__title {
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.brand__subtitle {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+/* botón de expandir/reducir */
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* derecha */
+.topbar__right {
+  display: flex;
+  align-items: center;
+}
+
+.topbar__user-wrapper {
+  position: relative;
+}
+
+.topbar__user-btn {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+.topbar__user-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.topbar__user-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.topbar__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* dropdown */
+.topbar__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  background: #ffffff;
+  min-width: 190px;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  color: #0f172a;
+  z-index: 1050;
+}
+
+.topbar__menu-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.7rem 0.85rem 0.4rem;
+}
+.topbar__menu-header .avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(0, 98, 255, 0.12);
+  color: #003eb0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+}
+.topbar__menu-header .name {
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.topbar__menu-item {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: #0f172a;
+}
+.topbar__menu-item i {
+  font-size: 1rem;
+  width: 1.25rem;
+  text-align: center;
+}
+.topbar__menu-item:hover {
+  background: rgba(0, 98, 255, 0.07);
+}
+
+.topbar__divider {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.05);
+  margin: 0.35rem 0;
+}
+
+/* responsive */
+@media (max-width: 991.98px) {
+  /* en mobile, como el sidebar entra sobrepuesto,
+     el topbar left se queda en 72px siempre */
+  .topbar__left {
+    width: 72px;
+    justify-content: flex-start;
+  }
+  .brand__title,
+  .brand__subtitle {
+    display: none;
+  }
+  .topbar__user-name {
+    display: none;
+  }
+}

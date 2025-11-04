@@ -1,0 +1,54 @@
+<nav
+  class="sidebar"
+  [class.sidebar--collapsed]="collapsed"
+  [class.sidebar--mobile-open]="mobileOpen"
+>
+ 
+
+  <div class="sidebar__scroll">
+    <ng-container *ngFor="let item of menu; let i = index">
+      <div class="sidebar__section" *ngIf="item.section && !collapsed">
+        {{ item.section }}
+      </div>
+
+      <!-- sin hijos -->
+      <a
+        *ngIf="!item.children"
+        [routerLink]="item.route"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="sidebar__item"
+        [attr.title]="collapsed ? item.label : null"
+        (click)="onItemClick()"
+      >
+        <i class="bi sidebar__icon" [ngClass]="item.icon"></i>
+        <span class="sidebar__text" *ngIf="!collapsed">{{ item.label }}</span>
+      </a>
+
+      <!-- con hijos -->
+      <div *ngIf="item.children" class="sidebar__group" [attr.title]="collapsed ? item.label : null">
+        <div class="sidebar__item">
+          <i class="bi sidebar__icon" [ngClass]="item.icon"></i>
+          <span class="sidebar__text" *ngIf="!collapsed">{{ item.label }}</span>
+          <i class="bi bi-chevron-right ms-auto" *ngIf="!collapsed"></i>
+        </div>
+        <div class="sidebar__children" *ngIf="!collapsed">
+          <a
+            *ngFor="let child of item.children"
+            [routerLink]="child.route"
+            routerLinkActive="is-active"
+            class="sidebar__child"
+            (click)="onItemClick()"
+          >
+            <span class="bullet"></span>
+            <span>{{ child.label }}</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="sidebar__divider" *ngIf="!collapsed && i < menu.length - 1"></div>
+    </ng-container>
+  </div>
+
+
+</nav>
