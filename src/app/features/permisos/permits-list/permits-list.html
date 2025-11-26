@@ -1,0 +1,170 @@
+<div class="ux-scope">
+  <div class="card ux-card p-3">
+    <!-- HEADER -->
+    <div class="row align-items-center g-3 mb-2">
+      <div class="col-md-6 col-12">
+        <h5 class="ux-title mb-1">Permisos por módulo</h5>
+        <p class="text-muted small mb-0">
+          Define qué acciones puede realizar cada rol en los módulos del sistema.
+        </p>
+      </div>
+
+      <div class="col-md-3 col-12">
+        <label class="form-label mb-1 small text-muted">Rol</label>
+        <div class="ux-select">
+          <select
+            class="form-select ux-input"
+            [(ngModel)]="selectedRoleId"
+            (ngModelChange)="onRoleChange($event)"
+          >
+            <option *ngFor="let r of roles" [value]="r.id">
+              {{ r.name }}
+            </option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">expand_more</span>
+        </div>
+      </div>
+
+      <div
+        class="col-md-3 col-12 d-flex justify-content-md-end gap-2 mt-2 mt-md-4"
+      >
+        <button
+          type="button"
+          class="ux-btn ux-btn--blue"
+          (click)="reset()"
+        >
+          <span class="material-symbols-rounded">refresh</span>
+          <span>Restablecer</span>
+        </button>
+
+        <button
+          type="button"
+          class="ux-btn ux-btn--primary"
+          (click)="save()"
+        >
+          <span class="material-symbols-rounded">save</span>
+          <span>Guardar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="table-responsive pt-2">
+      <table class="table table-hover ux-table m-0">
+        <thead class="ux-table__head">
+          <tr>
+            <th class="ux-col-module">Módulo</th>
+            <th class="ux-col-scope text-center">Todos</th>
+            <th class="ux-col-action text-center">Ver</th>
+            <th class="ux-col-action text-center">Editar</th>
+            <th class="ux-col-action text-center">Crear</th>
+            <th class="ux-col-action text-center">Eliminar</th>
+            <th class="ux-col-action text-center">Estado</th>
+            <th class="ux-col-action text-center">Exportar</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let row of rows">
+            <!-- Módulo -->
+            <td class="ux-col-module" [attr.data-label]="'Módulo'">
+              {{ row.label }}
+            </td>
+
+            <!-- TODOS (botón especial, NO check verde) -->
+            <td class="text-center" [attr.data-label]="'Todos'">
+              <button
+                type="button"
+                class="permits-all-btn"
+                [class.is-active]="isAllSelected(row)"
+                (click)="toggleAll(row)"
+                title="Marcar / desmarcar todas las acciones"
+              >
+                <span class="material-symbols-rounded">done_all</span>
+                <span>Todos</span>
+              </button>
+            </td>
+
+            <!-- Ver -->
+            <td class="text-center" [attr.data-label]="'Ver'">
+              <button
+                type="button"
+                class="permits-check"
+                [class.is-active]="row.canView"
+                (click)="toggleAction(row, 'canView')"
+                title="Ver"
+              >
+                <span class="material-symbols-rounded">done</span>
+              </button>
+            </td>
+
+            <!-- Editar -->
+            <td class="text-center" [attr.data-label]="'Editar'">
+              <button
+                type="button"
+                class="permits-check"
+                [class.is-active]="row.canEdit"
+                (click)="toggleAction(row, 'canEdit')"
+                title="Editar"
+              >
+                <span class="material-symbols-rounded">done</span>
+              </button>
+            </td>
+
+            <!-- Crear -->
+            <td class="text-center" [attr.data-label]="'Crear'">
+              <button
+                type="button"
+                class="permits-check"
+                [class.is-active]="row.canCreate"
+                (click)="toggleAction(row, 'canCreate')"
+                title="Crear"
+              >
+                <span class="material-symbols-rounded">done</span>
+              </button>
+            </td>
+
+            <!-- Eliminar -->
+            <td class="text-center" [attr.data-label]="'Eliminar'">
+              <button
+                type="button"
+                class="permits-check"
+                [class.is-active]="row.canDelete"
+                (click)="toggleAction(row, 'canDelete')"
+                title="Eliminar"
+              >
+                <span class="material-symbols-rounded">done</span>
+              </button>
+            </td>
+
+            <!-- Estado -->
+            <td class="text-center" [attr.data-label]="'Estado'">
+              <button
+                type="button"
+                class="permits-check"
+                [class.is-active]="row.canStatus"
+                (click)="toggleAction(row, 'canStatus')"
+                title="Cambiar estado"
+              >
+                <span class="material-symbols-rounded">done</span>
+              </button>
+            </td>
+
+            <!-- Exportar -->
+            <td class="text-center" [attr.data-label]="'Exportar'">
+              <button
+                type="button"
+                class="permits-check"
+                [class.is-active]="row.canExport"
+                (click)="toggleAction(row, 'canExport')"
+                title="Exportar"
+              >
+                <span class="material-symbols-rounded">done</span>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

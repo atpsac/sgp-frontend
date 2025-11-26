@@ -1,0 +1,32 @@
+/* src/styles/main.scss */
+
+/* 1) Imports de Sass SIEMPRE al inicio */
+@use './_theme-css-vars';
+/* variables CSS del tema (:root) */
+@use './bootstrap';
+/* incluye "bootstrap/scss/bootstrap" con overrides */
+@use './_utilities';
+/* helpers propios */
+@use './_tables';
+
+/* 2) (Opcional) Bootstrap Icons (CSS) – va después de los @use */
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* 3) Reglas globales (ahora sí) */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+app-shell {
+    display: block;
+    min-height: 100dvh;
+}

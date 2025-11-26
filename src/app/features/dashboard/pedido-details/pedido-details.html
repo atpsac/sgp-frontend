@@ -1,0 +1,242 @@
+<div class="ux-scope">
+  <div class="card ux-card p-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <a class="ux-btn ux-btn--blue" routerLink="/dashboard">
+          <span class="material-symbols-rounded">arrow_back</span>
+          <span>Volver</span>
+        </a>
+        <h4 class="ux-title mb-0">
+          Pedido <span *ngIf="detalle">#{{ detalle?.pedido?.Numero }}</span>
+        </h4>
+      </div>
+
+      <!-- <div class="d-flex align-items-center gap-2">
+        <a class="ux-btn ux-btn--blue"
+           [href]="comprobanteUrl()" target="_blank" rel="noopener"
+           [class.disabled]="!hasComprobante()">
+          <span class="material-symbols-rounded">download</span>
+          <span>Descargar comprobante</span>
+        </a>
+        <button class="ux-btn ux-btn--primary"
+                (click)="openComprobante()" [disabled]="!hasComprobante()">
+          <span class="material-symbols-rounded">image</span>
+          <span>Ver comprobante</span>
+        </button>
+      </div> -->
+    </div>
+
+    <!-- Mensajes -->
+    <div *ngIf="okMsg" class="alert alert-success my-3 py-2">{{ okMsg }}</div>
+    <div *ngIf="errorMsg" class="alert alert-danger my-3 py-2">{{ errorMsg }}</div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="py-5 text-center">
+      <div class="spinner-border" role="status"></div>
+      <div class="mt-2">Cargando…</div>
+    </div>
+
+    <ng-container *ngIf="!loading && detalle">
+
+      <!-- Chips -->
+      <div class="row g-3 my-2">
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="ux-kv">
+            <div class="ux-kv__label">Estado</div>
+            <div [class]="estadoClass(detalle?.pedido?.Estado)">{{ detalle?.pedido?.Estado }}</div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="ux-kv">
+            <div class="ux-kv__label">Entrega</div>
+            <div [class]="entregaClass(detalle?.pedido?.MetodoEntrega)">{{ prettyEntrega(detalle?.pedido?.MetodoEntrega) }}</div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="ux-kv">
+            <div class="ux-kv__label">Pago</div>
+            <div [class]="pagoClass(detalle?.pedido?.MetodoPago)">{{ prettyPago(detalle?.pedido?.MetodoPago) }}</div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="ux-kv">
+            <div class="ux-kv__label">Total</div>
+            <div class="ux-amount">S/ {{ prettyMoney(detalle?.pedido?.TotalGeneral) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gestión -->
+      <div class="ux-panel mb-3">
+        <div class="ux-panel__head">Gestión</div>
+        <div class="ux-panel__body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Estado</label>
+              <div class="ux-select">
+                <select class="form-select ux-input" [(ngModel)]="estadoSel">
+                  <option *ngFor="let e of estados" [ngValue]="e">{{ e }}</option>
+                </select>
+                <span class="ux-select__icon material-symbols-rounded" aria-hidden="true">expand_more</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Observación</label>
+              <input class="form-control ux-input"
+                     type="text"
+                     [(ngModel)]="observacion"
+                     placeholder="Añade una nota u observación del pedido" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label fw-semibold d-block">Notificación</label>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="notifyWa" [(ngModel)]="notificarWa">
+                <label class="form-check-label" for="notifyWa">Avisar por WhatsApp al cliente</label>
+              </div>
+              <button class="ux-btn ux-btn--blue w-100 mt-2"
+                      (click)="guardarEstado()" [disabled]="saving">
+                <ng-container *ngIf="!saving">
+                  <span class="material-symbols-rounded">save</span><span>Guardar</span>
+                </ng-container>
+                <ng-container *ngIf="saving">
+                  <span class="spinner-border spinner-border-sm me-2"></span>Guardando…
+                </ng-container>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos -->
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <div class="ux-panel">
+            <div class="ux-panel__head">Cliente</div>
+            <div class="ux-panel__body">
+              <div class="ux-row"><span>Nombre</span><b>{{ detalle?.cliente?.nombres }} {{ detalle?.cliente?.apellidos }}</b></div>
+              <div class="ux-row"><span>Documento</span><b>{{ detalle?.cliente?.numeroDocumento }}</b></div>
+              <div class="ux-row"><span>Teléfono</span><b>{{ detalle?.cliente?.telefono || detalle?.pedido?.Telefono }}</b></div>
+              <div class="ux-row"><span>Correo</span><b>{{ detalle?.cliente?.correo || detalle?.pedido?.Correo }}</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="ux-panel">
+            <div class="ux-panel__head">Entrega</div>
+            <div class="ux-panel__body">
+              <ng-container *ngIf="detalle?.pedido?.MetodoEntrega === 'RECOJO'; else entregaDom">
+                <div class="ux-row"><span>Sede</span><b>{{ detalle?.direccionEnvio?.sedeNombre || '-' }}</b></div>
+                <div class="ux-row"><span>Dirección</span><b>{{ detalle?.direccionEnvio?.sedeDireccion || '-' }}</b></div>
+                <div class="ux-row"><span>Teléfono</span><b>{{ detalle?.direccionEnvio?.sedeTelefono || '-' }}</b></div>
+              </ng-container>
+              <ng-template #entregaDom>
+                <div class="ux-row"><span>Dirección</span><b>{{ detalle?.direccionEnvio?.direccion || '-' }}</b></div>
+                <div class="ux-row"><span>Distrito</span><b>{{ detalle?.direccionEnvio?.distrito || '-' }}</b></div>
+                <div class="ux-row"><span>Referencia</span><b>{{ detalle?.direccionEnvio?.referencia || '-' }}</b></div>
+              </ng-template>
+
+              <div class="d-flex gap-2 mt-2" *ngIf="mapsUrl()">
+                <a class="ux-btn ux-btn--blue flex-grow-1" [href]="mapsUrl()" target="_blank">
+                  <span class="material-symbols-rounded">map</span><span>Ver en Maps</span>
+                </a>
+                <button class="ux-btn ux-btn--primary" (click)="copyMaps()" title="Copiar enlace">
+                  <span class="material-symbols-rounded">content_copy</span>
+                </button>
+                <button class="ux-btn ux-btn--primary" (click)="shareMaps()" title="Compartir">
+                  <span class="material-symbols-rounded">send</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="ux-panel">
+            <div class="ux-panel__head">Comprobante</div>
+            <div class="ux-panel__body d-flex align-items-center gap-3">
+              <img class="ux-thumb"
+                   [src]="thumbUrl()"
+                   (click)="openComprobante()"
+                   (error)="onImgError($event)" />
+              <div class="d-flex flex-column gap-2">
+                <button class="ux-btn ux-btn--primary"
+                        (click)="openComprobante()" [disabled]="!hasComprobante()">
+                  <span class="material-symbols-rounded">zoom_in</span><span>Ampliar</span>
+                </button>
+                <a class="ux-btn ux-btn--blue"
+                   [href]="comprobanteUrl()" target="_blank"
+                   [class.disabled]="!hasComprobante()">
+                  <span class="material-symbols-rounded">download</span><span>Descargar</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Productos -->
+      <div class="ux-panel mt-3">
+        <div class="ux-panel__head">Productos</div>
+        <div class="ux-panel__body p-0">
+          <div class="table-responsive">
+            <table class="table m-0 ux-table">
+              <thead>
+                <tr>
+                  <th class="ux-col-idx">#</th>
+                  <th>Imagen</th>
+                  <th>Producto</th>
+                  <th>Cant.</th>
+                  <th>Precio</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let it of detalle?.items; let i = index">
+                  <td class="ux-col-idx">{{ i+1 }}</td>
+                  <td>
+                    <div class="ux-pic"
+                         (click)="showLightbox=true; lightboxUrl=itemImgUrl(it.Archivo); lightboxScale=1"
+                         title="Ampliar">
+                      <img [src]="itemImgUrl(it.Archivo)" (error)="itemImgError($event)" />
+                    </div>
+                  </td>
+                  <td>{{ it.Nombre }}</td>
+                  <td>{{ it.Cantidad }}</td>
+                  <td>S/ {{ prettyMoney(it.PrecioUnitario) }}</td>
+                  <td>S/ {{ prettyMoney(it.Total) }}</td>
+                </tr>
+                <tr *ngIf="!detalle?.items?.length">
+                  <td colspan="6" class="text-center py-3">Sin productos</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </ng-container>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" *ngIf="showLightbox" (click)="closeLightbox()">
+    <div class="lightbox__inner" (click)="$event.stopPropagation()">
+      <button class="lightbox__close" (click)="closeLightbox()" title="Cerrar">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+      <div class="lightbox__toolbar">
+        <button (click)="zoomOut()"  title="Alejar"><span class="material-symbols-rounded">remove</span></button>
+        <button (click)="zoomReset()" title="Restablecer"><span class="material-symbols-rounded">restart_alt</span></button>
+        <button (click)="zoomIn()"   title="Acercar"><span class="material-symbols-rounded">add</span></button>
+      </div>
+      <div class="lightbox__content">
+        <img [src]="lightboxUrl"
+             [style.transform]="'scale(' + lightboxScale + ')'"
+             (error)="onImgError($event)"/>
+      </div>
+    </div>
+  </div>
+</div>

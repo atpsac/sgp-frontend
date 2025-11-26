@@ -1,0 +1,302 @@
+<div class="ux-scope perfil-scope">
+  <div class="perfil-layout">
+    <!-- ================== PANEL IZQUIERDO ================== -->
+    <aside class="ux-card perfil-sidebar">
+      <div class="perfil-avatar-wrapper">
+        <img
+          *ngIf="usuario.fotoUrl; else avatarIniciales"
+          [src]="usuario.fotoUrl"
+          alt="Foto de {{ usuario.nombre }}"
+        />
+        <ng-template #avatarIniciales>
+          <div class="perfil-avatar-iniciales">
+            {{ usuario.nombre[0] }}
+          </div>
+        </ng-template>
+      </div>
+
+      <h2 class="perfil-name">{{ usuario.nombre }}</h2>
+      <span class="perfil-role-chip">{{ usuario.rol }}</span>
+
+      <div class="perfil-section-title">Datos de usuario</div>
+
+      <dl class="perfil-datalist">
+        <div class="perfil-dl-row">
+          <dt>Nombre</dt>
+          <dd>{{ usuario.nombre }}</dd>
+        </div>
+
+        <div class="perfil-dl-row">
+          <dt>Email</dt>
+          <dd>{{ usuario.email }}</dd>
+        </div>
+
+        <div class="perfil-dl-row">
+          <dt>Estado</dt>
+          <dd>
+            <span
+              class="ux-badge"
+              [class.ux-badge--ok]="usuario.estado === 'Activo'"
+              [class.ux-badge--bad]="usuario.estado === 'Inactivo'"
+            >
+              {{ usuario.estado }}
+            </span>
+          </dd>
+        </div>
+
+        <div class="perfil-dl-row">
+          <dt>Rol</dt>
+          <dd>{{ usuario.rol }}</dd>
+        </div>
+
+        <div class="perfil-dl-row">
+          <dt>Contacto</dt>
+          <dd>{{ usuario.contacto }}</dd>
+        </div>
+
+        <div class="perfil-dl-row">
+          <dt>País</dt>
+          <dd>{{ usuario.pais }}</dd>
+        </div>
+
+        <div class="perfil-dl-row">
+          <dt>Planta</dt>
+          <dd>{{ usuario.planta }}</dd>
+        </div>
+      </dl>
+
+      <button type="button" class="btn-edit" (click)="onEditPerfil()">
+        Editar
+      </button>
+    </aside>
+
+    <!-- ================== PANEL DERECHO ================== -->
+    <main class="perfil-main">
+      <!-- Cambiar contraseña -->
+      <section class="ux-card perfil-card-section">
+        <div class="perfil-alert-success" *ngIf="passwordChanged">
+          <span class="material-symbols-rounded" aria-hidden="true">
+            check_circle
+          </span>
+          <span>¡Tu contraseña ha sido cambiada con éxito!</span>
+        </div>
+
+        <h3 class="perfil-card-title">Cambiar la contraseña</h3>
+        <p class="perfil-card-subtitle">
+          Actualiza tu clave de acceso al sistema de pesadas.
+        </p>
+
+        <div class="perfil-requirements">
+          <div class="perfil-requirements-title">
+            Asegúrate de cumplir estos requisitos
+          </div>
+          <div>
+            Mínimo 8 caracteres de largo. Usa mayúsculas, minúsculas y símbolos
+            para una contraseña más segura.
+          </div>
+        </div>
+
+        <form
+          class="perfil-form"
+          [formGroup]="passwordForm"
+          (ngSubmit)="onSubmitPassword()"
+        >
+          <div class="perfil-form-row">
+            <!-- Nueva contraseña -->
+            <div class="ux-field">
+              <label for="nueva">Nueva contraseña</label>
+              <div class="ux-field__wrapper">
+                <input
+                  id="nueva"
+                  class="form-control ux-input"
+                  [type]="showNueva ? 'text' : 'password'"
+                  formControlName="nueva"
+                  placeholder="Ingresa tu nueva contraseña"
+                />
+                <button
+                  type="button"
+                  class="ux-field__icon-btn"
+                  (click)="toggleShowNueva()"
+                  aria-label="Mostrar u ocultar contraseña"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">
+                    {{ showNueva ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+
+              <small
+                class="ux-field__error"
+                *ngIf="nuevaCtrl?.hasError('required') && nuevaCtrl?.touched"
+              >
+                Este campo es obligatorio.
+              </small>
+              <small
+                class="ux-field__error"
+                *ngIf="nuevaCtrl?.hasError('minlength') && nuevaCtrl?.touched"
+              >
+                La contraseña debe tener al menos 8 caracteres.
+              </small>
+            </div>
+
+            <!-- Confirmar contraseña -->
+            <div class="ux-field">
+              <label for="confirmar">Confirmar contraseña</label>
+              <div class="ux-field__wrapper">
+                <input
+                  id="confirmar"
+                  class="form-control ux-input"
+                  [type]="showConfirmar ? 'text' : 'password'"
+                  formControlName="confirmar"
+                  placeholder="Confirma tu nueva contraseña"
+                />
+                <button
+                  type="button"
+                  class="ux-field__icon-btn"
+                  (click)="toggleShowConfirmar()"
+                  aria-label="Mostrar u ocultar contraseña"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">
+                    {{ showConfirmar ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+
+              <small
+                class="ux-field__error"
+                *ngIf="
+                  confirmarCtrl?.hasError('required') && confirmarCtrl?.touched
+                "
+              >
+                Este campo es obligatorio.
+              </small>
+              <small
+                class="ux-field__error"
+                *ngIf="
+                  confirmarCtrl?.hasError('mismatch') && confirmarCtrl?.touched
+                "
+              >
+                Las contraseñas no coinciden.
+              </small>
+            </div>
+          </div>
+
+          <div class="perfil-actions">
+            <button
+              type="submit"
+              class="ux-btn ux-btn--primary"
+              [disabled]="passwordForm.invalid || loadingPassword"
+            >
+              <ng-container *ngIf="!loadingPassword">
+                Cambiar la contraseña
+              </ng-container>
+              <ng-container *ngIf="loadingPassword">
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                <span>Guardando…</span>
+              </ng-container>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Verificación de dos pasos -->
+      <section class="ux-card perfil-card-section">
+        <div class="perfil-twofactor-header">
+          <div>
+            <h3 class="perfil-card-title">Verificación de dos pasos</h3>
+            <p class="perfil-card-subtitle">
+              Mantén tu cuenta más segura con un código adicional vía SMS.
+            </p>
+          </div>
+          <span class="perfil-chip-beta">Beta</span>
+        </div>
+
+        <div class="perfil-alert-success" *ngIf="twoFactorSaved">
+          <span class="material-symbols-rounded" aria-hidden="true">
+            check_circle
+          </span>
+          <span>Se ha guardado tu número para verificación por SMS.</span>
+        </div>
+
+        <form
+          class="perfil-form"
+          [formGroup]="twoFactorForm"
+          (ngSubmit)="onSubmitTwoFactor()"
+        >
+          <div class="perfil-form-row perfil-form-row--single">
+            <div class="ux-field">
+              <label for="telefono">SMS</label>
+              <div class="ux-field__wrapper">
+                <input
+                  id="telefono"
+                  type="tel"
+                  class="form-control ux-input"
+                  formControlName="telefono"
+                  placeholder="Número de teléfono"
+                />
+              </div>
+
+              <small
+                class="ux-field__error"
+                *ngIf="
+                  telefonoCtrl?.hasError('required') && telefonoCtrl?.touched
+                "
+              >
+                Este campo es obligatorio.
+              </small>
+              <small
+                class="ux-field__error"
+                *ngIf="
+                  telefonoCtrl?.hasError('minlength') && telefonoCtrl?.touched
+                "
+              >
+                Ingresa un número válido (al menos 9 dígitos).
+              </small>
+            </div>
+          </div>
+
+          <p class="perfil-card-text">
+            Usaremos este número para enviarte códigos de verificación cuando
+            inicies sesión en el sistema de pesadas de
+            <strong>Amazonas Trading Perú S.A.C.</strong>.
+          </p>
+
+          <div class="perfil-actions">
+            <button
+              type="submit"
+              class="ux-btn ux-btn--blue"
+              [disabled]="twoFactorForm.invalid || loadingTwoFactor"
+            >
+              <ng-container *ngIf="!loadingTwoFactor">
+                Guardar número
+              </ng-container>
+              <ng-container *ngIf="loadingTwoFactor">
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                <span>Guardando…</span>
+              </ng-container>
+            </button>
+          </div>
+
+          <p class="perfil-card-text perfil-card-text--small">
+            Estado actual:
+            <strong
+              >{{
+                twoFactorEnabled
+                  ? 'Verificación en dos pasos activada'
+                  : 'Verificación en dos pasos desactivada'
+              }}</strong
+            >.
+          </p>
+        </form>
+      </section>
+    </main>
+  </div>
+</div>

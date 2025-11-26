@@ -1,0 +1,194 @@
+<div class="uxf-modal">
+  <!-- Cerrar -->
+  <button
+    type="button"
+    class="uxf-close"
+    aria-label="Cerrar"
+    (click)="close()"
+  >
+    ×
+  </button>
+
+  <!-- Header -->
+  <div class="uxf-header">
+    <h3 class="uxf-title">{{ title }}</h3>
+    <p class="uxf-sub">{{ subtitle }}</p>
+  </div>
+
+  <!-- Form -->
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="uxf-grid">
+      <!-- Columna izquierda: formulario -->
+      <div class="uxf-col-main">
+        <!-- Producto -->
+        <div class="uxf-field">
+          <label class="uxf-label" for="producto">
+            Producto <span class="req">*</span>
+          </label>
+
+          <div class="uxf-select">
+            <select
+              id="producto"
+              class="uxf-control"
+              formControlName="ProductoId"
+              [class.is-invalid]="f['ProductoId'].touched && f['ProductoId'].invalid"
+            >
+              <option
+                *ngFor="let p of productoOptions"
+                [ngValue]="p.id"
+              >
+                {{ p.nombre }}
+              </option>
+            </select>
+            <span
+              class="material-symbols-rounded uxf-select__icon"
+              aria-hidden="true"
+            >
+              expand_more
+            </span>
+          </div>
+
+          <div class="uxf-hint-row">
+            <div
+              class="uxf-error"
+              *ngIf="f['ProductoId'].touched && f['ProductoId'].hasError('required')"
+            >
+              El producto es obligatorio.
+            </div>
+          </div>
+        </div>
+
+        <!-- Balanza / Peso bruto (6 / 6) -->
+        <div class="uxf-row-2">
+          <!-- Balanza -->
+          <div class="uxf-col-6">
+            <div class="uxf-field">
+              <label class="uxf-label" for="balanza">
+                Balanza <span class="req">*</span>
+              </label>
+
+              <div class="uxf-select">
+                <select
+                  id="balanza"
+                  class="uxf-control"
+                  formControlName="BalanzaId"
+                  [class.is-invalid]="f['BalanzaId'].touched && f['BalanzaId'].invalid"
+                >
+                  <option
+                    *ngFor="let b of balanzaOptions"
+                    [ngValue]="b.id"
+                  >
+                    {{ b.nombre }}
+                  </option>
+                </select>
+                <span
+                  class="material-symbols-rounded uxf-select__icon"
+                  aria-hidden="true"
+                >
+                  expand_more
+                </span>
+              </div>
+
+              <div class="uxf-hint-row">
+                <div
+                  class="uxf-error"
+                  *ngIf="f['BalanzaId'].touched && f['BalanzaId'].hasError('required')"
+                >
+                  La balanza es obligatoria.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Peso bruto -->
+          <div class="uxf-col-6">
+            <div class="uxf-field">
+              <label class="uxf-label" for="pesoBruto">
+                Peso bruto (kg) <span class="req">*</span>
+              </label>
+              <input
+                id="pesoBruto"
+                type="number"
+                min="0"
+                step="0.01"
+                class="uxf-control"
+                formControlName="PesoBruto"
+                [class.is-invalid]="f['PesoBruto'].touched && f['PesoBruto'].invalid"
+              />
+
+              <div class="uxf-hint-row">
+                <div
+                  class="uxf-error"
+                  *ngIf="f['PesoBruto'].touched && f['PesoBruto'].hasError('required')"
+                >
+                  El peso bruto es obligatorio.
+                </div>
+                <div
+                  class="uxf-error"
+                  *ngIf="f['PesoBruto'].touched && f['PesoBruto'].hasError('min')"
+                >
+                  El peso bruto no puede ser negativo.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="uxf-field">
+          <label class="uxf-label" for="observaciones">
+            Observaciones
+          </label>
+          <textarea
+            id="observaciones"
+            class="uxf-control uxf-control--area"
+            formControlName="Observaciones"
+            rows="3"
+            placeholder="Comentarios adicionales sobre la pesada"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Columna derecha: visor de peso -->
+      <div class="uxf-col-visor">
+        <div class="uxf-visor">
+          <span class="uxf-visor-label">PESO ACTUAL</span>
+          <div class="uxf-visor-value">
+            {{ pesoActual | number : '1.2-2' }}
+            <span class="uxf-visor-unit">kg</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="uxf-footer">
+        <button
+          type="button"
+          class="uxf-btn uxf-btn--ghost"
+          (click)="close()"
+          [disabled]="loading || loadingData"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="submit"
+          class="uxf-btn uxf-btn--primary"
+          [disabled]="loading || loadingData || form.invalid"
+        >
+          <ng-container *ngIf="!loading">
+            Guardar
+          </ng-container>
+          <ng-container *ngIf="loading">
+            <span
+              class="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true"
+            ></span>
+            Guardando…
+          </ng-container>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

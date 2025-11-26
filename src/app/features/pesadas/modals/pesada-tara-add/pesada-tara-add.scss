@@ -1,0 +1,259 @@
+.tara-add-modal {
+  position: relative;
+  padding: 18px 22px 20px 22px;
+  background: #ffffff;
+  border-radius: 14px;
+  min-width: min(880px, 100vw - 32px);
+}
+
+/* Botón cerrar */
+.tara-add-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 0;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+  cursor: pointer;
+
+  &:hover {
+    background: #e5e7eb;
+  }
+}
+
+/* Header */
+.tara-add-header {
+  padding-right: 40px;
+  margin-bottom: 10px;
+}
+
+.tara-add-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 22px;
+  color: #fd4a29;
+}
+
+.tara-add-subtitle {
+  margin: 6px 0 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Grid general */
+.tara-add-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.col-12 {
+  grid-column: 1 / -1;
+}
+
+/* Fila interna de 3 columnas (4+4+4) */
+.tara-add-row-3 {
+  grid-column: 1 / -1; /* ocupa las 12 columnas del grid padre */
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.tara-col-4 {
+  grid-column: span 4;
+}
+
+/* Labels & inputs */
+.tara-add-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  color: #0f172a;
+  margin-bottom: 6px;
+
+  .req {
+    color: #ef4444;
+    margin-left: 2px;
+  }
+}
+
+.tara-add-control {
+  display: block;
+  width: 100%;
+  border: 2px solid #d9ecf2;
+  background: #f9fdff;
+  font-size: 14px;
+  padding: 10px 12px;
+  height: 42px;
+  border-radius: 8px;
+  transition: 0.15s ease;
+  outline: none;
+
+  &::placeholder {
+    color: #95a5a6;
+  }
+
+  &:focus {
+    border-color: #cde7f0;
+    box-shadow: 0 0 0 0.2rem rgba(10, 61, 243, 0.15);
+  }
+}
+
+.tara-add-control--number {
+  text-align: right;
+}
+
+/* Select */
+.tara-add-select {
+  position: relative;
+  width: 100%;
+
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 42px;
+  }
+
+  .tara-add-select__icon {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #d2edf4;
+    color: #1c1f8a;
+    font-size: 18px;
+    line-height: 1;
+    pointer-events: none;
+  }
+}
+
+/* Fila inferior: botones + tarjeta */
+.tara-add-bottom {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  column-gap: 16px;
+  row-gap: 10px;
+}
+
+/* Tarjeta Tara total */
+.tara-add-total-card {
+  min-width: 260px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #edf2f7;
+  text-align: right;
+}
+
+.tara-add-total-label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6c7280;
+  margin-bottom: 4px;
+}
+
+.tara-add-total-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.tara-add-total-unit {
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 4px;
+  color: #6b7280;
+}
+
+/* Footer botones */
+.tara-add-footer {
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Botones */
+.tara-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: 0.15s;
+}
+
+.tara-btn--ghost {
+  background: #eeeeef;
+  color: #6b7280;
+
+  &:hover {
+    background: #e6e7ea;
+  }
+}
+
+.tara-btn--primary {
+  color: #fff;
+  background: linear-gradient(90deg, #0a3df3 0%, #3c6bff 100%);
+  box-shadow: 0 6px 16px rgba(10, 61, 243, 0.18);
+
+  &:hover {
+    filter: brightness(1.02);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tara-add-modal {
+    padding: 16px;
+    min-width: auto;
+  }
+
+  .tara-col-4 {
+    grid-column: 1 / -1; /* en móviles cada input ocupa toda la fila */
+  }
+
+  .tara-add-bottom {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .tara-add-total-card {
+    width: 100%;
+    text-align: right;
+  }
+
+  .tara-add-footer {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,517 @@
+/* ================= SCOPE ================= */
+.ux-scope {
+  /* ---------- Card ---------- */
+  .ux-card {
+    border: 1px solid #e9eef6;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .ux-title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  /* ---------- HEADER SUPERIOR ---------- */
+  .ux-header {
+    border-bottom: 1px solid #edf1f7;
+    padding-bottom: 6px;
+  }
+
+  .ux-search {
+    display: flex;
+    width: 100%; // ocupa todo el ancho de la columna
+  }
+
+  .ux-input {
+    border: 2px solid #d9ecf2;
+    background: #f9fdff;
+    font-size: 14px;
+    padding: 10px 14px;
+    height: 42px;
+    border-radius: 8px;
+    transition: 0.2s;
+
+    &::placeholder {
+      color: #95a5a6;
+    }
+
+    &:focus {
+      border-color: #cde7f0;
+      box-shadow: 0 0 0 0.2rem rgba(10, 61, 243, 0.15);
+      outline: none;
+    }
+  }
+
+  .ux-input--search {
+    border-radius: 20px 0 0 20px;
+    border-right: 0;
+  }
+
+  .ux-search-btn {
+    width: 46px;
+    border-radius: 0 20px 20px 0;
+    border: 0;
+    background: #fd4a29;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s;
+
+    .material-symbols-rounded {
+      font-size: 20px;
+    }
+
+    &:hover {
+      filter: brightness(1.05);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
+  .ux-header-actions {
+    .ux-top-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 22px;
+      border: 0;
+      font-size: 14px;
+      font-weight: 500;
+      transition: 0.15s;
+
+      .material-symbols-rounded {
+        font-size: 18px;
+      }
+    }
+
+    .ux-top-btn--blue {
+      background: #0a3df3;
+      color: #fff;
+
+      &:hover {
+        filter: brightness(1.05);
+      }
+    }
+
+    .ux-top-btn--green {
+      background: #23b345;
+      color: #fff;
+
+      &:hover {
+        filter: brightness(1.05);
+      }
+    }
+
+    .ux-top-btn--outline-blue {
+      background: #ffffff;
+      color: #0a3df3;
+      border: 1px solid #0a3df3;
+
+      &:hover {
+        background: #eff4ff;
+      }
+    }
+  }
+
+  /* ---------- Select estándar ---------- */
+  .ux-select {
+    position: relative;
+    width: 100%;
+
+    select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: none;
+      padding-right: 42px;
+      height: 42px;
+    }
+
+    .ux-select__icon {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #d2edf4;
+      color: #1c1f8a;
+      font-size: 18px;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    &.ux-select--compact {
+      width: 120px;
+    }
+  }
+
+  /* ---------- Botones pequeños (filtros avanzados) ---------- */
+  .ux-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 14px;
+    border-radius: 18px;
+    border: 0;
+    color: #fff;
+    transition: 0.2s;
+
+    .material-symbols-rounded {
+      font-size: 18px;
+    }
+  }
+
+  .ux-btn--primary {
+    background: #fd4a29;
+  }
+
+  .ux-btn--blue {
+    background: #0a3df3;
+  }
+
+  .ux-btn--green {
+    background: #23b345;
+  }
+
+  /* ---------- Filtros avanzados (colapsables) ---------- */
+  .ux-advanced {
+    margin-top: 10px;
+    padding: 10px 12px 6px;
+    border-radius: 10px;
+    background: #f5f8ff;
+    border: 1px dashed #d3e0ff;
+  }
+
+  /* Contenedor de botones Aplicar / Limpiar */
+  .ux-filter-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+
+    .ux-btn {
+      flex: 1 1 0; // 50% y 50%
+      justify-content: center;
+    }
+  }
+
+  /* ================= TABLA ================= */
+  .ux-table {
+    border-collapse: separate;
+    border-spacing: 0;
+
+    /* Header azul + bordes extremos */
+    thead.ux-table__head {
+      position: relative;
+      z-index: 0;
+    }
+    thead.ux-table__head::before,
+    thead.ux-table__head::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: var(--bg-latam);
+      z-index: 1;
+    }
+    thead.ux-table__head::before {
+      left: 0;
+    }
+    thead.ux-table__head::after {
+      right: 0;
+    }
+    thead.ux-table__head tr {
+      background-color: var(--bg-latam) !important;
+    }
+    thead.ux-table__head th {
+      background-color: var(--bg-latam-fill) !important;
+      color: var(--bg-latam) !important;
+      border-color: var(--bg-latam) !important;
+      font-weight: 600 !important;
+      vertical-align: middle;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    /* Columnas específicas */
+    .ux-col-ticket {
+      width: 170px;
+    }
+    .ux-col-sede {
+      width: 210px;
+    }
+    .ux-col-activo {
+      width: 110px;
+      text-align: center;
+    }
+    .ux-col-actions {
+      width: 80px;
+      text-align: center;
+    }
+
+    /* Filas y celdas */
+    tbody tr {
+      border-bottom: 1px solid #f1f4fa;
+    }
+    tbody td {
+      padding: 6px 12px;
+      font-size: 13px;
+      vertical-align: middle;
+      line-height: 1.2;
+      background-color: transparent !important;
+      background-clip: padding-box;
+      transition: background-color 0.12s ease;
+    }
+
+    /* Hover gris nativo */
+    .table-hover > tbody > tr:hover {
+      --bs-table-hover-bg: #f9fafb !important;
+      background-color: #f9fafb !important;
+      box-shadow: none !important;
+    }
+  }
+
+  .ux-ticket-link {
+    color: #0a3df3;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  /* ---------- Estado (badge por tipo) ---------- */
+  .ux-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 90px;
+    text-align: center;
+  }
+  .ux-status--registro {
+    background: #0ea5e9;
+  }
+  .ux-status--evaluacion {
+    background: #a855f7;
+  }
+  .ux-status--cerrado {
+    background: #10b981;
+  }
+  .ux-status--anulado {
+    background: #ef4444;
+  }
+  .ux-status--otro {
+    background: #6b7280;
+  }
+
+  /* ---------- Activo (verde/rojo) ---------- */
+  .ux-active-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .ux-active-pill--yes {
+    background: #22c55e;
+  }
+  .ux-active-pill--no {
+    background: #ef4444;
+  }
+
+  /* ---------- Acciones (menú desplegable) ---------- */
+  .ux-actions-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .ux-more-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: 0.12s;
+
+    .material-symbols-rounded {
+      font-size: 18px;
+      color: #4b5563;
+    }
+
+    &:hover {
+      background: #f3f4ff;
+      border-color: #c7d2fe;
+    }
+  }
+
+  .ux-actions-menu {
+    position: absolute;
+    right: 0;
+    top: 34px;
+    min-width: 190px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+    padding: 6px 0;
+    z-index: 20;
+
+    button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 7px 12px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+      color: #374151;
+
+      .material-symbols-rounded {
+        font-size: 18px;
+      }
+
+      &:hover {
+        background: #f3f4ff;
+        color: #111827;
+      }
+    }
+  }
+
+  .ux-action-icon--primary {
+    color: #0ea5e9;
+  }
+  .ux-action-icon--blue {
+    color: #0a3df3;
+  }
+  .ux-action-icon--purple {
+    color: #a855f7;
+  }
+  .ux-action-icon--danger {
+    color: #ef4444;
+  }
+
+  /* ---------- Footer / paginación ---------- */
+  .ux-table__footer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #edf1f7;
+    row-gap: 10px;
+  }
+
+  .ux-foot-info {
+    white-space: nowrap;
+  }
+
+  .ux-pagination .page-item .page-link {
+    color: var(--bg-latam);
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .ux-pagination .page-item .page-link:hover {
+    color: #fff;
+    background: var(--bg-latam);
+    border-color: var(--bg-latam);
+  }
+  .ux-pagination .page-item.active .page-link {
+    color: #fff;
+    background: var(--bg-latam);
+    border-color: var(--bg-latam);
+  }
+
+  /* ================= RESPONSIVE (móvil) ================= */
+  @media (max-width: 768px) {
+    .ux-table thead {
+      display: none;
+    }
+    .ux-table,
+    .ux-table tbody,
+    .ux-table tr,
+    .ux-table td {
+      display: block;
+      width: 100%;
+    }
+    .ux-table tr {
+      margin-bottom: 12px;
+      border: 1px solid #eef1f6;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .ux-table td {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+    }
+    .ux-table td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: #0f172a;
+      margin-right: 12px;
+    }
+    .ux-col-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
+  /* ---------- Skeleton ---------- */
+  .ux-skel-row > td {
+    height: 32px;
+  }
+  .ux-skel {
+    width: 100%;
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      #f0f3f5 25%,
+      #e6e9ec 37%,
+      #f0f3f5 63%
+    );
+    background-size: 400% 100%;
+    animation: ux-skel 1.2s ease infinite;
+  }
+  .ux-skel--actions {
+    width: 52px;
+    height: 16px;
+    border-radius: 8px;
+  }
+
+  @keyframes ux-skel {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+}

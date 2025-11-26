@@ -1,0 +1,127 @@
+/* Modal Logout */
+.uxd-modal {
+  position: relative;
+  padding: 18px 22px 20px 22px;
+  background: #fff;
+  border-radius: 14px;
+}
+
+/* Botón X */
+.uxd-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 0;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+
+  &:hover {
+    background: #e5e7eb;
+  }
+}
+
+/* Header */
+.uxd-header {
+  padding-right: 38px;
+  margin-bottom: 8px;
+}
+
+.uxd-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 22px;
+  color: #fd4a29; /* título naranja */
+}
+
+.uxd-sub {
+  margin: 6px 0 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Caja de advertencia */
+.uxd-warning {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 12px;
+  background: #fff6f6;
+  border: 1px solid #ffd6d6;
+  color: #991b1b;
+
+  .material-symbols-rounded {
+    font-size: 20px;
+  }
+}
+
+.uxd-warning__title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.uxd-warning__text {
+  font-size: 13px;
+  color: #7f1d1d;
+}
+
+/* Footer */
+.uxd-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.uxd-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.uxd-btn--ghost {
+  background: #eeeeef;
+  color: #6b7280;
+
+  &:hover {
+    background: #e6e7ea;
+  }
+}
+
+.uxd-btn--danger {
+  color: #fff;
+  background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.25);
+
+  &:hover {
+    filter: brightness(1.02);
+  }
+}
+
+/* Overlay para spinner */
+.uxd-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  border-radius: 14px;
+}

@@ -1,0 +1,116 @@
+:root {
+
+/* ==== Header (nuevo) ==== */
+    --header-bg: #0a3df3;
+    --header-text: #ffffff;
+    --header-search-bg: #cad8ff;
+    --header-search-border: transparent;
+  
+  
+    // --bg-latam-fill: #fff1e8;
+    // --bg-latam: #ff5722;
+
+        // --bg-latam-fill: #e8fff9;
+        // --bg-latam: #23b345;
+
+
+        --bg-latam-fill: #E8F0FF;
+        --bg-latam: #0a3df3;
+
+
+
+
+
+    --header-icon-bg: #ffffff;
+    --header-icon-tx: #0a3df3;
+
+
+    /* Woo Styler */
+    --input-border: #cccccc;
+    --input-bg: #ffffff;
+    --input-text: #111111;
+    --input-placeholder: #666666;
+    --input-focus: #0073aa;
+
+    --btn-bg: #ff6a00;
+    --btn-text: #ffffff;
+    --btn-border: #ff6a00;
+
+    --btn-bg-hover: #1e73be;
+    --btn-text-hover: #ffffff;
+    --btn-border-hover: #1e73be;
+
+    --price-color: #111111;
+
+    /* AWS Styler (buscador) */
+    --search-input-bg: #fff;
+    --search-input-border: #ccc;
+    --search-result-bg: #fff;
+    --search-result-border: #e5e7eb;
+    --search-result-title: #111;
+
+    /* Cart Styler */
+    --cart-card-bg: #fff;
+    --cart-card-bd: #e9eef5;
+    --cart-qty-bg: #fff;
+    --cart-qty-bd: #e5e7eb;
+
+    /* Single Product Designer */
+    --product-card-bg: #fff;
+    --product-card-bd: #e9eef5;
+    --product-cta-bg: #16a34a;
+    --product-cta-bg-hover: #11843e;
+
+    --footer-bg: #f5f6f8;
+    --footer-text: #6b7280;
+    --footer-title: #4b5563;
+    --footer-link: #6b7280;
+    --footer-link-hover: #1f6fe5;
+    --footer-icon-bg: #e5e7eb;
+    --footer-icon-tx: #374151;
+    --footer-divider: #e5e7eb;
+
+    --hero-bg: #0a3df3;
+    --hero-title: #ffffff;
+    --hero-subtitle: #d9e2ff;
+    --hero-cta-bg: #ff5722;
+    --hero-cta-bg-hover: #e24f1f;
+    --hero-cta-tx: #ffffff;
+
+        /* ==== Tablas (tema) ==== */
+    --table-bg: #ffffff;
+    --table-border: #e5e7eb;
+    --table-header-bg: #f8fafc;
+    --table-header-text: #1f2937;
+    --table-row-hover: #f1f5f9;
+    --table-row-stripe: #fcfcfd;
+    --table-muted-text: #6b7280;
+
+    /* Badges/estados (opcionales) */
+    --badge-bg: #eef2ff;
+    --badge-text: #3730a3;
+
+
+    }
+
+
+
+
+    /* Tema AZUL explícito (por si quieres forzarlo) */
+body.theme-blue {
+  --bg-latam-fill: #E8F0FF;
+  --bg-latam: #0a3df3;
+}
+
+/* Tema VERDE */
+body.theme-green {
+  --bg-latam-fill: #e8fff9;
+  --bg-latam: #23b345;
+}
+
+/* Tema NARANJA */
+body.theme-orange {
+  --bg-latam-fill: #fff1e8;
+  --bg-latam: #ff5722;
+}
+

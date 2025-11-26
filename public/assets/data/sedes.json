@@ -1,0 +1,136 @@
+{
+  "data": [
+    {
+      "Codigo": "ATP-LP",
+      "Nombre": "ATP - LIMA PLANTA",
+      "Direccion": "Planta Lima, Cal. Los Brillantes S15B Mz C1, Lurigancho - Lima",
+      "Telefono": "(01) 371-1443",
+      "Correo": "planta.lima@amazonastrading.com",
+      "Administrador": "Carlos Herrera",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-SA",
+      "Nombre": "ATP - SAN ALEJANDRO",
+      "Direccion": "Carretera Federico Basadre Km 223, San Alejandro - Ucayali",
+      "Telefono": "961-111-222",
+      "Correo": "san.alejandro@amazonastrading.com",
+      "Administrador": "María Rivas",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-SAT",
+      "Nombre": "ATP - SATIPO",
+      "Direccion": "Jr. Comercio 215, Satipo - Junín",
+      "Telefono": "962-333-444",
+      "Correo": "satipo@amazonastrading.com",
+      "Administrador": "Luis Gamarra",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-PUC",
+      "Nombre": "ATP - PUCALLPA",
+      "Direccion": "Av. Centenario 1450, Pucallpa - Ucayali",
+      "Telefono": "963-555-666",
+      "Correo": "pucallpa@amazonastrading.com",
+      "Administrador": "Ana Rodríguez",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-TAR",
+      "Nombre": "ATP - TARAPOTO",
+      "Direccion": "Jr. Lima 480, Tarapoto - San Martín",
+      "Telefono": "964-777-888",
+      "Correo": "tarapoto@amazonastrading.com",
+      "Administrador": "Fernando Salazar",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-JAE",
+      "Nombre": "ATP - JAÉN",
+      "Direccion": "Av. Pakamuros 950, Jaén - Cajamarca",
+      "Telefono": "965-101-202",
+      "Correo": "jaen@amazonastrading.com",
+      "Administrador": "Julio Rojas",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-BAG",
+      "Nombre": "ATP - BAGUA",
+      "Direccion": "Av. Héroes del Cenepa 310, Bagua - Amazonas",
+      "Telefono": "966-303-404",
+      "Correo": "bagua@amazonastrading.com",
+      "Administrador": "Milagros Pérez",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-BGG",
+      "Nombre": "ATP - BAGUA GRANDE",
+      "Direccion": "Jr. Amazonas 720, Bagua Grande - Amazonas",
+      "Telefono": "967-505-606",
+      "Correo": "bagua.grande@amazonastrading.com",
+      "Administrador": "Gustavo Medina",
+      "FlagActivo": 0
+    },
+    {
+      "Codigo": "ATP-JUJ",
+      "Nombre": "ATP - JUANJUI",
+      "Direccion": "Jr. Progreso 180, Juanjuí - San Martín",
+      "Telefono": "968-707-808",
+      "Correo": "juanjui@amazonastrading.com",
+      "Administrador": "Selena Díaz",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-RIO",
+      "Nombre": "ATP - RIOJA",
+      "Direccion": "Av. Libertad 520, Rioja - San Martín",
+      "Telefono": "969-909-010",
+      "Correo": "rioja@amazonastrading.com",
+      "Administrador": "Héctor Paredes",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-CHI",
+      "Nombre": "ATP - CHICLAYO",
+      "Direccion": "Av. Agricultura 1300, Chiclayo - Lambayeque",
+      "Telefono": "970-111-313",
+      "Correo": "chiclayo@amazonastrading.com",
+      "Administrador": "Patricia León",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-PIU",
+      "Nombre": "ATP - PIURA",
+      "Direccion": "Carretera Piura - Sullana Km 5, Piura",
+      "Telefono": "971-212-414",
+      "Correo": "piura@amazonastrading.com",
+      "Administrador": "Rodrigo Campos",
+      "FlagActivo": 0
+    },
+    {
+      "Codigo": "ATP-TRU",
+      "Nombre": "ATP - TRUJILLO",
+      "Direccion": "Av. Mansiche 2500, Trujillo - La Libertad",
+      "Telefono": "972-313-515",
+      "Correo": "trujillo@amazonastrading.com",
+      "Administrador": "Nathaly Ruiz",
+      "FlagActivo": 1
+    },
+    {
+      "Codigo": "ATP-CHA",
+      "Nombre": "ATP - CHANCHAMAYO",
+      "Direccion": "Av. Perú 410, La Merced - Chanchamayo",
+      "Telefono": "973-414-616",
+      "Correo": "chanchamayo@amazonastrading.com",
+      "Administrador": "Edgar Huamán",
+      "FlagActivo": 1
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "pageSize": 1000,
+    "totalPages": 1,
+    "totalRecords": 14
+  }
+}

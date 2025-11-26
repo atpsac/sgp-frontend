@@ -1,0 +1,50 @@
+$header-h: 56px;
+$sidebar-w: 250px;
+$sidebar-w-collapsed: 68px;
+
+.app-content {
+    min-height: calc(100vh - #{$header-h});
+    padding: 36px;
+    padding-top: calc(36px + #{$header-h});
+    transition: margin-left .2s ease;
+
+    /* con sidebar normal (no colapsado) */
+    &.shift {
+        margin-left: $sidebar-w;
+    }
+
+    /* con sidebar colapsado (desktop) */
+    &.shift-collapsed {
+        margin-left: $sidebar-w-collapsed;
+    }
+
+    /* en móvil el contenido ocupa todo el ancho */
+    @media (max-width: 992px) {
+        margin-left: 0 !important;
+        padding-top: calc(16px + #{$header-h});
+    }
+}
+
+$footer-h: 30px;
+
+app-footer {
+    bottom: 0;
+    left: 0;
+    text-align: center;
+    right: 50px;
+    left: 50px;
+    height: $footer-h;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+app-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: $header-h;
+    z-index: 1100;
+}

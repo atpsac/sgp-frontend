@@ -1,0 +1,161 @@
+/* ===== Modal base ===== */
+.uxf-modal{
+  position: relative;
+  padding: 18px 22px 20px 22px;
+  background: #fff;
+  border-radius: 14px;
+}
+
+.uxf-close{
+  position: absolute; top: 10px; right: 10px;
+  width: 36px; height: 36px; border-radius: 10px;
+  border: 0; background: #f3f4f6; color: #4b5563;
+  font-size: 22px; line-height: 1;
+  display:flex; align-items:center; justify-content:center;
+  transition: .15s;
+  &:hover{ background:#e5e7eb; }
+}
+
+/* ===== Header ===== */
+.uxf-header{ padding-right: 40px; margin-bottom: 10px; }
+.uxf-title{ margin:0; font-weight:700; font-size:22px; color:#FD4A29; }
+.uxf-sub{ margin:6px 0 0 0; color:#6b7280; font-size:14px; }
+
+/* ===== Grid 12 cols ===== */
+.uxf-grid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+}
+
+/* helpers cols */
+.uxf-col-3{ grid-column: span 3; }
+.uxf-col-4{ grid-column: span 4; }
+.uxf-col-5{ grid-column: span 5; }
+.uxf-col-6{ grid-column: span 6; }
+.uxf-col-12{ grid-column: 1 / -1; }
+
+/* ===== Inputs / Selects ===== */
+.uxf-field{ }
+
+.uxf-label{
+  display:block; font-weight:600; font-size:13px; color:#0f172a; margin-bottom:6px;
+  .req{ color:#ef4444; margin-left:2px; }
+}
+
+.uxf-control{
+  display:block; width:100%;
+  border: 2px solid #D9ECF2; background:#F9FDFF;
+  font-size: 14px; padding: 10px 12px; height: 42px; border-radius: 8px;
+  transition: .15s ease;
+  &::placeholder{ color:#95a5a6; }
+  &:focus{ border-color:#cde7f0; box-shadow:0 0 0 .2rem rgba(10,61,243,.15); outline:none; }
+  &.is-invalid{ border-color:#fda4af; box-shadow:0 0 0 .2rem rgba(239,68,68,.12); }
+}
+
+/* ===== Select SIN ícono nativo (cross-browser) ===== */
+.uxf-select { position: relative; }
+
+/* Aplica solo a selects con .uxf-control */
+.uxf-select .uxf-control {
+  /* quita flecha nativa */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none !important;
+  padding-right: 44px;          /* espacio para el icono custom */
+  cursor: pointer;
+
+  /* IE/Edge heredado */
+  &::-ms-expand { display: none; }
+}
+
+/* Estado disabled de select/input */
+.uxf-control:disabled,
+.uxf-select .uxf-control:disabled{
+  background: #f3f6fb;
+  color: #8b95a7;
+  cursor: not-allowed;
+  border-color: #e3e9f4;
+}
+
+/* Ícono custom del select */
+.uxf-select__icon{
+  position:absolute; top:50%; right:10px; transform:translateY(-50%);
+  width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:#d2edf4; color:#1c1f8a; font-size:18px;
+  pointer-events:none;
+  /* asegura que no tape el borde en focus */
+  box-shadow: 0 0 0 2px rgba(0,0,0,0);
+}
+
+/* Mejor foco visual cuando el padre select tiene focus */
+.uxf-select:has(.uxf-control:focus) .uxf-select__icon{
+  background:#c8e6f3;
+}
+
+/* Hint/errores */
+.uxf-hint-row{ margin-top:6px; display:flex; align-items:center; gap:10px; flex-wrap: wrap; }
+.uxf-error{ font-size:12px; color:#b91c1c; }
+
+/* ===== Botones ===== */
+.uxf-btn{
+  border:0; border-radius:12px; padding:10px 18px; font-weight:600; font-size:14px;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  transition: .15s;
+}
+.uxf-btn--ghost{
+  background:#eeeeef; color:#6b7280;
+  &:hover{ background:#e6e7ea; }
+}
+.uxf-btn--primary{
+  color:#fff;
+  background: linear-gradient(90deg, #0A3DF3 0%, #3c6bff 100%);
+  box-shadow: 0 6px 16px rgba(10,61,243,.18);
+  &:hover{ filter: brightness(1.02); }
+  &:disabled{ opacity:.7; cursor:not-allowed; }
+}
+
+/* Mini buttons en contenedor de foto (si se usa en otros modales) */
+.uxf-mini-btn{
+  border:0; border-radius:10px; padding:8px 12px; font-weight:600; font-size:12px;
+  background:#2563eb; color:#fff;
+  &:hover{ filter:brightness(1.03); }
+}
+.uxf-mini-btn--ghost{
+  background:#eeeeef; color:#374151;
+  &:hover{ background:#e5e7eb; }
+}
+
+/* ===== Foto (bloque opcional, no usado en este formulario) ===== */
+.uxf-photo{
+  border:2px dashed #dfe7ff; border-radius:12px; background:#f8fbff;
+  padding:10px; position: relative; min-height: 140px;
+  display:flex; align-items:center; justify-content:center;
+  img{ max-width:100%; max-height:120px; border-radius:10px; display:block; }
+}
+.uxf-photo--sm{ min-height: 140px; }
+.uxf-photo__empty{ color:#64748b; font-size:14px; text-align:center; }
+.uxf-photo__actions{ position:absolute; bottom:10px; right:10px; display:flex; gap:8px; }
+.uxf-photo__actions--inset{ background: rgba(255,255,255,.75); padding:6px; border-radius:10px; backdrop-filter: blur(2px); }
+
+/* ===== Footer ===== */
+.uxf-footer{
+  grid-column: 1 / -1;
+  margin-top: 6px; 
+  display:flex; justify-content:flex-end; gap:12px; flex-wrap: wrap;
+}
+
+/* ===== Overlay carga ===== */
+.uxf-loading{
+  position:absolute; inset:0; background:rgba(255,255,255,.65);
+  display:flex; align-items:center; justify-content:center; z-index: 5;
+  border-radius: 14px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px){
+  .uxf-col-3, .uxf-col-4, .uxf-col-5, .uxf-col-6{ grid-column: 1 / -1; }
+  .uxf-photo--sm{ min-height: 120px; }
+}

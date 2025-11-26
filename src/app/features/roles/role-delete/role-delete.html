@@ -1,0 +1,43 @@
+<div class="uxd-modal">
+  <!-- Cerrar (X) -->
+  <button type="button" class="uxd-close" aria-label="Cerrar" (click)="cancel()">×</button>
+
+  <!-- Header -->
+  <div class="uxd-header">
+    <h3 class="uxd-title">Eliminar rol</h3>
+    <p class="uxd-sub">¿Estás seguro de eliminar el siguiente rol?</p>
+
+    <div class="uxd-chip" *ngIf="displayName">
+      <span class="material-symbols-rounded" aria-hidden="true">badge</span>
+      <strong>{{ displayName }}</strong>
+    </div>
+  </div>
+
+  <!-- Advertencia -->
+  <div class="uxd-warning">
+    <span class="material-symbols-rounded" aria-hidden="true">warning</span>
+    <div>
+      <div class="uxd-warning__title">Acción definitiva</div>
+      <div class="uxd-warning__text">
+        Esta acción marcará el rol como eliminado en el sistema.
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="uxd-footer">
+    <button class="uxd-btn uxd-btn--ghost" (click)="cancel()" [disabled]="loading">Cancelar</button>
+    <button class="uxd-btn uxd-btn--danger" (click)="confirmDelete()" [disabled]="loading">
+      <ng-container *ngIf="!loading">Eliminar</ng-container>
+      <ng-container *ngIf="loading">
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        Eliminando…
+      </ng-container>
+    </button>
+  </div>
+
+  <!-- Overlay de carga -->
+  <div class="uxd-loading" *ngIf="loading">
+    <div class="spinner-border" role="status" aria-hidden="true"></div>
+  </div>
+</div>

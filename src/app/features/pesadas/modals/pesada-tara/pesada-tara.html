@@ -1,0 +1,229 @@
+<div class="tara-modal">
+  <!-- Cerrar -->
+  <button type="button" class="tara-close" (click)="close()">
+    &times;
+  </button>
+
+  <!-- HEADER -->
+  <div class="tara-header">
+    <h4 class="tara-title">{{ title }}</h4>
+    <p class="tara-subtitle">{{ subtitle }}</p>
+  </div>
+
+  <!-- RESUMEN (Totales + botón Agregar) -->
+  <div class="tara-summary">
+    <div class="tara-summary__group">
+      <div class="tara-summary__item">
+        <div class="tara-summary__label">Totales</div>
+      </div>
+
+      <div class="tara-summary__item">
+        <div class="tara-summary__label">Cantidad ítems</div>
+        <div class="tara-summary__value">
+          {{ resumen.cantidadItems || 0 }}
+        </div>
+      </div>
+
+      <div class="tara-summary__item">
+        <div class="tara-summary__label">Cantidad empaques</div>
+        <div class="tara-summary__value">
+          {{ resumen.cantidadEmpaques || 0 }}
+        </div>
+      </div>
+
+      <div class="tara-summary__item">
+        <div class="tara-summary__label">Tara (kg)</div>
+        <div class="tara-summary__value">
+          {{ resumen.taraTotalKg || 0 | number : '1.2-2' }}
+        </div>
+      </div>
+    </div>
+
+    <div class="tara-summary__actions">
+      <button
+        type="button"
+        class="tara-add-btn"
+        (click)="onClickAgregarTara()"
+      >
+        <span class="material-symbols-rounded">add</span>
+        <span>Agregar tara</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="tara-table-wrapper">
+    <table class="tara-table table table-hover m-0">
+      <thead>
+        <tr>
+          <th class="tara-col-idx">Item</th>
+          <th>Empaque</th>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th class="text-end">Tara x empaque (kg)</th>
+          <th class="text-end">Cantidad</th>
+          <th class="text-end">Tara (kg)</th>
+          <th class="tara-col-actions text-center">Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody *ngIf="taras.length > 0; else taraEmpty">
+        <tr *ngFor="let row of pagedTaras; let i = index">
+          <!-- índice global -->
+          <td class="tara-col-idx" [attr.data-label]="'Item'">
+            {{ (currentPage - 1) * pageSize + i + 1 | number : '2.0-0' }}
+          </td>
+
+          <td [attr.data-label]="'Empaque'">
+            {{ row.empaque }}
+          </td>
+
+          <td [attr.data-label]="'Código'">
+            {{ row.codigo }}
+          </td>
+
+          <td [attr.data-label]="'Descripción'">
+            {{ row.descripcion }}
+          </td>
+
+          <td
+            class="text-end"
+            [attr.data-label]="'Tara x empaque (kg)'"
+          >
+            {{ row.taraPorEmpaqueKg | number : '1.2-2' }}
+          </td>
+
+          <td class="text-end" [attr.data-label]="'Cantidad'">
+            {{ row.cantidad }}
+          </td>
+
+          <td class="text-end" [attr.data-label]="'Tara (kg)'">
+            {{ row.taraKg | number : '1.2-2' }}
+          </td>
+
+          <td
+            class="tara-col-actions text-center"
+            [attr.data-label]="'Acciones'"
+          >
+            <!-- Editar (opcional) -->
+            <button
+              type="button"
+              class="tara-icon-btn me-1"
+              title="Editar tara"
+              (click)="onEditTara(row, (currentPage - 1) * pageSize + i)"
+            >
+              <span class="material-symbols-rounded">more_horiz</span>
+            </button>
+
+            <!-- Eliminar -->
+            <button
+              type="button"
+              class="tara-icon-btn"
+              title="Eliminar tara"
+              (click)="onDeleteTara((currentPage - 1) * pageSize + i)"
+            >
+              <span class="material-symbols-rounded">delete</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Sin registros -->
+    <ng-template #taraEmpty>
+      <tbody>
+        <tr>
+          <td colspan="8" class="text-center py-3">
+            No se han registrado taras para esta pesada.
+          </td>
+        </tr>
+      </tbody>
+    </ng-template>
+  </div>
+
+  <!-- FOOTER: paginación + info -->
+  <div class="tara-footer">
+    <div class="tara-footer__info">
+      <span class="tara-foot-text">
+        {{ startRecord }} - {{ endRecord }} de {{ totalRecords }} registros.
+      </span>
+
+      <div class="tara-page-size">
+        <select
+          [(ngModel)]="pageSize"
+          (change)="changePageSize(pageSize)"
+        >
+          <option *ngFor="let size of pageSizes" [value]="size">
+            {{ size }}
+          </option>
+        </select>
+        <span
+          class="tara-page-size__icon material-symbols-rounded"
+          aria-hidden="true"
+        >
+          expand_more
+        </span>
+      </div>
+    </div>
+
+    <nav aria-label="Paginación" class="tara-pagination">
+      <ul class="pagination mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button
+            type="button"
+            class="page-link"
+            (click)="changePage(currentPage - 1)"
+          >
+            Anterior
+          </button>
+        </li>
+
+        <!-- Páginas (1..totalPages) -->
+        <li
+          class="page-item"
+          *ngFor="let page of [].constructor(totalPages); let idx = index"
+          [class.active]="currentPage === idx + 1"
+        >
+          <button
+            type="button"
+            class="page-link"
+            (click)="changePage(idx + 1)"
+          >
+            {{ idx + 1 }}
+          </button>
+        </li>
+
+        <li
+          class="page-item"
+          [class.disabled]="currentPage === totalPages"
+        >
+          <button
+            type="button"
+            class="page-link"
+            (click)="changePage(currentPage + 1)"
+          >
+            Siguiente
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- BOTONES FINALES -->
+  <div class="tara-actions">
+    <button
+      type="button"
+      class="tara-btn tara-btn--ghost"
+      (click)="close()"
+    >
+      Cancelar
+    </button>
+    <button
+      type="button"
+      class="tara-btn tara-btn--primary"
+      (click)="save()"
+    >
+      Guardar
+    </button>
+  </div>
+</div>

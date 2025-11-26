@@ -1,0 +1,91 @@
+<div class="dashboard-page">
+  <!-- ================== KPIs ================== -->
+  <div class="kpi-grid">
+    <div
+      class="kpi-card"
+      *ngFor="let item of kpis"
+      [style.--card-color]="item.color"
+    >
+      <div class="kpi-icon">
+        <i class="bi" [ngClass]="item.icon"></i>
+      </div>
+
+      <div class="kpi-body">
+        <div class="kpi-title">{{ item.title }}</div>
+        <div class="kpi-value">{{ item.value }}</div>
+        <div class="kpi-subtitle">
+          {{ item.subtitle }}
+          <span *ngIf="item.helper">{{ item.helper }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================== GRÁFICAS ================== -->
+  <div class="charts-grid">
+    <!-- Línea -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h5>Tickets por día</h5>
+      </div>
+
+      <apx-chart
+        [series]="lineChartOptions.series!"
+        [chart]="lineChartOptions.chart!"
+        [dataLabels]="lineChartOptions.dataLabels!"
+        [stroke]="lineChartOptions.stroke!"
+        [xaxis]="lineChartOptions.xaxis!"
+        [legend]="lineChartOptions.legend!"
+        [grid]="lineChartOptions.grid!"
+        [tooltip]="lineChartOptions.tooltip!"
+      ></apx-chart>
+
+      <div class="chart-legend mt-3">
+        <span class="legend-dot dot-blue"></span> Tickets
+      </div>
+    </div>
+
+    <!-- Donut estados -->
+    <div class="chart-card small">
+      <div class="chart-header">
+        <h5>Estados de tickets</h5>
+      </div>
+
+      <apx-chart
+        [series]="donutEstados.series!"
+        [chart]="donutEstados.chart!"
+        [labels]="donutEstados.labels!"
+        [colors]="donutEstados.colors!"
+        [legend]="donutEstados.legend!"
+      ></apx-chart>
+
+      <div class="chart-footer">
+        <div><span class="legend-dot dot-green"></span> En registro</div>
+        <div><span class="legend-dot dot-blue"></span> Cerrada</div>
+        <div><span class="legend-dot dot-red"></span> Anulada</div>
+        <div><span class="legend-dot dot-amber"></span> En evaluación</div>
+      </div>
+    </div>
+
+    <!-- Donut sedes -->
+    <div class="chart-card small blue">
+      <div class="chart-header">
+        <h5>Tickets por sede</h5>
+      </div>
+
+      <apx-chart
+        [series]="donutSedes.series!"
+        [chart]="donutSedes.chart!"
+        [labels]="donutSedes.labels!"
+        [colors]="donutSedes.colors!"
+        [legend]="donutSedes.legend!"
+      ></apx-chart>
+
+      <div class="chart-footer">
+        <div><span class="legend-dot dot-blue"></span> ATP - LIMA PLANTA</div>
+        <div><span class="legend-dot dot-green"></span> ATP - SAN ALEJANDRO</div>
+        <div><span class="legend-dot dot-amber"></span> Otras</div>
+      </div>
+    </div>
+  </div>
+</div>

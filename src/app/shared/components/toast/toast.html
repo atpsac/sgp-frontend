@@ -1,0 +1,97 @@
+<!-- shared/components/toast/toast.html -->
+<div class="uxs-modal" [ngClass]="modalClass">
+  <!-- Cerrar -->
+  <button
+    type="button"
+    class="uxs-close"
+    aria-label="Cerrar"
+    (click)="cancel()"
+  >
+    ×
+  </button>
+
+  <!-- HEADER -->
+  <div class="uxs-header">
+    <h3 class="uxs-title">{{ title }}</h3>
+    <p class="uxs-sub" *ngIf="subtitle">{{ subtitle }}</p>
+
+    <div class="uxs-chip" *ngIf="chipLabel">
+      <span class="material-symbols-rounded" aria-hidden="true">
+        {{ chipIcon }}
+      </span>
+      <strong>{{ chipLabel }}</strong>
+    </div>
+  </div>
+
+  <!-- ICONO CENTRAL + MENSAJE PRINCIPAL (como tus pantallas de pesadas) -->
+  <div class="uxs-main" *ngIf="message">
+    <div class="uxs-main__icon">
+      <span class="material-symbols-rounded" aria-hidden="true">
+        {{ iconName }}
+      </span>
+    </div>
+    <p class="uxs-main__message">
+      {{ message }}
+    </p>
+  </div>
+
+  <!-- Caja informativa opcional -->
+  <div
+    class="uxs-warning"
+    *ngIf="boxTitle || boxText"
+    [ngClass]="{
+      'uxs-warning--success': type === 'success',
+      'uxs-warning--error': type === 'error',
+      'uxs-warning--warning': type === 'warning',
+      'uxs-warning--question': type === 'question'
+    }"
+  >
+    <span class="material-symbols-rounded" aria-hidden="true">
+      {{ iconName }}
+    </span>
+    <div>
+      <div class="uxs-warning__title" *ngIf="boxTitle">{{ boxTitle }}</div>
+      <div class="uxs-warning__text" *ngIf="boxText">{{ boxText }}</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="uxs-footer">
+    <button
+      class="uxs-btn uxs-btn--ghost"
+      type="button"
+      *ngIf="showCancel"
+      (click)="cancel()"
+      [disabled]="loading"
+    >
+      {{ cancelLabel }}
+    </button>
+
+    <button
+      class="uxs-btn"
+      type="button"
+      [ngClass]="{
+        'uxs-btn--ok': type === 'success' || type === 'info',
+        'uxs-btn--warn': type === 'warning' || type === 'question',
+        'uxs-btn--error': type === 'error'
+      }"
+      (click)="confirm()"
+      [disabled]="loading"
+    >
+      <ng-container *ngIf="!loading">{{ confirmLabel }}</ng-container>
+      <ng-container *ngIf="loading">
+        <span
+          class="spinner-border spinner-border-sm me-2"
+          role="status"
+          aria-hidden="true"
+        ></span>
+        Procesando…
+      </ng-container>
+    </button>
+  </div>
+
+  <!-- Overlay de carga -->
+  <div class="uxs-loading" *ngIf="loading">
+    <div class="spinner-border" role="status" aria-hidden="true"></div>
+  </div>
+</div>

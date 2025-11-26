@@ -1,0 +1,27 @@
+.pc-footer {
+    background-color: #ffffff;
+
+    .footer-wrapper {
+        .row {
+            justify-content: center;
+        }
+
+        .col {
+            text-align: center; 
+            color: #fff;
+
+            p {
+                color: var(--bg-latam);
+            }
+
+            a {
+                color: var(--hero-bg );
+                text-decoration: none;
+
+                &:hover {
+                    color: #1d1d1d;
+                }
+            }
+        }
+    }
+}

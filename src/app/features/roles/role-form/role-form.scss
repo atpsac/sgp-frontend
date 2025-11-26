@@ -1,0 +1,84 @@
+/* ===== MODAL BASE ===== */
+.uxf-modal{
+  position: relative;
+  padding: 18px 22px 20px 22px;
+  background: #fff;
+  border-radius: 14px;
+}
+
+.uxf-close{
+  position: absolute; top: 10px; right: 10px;
+  width: 36px; height: 36px; border-radius: 10px;
+  border: 0; background: #f3f4f6; color: #4b5563;
+  font-size: 22px; line-height: 1; display:flex; align-items:center; justify-content:center;
+  transition: .15s;
+  &:hover{ background:#e5e7eb; }
+}
+
+/* ===== HEADER ===== */
+.uxf-header{ padding-right: 38px; margin-bottom: 8px; }
+.uxf-title{ margin:0; font-weight:700; font-size:22px; color:#FD4A29; }
+.uxf-sub{ margin:6px 0 0 0; color:#6b7280; font-size:14px; }
+
+/* ===== GRID 6 / 6 ===== */
+.uxf-grid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+}
+.uxf-col-6{ grid-column: span 6; }
+.uxf-footer{
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  display:flex; justify-content:flex-end; gap:12px; flex-wrap: wrap;
+}
+
+@media (max-width: 768px){
+  .uxf-col-6{ grid-column: 1 / -1; }
+}
+
+/* ===== CAMPOS ===== */
+.uxf-label{
+  display:block; font-weight:600; font-size:13px; color:#0f172a; margin-bottom:6px;
+  .req{ color:#ef4444; margin-left:2px; }
+}
+
+.uxf-control{
+  display:block; width:100%;
+  border: 2px solid #D9ECF2; background:#F9FDFF;
+  font-size: 14px; padding: 10px 12px; height: 42px; border-radius: 8px;
+  transition: .15s ease;
+  &::placeholder{ color:#95a5a6; }
+  &:focus{ border-color:#cde7f0; box-shadow:0 0 0 .2rem rgba(10,61,243,.15); outline:none; }
+  &.is-invalid{ border-color:#fda4af; box-shadow:0 0 0 .2rem rgba(239,68,68,.12); }
+}
+
+.uxf-hint-row{
+  margin-top:6px; display:flex; align-items:center; gap:10px; flex-wrap: wrap;
+}
+.uxf-error{ font-size:12px; color:#b91c1c; }
+
+/* ===== BOTONES ===== */
+.uxf-btn{
+  border:0; border-radius:12px; padding:10px 18px; font-weight:600; font-size:14px;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  transition: .15s;
+}
+.uxf-btn--ghost{
+  background:#eeeeef; color:#6b7280;
+  &:hover{ background:#e6e7ea; }
+}
+.uxf-btn--primary{
+  color:#fff;
+  background: linear-gradient(90deg, #0A3DF3 0%, #3c6bff 100%);
+  box-shadow: 0 6px 16px rgba(10,61,243,.18);
+  &:hover{ filter: brightness(1.02); }
+  &:disabled{ opacity:.7; cursor:not-allowed; }
+}
+
+/* ===== OVERLAY CARGA ===== */
+.uxf-loading{
+  position:absolute; inset:0; background:rgba(255,255,255,.65);
+  display:flex; align-items:center; justify-content:center; z-index: 5;
+  border-radius: 14px;
+}

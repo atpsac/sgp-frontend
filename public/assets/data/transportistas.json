@@ -1,0 +1,110 @@
+{
+  "data": [
+    {
+      "TransportistaId": 1,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20604935700",
+      "RazonSocial": "LOGISTICA TERRESTRE QUISNAVAR S.A.C.",
+      "Telefono": "01 445 1122",
+      "Correo": "contacto@quisnavar.com",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-01 10:15:00"
+    },
+    {
+      "TransportistaId": 2,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20512345679",
+      "RazonSocial": "TRANSPORTES ANDINOS DEL PERÚ S.A.",
+      "Telefono": "01 475 8899",
+      "Correo": "info@andinostransport.com",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-02 09:30:00"
+    },
+    {
+      "TransportistaId": 3,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20456789012",
+      "RazonSocial": "SERVICIOS DE CARGA AMAZÓNICA E.I.R.L.",
+      "Telefono": "065 421 300",
+      "Correo": "operaciones@cargaamazonica.pe",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-03 08:45:00"
+    },
+    {
+      "TransportistaId": 4,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20678901234",
+      "RazonSocial": "TRANSPORTE TERRESTRE RÍO NEGRO S.A.C.",
+      "Telefono": "064 321 456",
+      "Correo": "contacto@rionegrotransportes.com",
+      "FlagActivo": 0,
+      "FechaCreacion": "2025-11-04 11:20:00"
+    },
+    {
+      "TransportistaId": 5,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20598765432",
+      "RazonSocial": "LOGÍSTICA INTEGRAL DEL NORTE S.A.C.",
+      "Telefono": "074 601 223",
+      "Correo": "ventas@loginorte.pe",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-05 14:10:00"
+    },
+    {
+      "TransportistaId": 6,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20611122334",
+      "RazonSocial": "TRANSPORTES Y SERVICIOS QUISPE E.I.R.L.",
+      "Telefono": "051 352 901",
+      "Correo": "administracion@quispetrans.com",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-06 13:00:00"
+    },
+    {
+      "TransportistaId": 7,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20622233445",
+      "RazonSocial": "CARGA RÁPIDA DEL SUR S.A.C.",
+      "Telefono": "054 221 788",
+      "Correo": "soporte@cargarapidasur.pe",
+      "FlagActivo": 0,
+      "FechaCreacion": "2025-11-07 09:05:00"
+    },
+    {
+      "TransportistaId": 8,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20533344556",
+      "RazonSocial": "MULTISERVICIOS DE TRANSPORTE LIMA S.A.C.",
+      "Telefono": "01 331 7788",
+      "Correo": "contacto@mtlima.com",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-08 16:40:00"
+    },
+    {
+      "TransportistaId": 9,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20544455667",
+      "RazonSocial": "TRANSPORTES Y CARGA SAN MARTÍN S.A.C.",
+      "Telefono": "042 521 203",
+      "Correo": "info@tcsm.com.pe",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-09 12:25:00"
+    },
+    {
+      "TransportistaId": 10,
+      "TipoDocumento": "RUC",
+      "NumeroDocumento": "20555566778",
+      "RazonSocial": "LOGÍSTICA Y DISTRIBUCIÓN AREQUIPA S.A.C.",
+      "Telefono": "054 301 445",
+      "Correo": "contacto@logiarequipa.pe",
+      "FlagActivo": 1,
+      "FechaCreacion": "2025-11-10 17:50:00"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "pageSize": 10,
+    "totalPages": 1,
+    "totalRecords": 10
+  }
+}

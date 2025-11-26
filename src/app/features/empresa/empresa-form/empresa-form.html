@@ -1,0 +1,228 @@
+<div class="ux-scope empresa-scope">
+  <div class="empresa-layout">
+    <!-- =================== CARD DATOS DE EMPRESA =================== -->
+    <section class="ux-card empresa-card-main">
+      <!-- Logo -->
+      <div class="empresa-logo-col">
+        <div class="empresa-logo-box">
+          <img
+            *ngIf="logoPreview; else noLogo"
+            [src]="logoPreview"
+            alt="Logo de la empresa"
+          />
+          <ng-template #noLogo>
+            <div class="empresa-logo-placeholder">
+              <span class="material-symbols-rounded" aria-hidden="true">
+                image
+              </span>
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="empresa-logo-actions">
+          <label for="logoInput" class="ux-btn ux-btn--green empresa-logo-btn">
+            <span class="material-symbols-rounded" aria-hidden="true">
+              upload
+            </span>
+            <span>Cambiar logo</span>
+          </label>
+          <input
+            id="logoInput"
+            type="file"
+            accept="image/*"
+            (change)="onLogoChange($event)"
+            hidden
+          />
+        </div>
+      </div>
+
+      <!-- Formulario datos empresa -->
+      <div class="empresa-data-col">
+        <form (ngSubmit)="onSubmitEmpresa()" [formGroup]="empresaForm">
+          <div class="empresa-header-line">
+            <div class="empresa-name-ruc">
+              <input
+                class="form-control ux-input empresa-razon-input"
+                formControlName="razonSocial"
+                placeholder="Razón social"
+              />
+              <input
+                class="form-control ux-input empresa-ruc-input"
+                formControlName="ruc"
+                placeholder="RUC"
+              />
+            </div>
+          </div>
+
+          <div class="empresa-grid">
+            <div class="ux-field">
+              <label>Teléfonos</label>
+              <div class="empresa-phones">
+                <input
+                  class="form-control ux-input"
+                  formControlName="telefono1"
+                  placeholder="Teléfono principal"
+                />
+                <input
+                  class="form-control ux-input"
+                  formControlName="telefono2"
+                  placeholder="Teléfono secundario"
+                />
+              </div>
+            </div>
+
+            <div class="ux-field">
+              <label>Correo electrónico</label>
+              <input
+                class="form-control ux-input"
+                formControlName="correo"
+                placeholder="correo@empresa.com"
+                type="email"
+              />
+            </div>
+
+            <div class="ux-field">
+              <label>Sitio web</label>
+              <input
+                class="form-control ux-input"
+                formControlName="web"
+                placeholder="www.miempresa.com"
+              />
+            </div>
+
+            <div class="ux-field">
+              <label>Dirección</label>
+              <input
+                class="form-control ux-input"
+                formControlName="direccion"
+                placeholder="Dirección fiscal / principal"
+              />
+            </div>
+
+            <div class="ux-field">
+              <label>Ubigeo</label>
+              <input
+                class="form-control ux-input"
+                formControlName="ubigeo"
+                placeholder="Departamento - Provincia - Distrito"
+              />
+            </div>
+
+            <div class="ux-field">
+              <label>Rubro</label>
+              <input
+                class="form-control ux-input"
+                formControlName="rubro"
+                placeholder="Actividad económica"
+              />
+            </div>
+
+            <div class="ux-field">
+              <label>Tipo de contribuyente</label>
+              <div class="ux-select">
+                <select
+                  class="form-select ux-input"
+                  formControlName="tipoContribuyente"
+                >
+                  <option value="SOCIEDAD ANÓNIMA CERRADA">
+                    SOCIEDAD ANÓNIMA CERRADA
+                  </option>
+                  <option value="OTRO">Otro</option>
+                </select>
+                <span
+                  class="ux-select__icon material-symbols-rounded"
+                  aria-hidden="true"
+                >
+                  expand_more
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="empresa-actions">
+            <button type="submit" class="ux-btn ux-btn--primary">
+              <span class="material-symbols-rounded" aria-hidden="true">
+                save
+              </span>
+              <span>Guardar datos de empresa</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- =================== CARD CUENTAS BANCARIAS =================== -->
+    <section class="ux-card empresa-card-bancos">
+      <div class="empresa-bancos-header">
+        <h3 class="empresa-bancos-title">Cuentas bancarias</h3>
+        <button type="button" class="ux-btn ux-btn--blue" (click)="nuevaCuenta()">
+          <span class="material-symbols-rounded" aria-hidden="true">add</span>
+          <span>Nueva cuenta</span>
+        </button>
+      </div>
+
+      <!-- Solo tabla, el formulario se manejará en un modal -->
+      <div class="table-responsive empresa-table-wrap" *ngIf="cuentas.length > 0">
+        <table class="table table-hover ux-table empresa-table m-0">
+          <thead class="ux-table__head">
+            <tr>
+              <th class="ux-col-idx">#</th>
+              <th>Banco</th>
+              <th>Cuenta</th>
+              <th style="width: 140px">Tipo de Moneda</th>
+              <th style="width: 160px">Tipo Cuenta</th>
+              <th class="ux-col-state">Estado</th>
+              <th class="ux-col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of cuentas; let i = index" class="ux-row">
+              <td class="ux-col-idx">{{ i + 1 }}</td>
+              <td>{{ c.banco }}</td>
+              <td>{{ c.cuenta }}</td>
+              <td>{{ c.moneda }}</td>
+              <td>{{ c.tipoCuenta }}</td>
+              <td class="ux-col-state">
+                <span
+                  class="ux-badge"
+                  [class.ux-badge--ok]="c.estado === 'ACTIVO'"
+                  [class.ux-badge--bad]="c.estado === 'INACTIVO'"
+                  (click)="toggleEstado(c)"
+                  title="Cambiar estado"
+                >
+                  {{ c.estado === 'ACTIVO' ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td class="ux-col-actions">
+                <button
+                  type="button"
+                  class="empresa-icon-btn empresa-icon-btn--edit"
+                  (click)="editarCuenta(i)"
+                  title="Editar"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">
+                    edit
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="empresa-icon-btn empresa-icon-btn--delete"
+                  (click)="eliminarCuenta(i)"
+                  title="Eliminar"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">
+                    delete
+                  </span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empresa-empty" *ngIf="cuentas.length === 0">
+        No hay cuentas bancarias registradas.
+      </div>
+    </section>
+  </div>
+</div>

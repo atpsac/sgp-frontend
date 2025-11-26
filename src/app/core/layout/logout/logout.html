@@ -1,0 +1,65 @@
+<div class="uxd-modal">
+  <!-- Cerrar (X) -->
+  <button
+    type="button"
+    class="uxd-close"
+    aria-label="Cerrar"
+    (click)="cancel()"
+  >
+    ×
+  </button>
+
+  <!-- Header -->
+  <div class="uxd-header">
+    <h3 class="uxd-title">Cerrar sesión</h3>
+    <p class="uxd-sub">¿Quieres cerrar tu sesión actual?</p>
+  </div>
+
+  <!-- Advertencia -->
+  <div class="uxd-warning">
+    <span class="material-symbols-rounded" aria-hidden="true">logout</span>
+    <div>
+      <div class="uxd-warning__title">Se cerrará tu sesión</div>
+      <div class="uxd-warning__text">
+        Al confirmar, saldrás de tu cuenta y deberás volver a iniciar sesión
+        para acceder nuevamente al sistema.
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="uxd-footer">
+    <button
+      type="button"
+      class="uxd-btn uxd-btn--ghost"
+      (click)="cancel()"
+      [disabled]="loading"
+    >
+      Cancelar
+    </button>
+
+    <button
+      type="button"
+      class="uxd-btn uxd-btn--danger"
+      (click)="confirmLogout()"
+      [disabled]="loading"
+    >
+      <ng-container *ngIf="!loading">
+        Cerrar sesión
+      </ng-container>
+      <ng-container *ngIf="loading">
+        <span
+          class="spinner-border spinner-border-sm me-2"
+          role="status"
+          aria-hidden="true"
+        ></span>
+        Cerrando…
+      </ng-container>
+    </button>
+  </div>
+
+  <!-- Overlay de carga -->
+  <div class="uxd-loading" *ngIf="loading">
+    <div class="spinner-border" role="status" aria-hidden="true"></div>
+  </div>
+</div>

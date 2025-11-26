@@ -1,0 +1,145 @@
+<div class="tara-add-modal">
+  <!-- Botón cerrar -->
+  <button type="button" class="tara-add-close" (click)="close()">
+    &times;
+  </button>
+
+  <!-- Header -->
+  <div class="tara-add-header">
+    <h3 class="tara-add-title">{{ title }}</h3>
+    <p class="tara-add-subtitle">{{ subtitle }}</p>
+  </div>
+
+  <!-- Formulario -->
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="tara-add-grid">
+      <!-- Empaque -->
+      <div class="col-12">
+        <label class="tara-add-label" for="empaqueId">
+          Empaque <span class="req">*</span>
+        </label>
+
+        <div class="tara-add-select">
+          <select
+            id="empaqueId"
+            class="tara-add-control"
+            formControlName="empaqueId"
+          >
+            <option [ngValue]="null" disabled>Selecciona un empaque</option>
+            <option *ngFor="let opt of catalog" [ngValue]="opt.id">
+              {{ opt.nombre }}
+            </option>
+          </select>
+          <span
+            class="tara-add-select__icon material-symbols-rounded"
+            aria-hidden="true"
+          >
+            expand_more
+          </span>
+        </div>
+      </div>
+
+      <!-- Fila de 3 columnas (4+4+4) -->
+      <div class="tara-add-row-3">
+        <!-- Código -->
+        <div class="tara-col-4">
+          <label class="tara-add-label" for="codigo">
+            Código <span class="req">*</span>
+          </label>
+          <input
+            id="codigo"
+            type="text"
+            class="tara-add-control"
+            formControlName="codigo"
+            placeholder="Ej: SPC"
+          />
+        </div>
+
+        <!-- Tara x empaque -->
+        <div class="tara-col-4">
+          <label class="tara-add-label" for="taraPorEmpaqueKg">
+            Tara x empaque (kg) <span class="req">*</span>
+          </label>
+          <input
+            id="taraPorEmpaqueKg"
+            type="number"
+            step="0.01"
+            class="tara-add-control tara-add-control--number"
+            formControlName="taraPorEmpaqueKg"
+          />
+        </div>
+
+        <!-- Cantidad -->
+        <div class="tara-col-4">
+          <label class="tara-add-label" for="cantidad">
+            Cantidad <span class="req">*</span>
+          </label>
+          <input
+            id="cantidad"
+            type="number"
+            step="1"
+            min="1"
+            class="tara-add-control tara-add-control--number"
+            formControlName="cantidad"
+          />
+        </div>
+      </div>
+
+      <!-- Descripción -->
+      <div class="col-12">
+        <label class="tara-add-label" for="descripcion">
+          Descripción <span class="req">*</span>
+        </label>
+        <input
+          id="descripcion"
+          type="text"
+          class="tara-add-control"
+          formControlName="descripcion"
+          placeholder="Descripción del empaque"
+        />
+      </div>
+
+      <!-- Fila inferior: botones + Tara total -->
+      <div class="col-12 tara-add-bottom">
+        <!-- Botones -->
+        <div class="tara-add-footer">
+          <button
+            type="button"
+            class="tara-btn tara-btn--ghost"
+            (click)="close()"
+            [disabled]="loading"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="tara-btn tara-btn--primary"
+            [disabled]="loading || form.invalid"
+          >
+            <ng-container *ngIf="!loading">
+              {{ isEdit ? 'Actualizar' : 'Guardar' }}
+            </ng-container>
+            <ng-container *ngIf="loading">
+              <span
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              {{ isEdit ? 'Actualizando…' : 'Guardando…' }}
+            </ng-container>
+          </button>
+        </div>
+
+        <!-- Tarjeta Tara total -->
+        <div class="tara-add-total-card">
+          <span class="tara-add-total-label">Tara total</span>
+          <div class="tara-add-total-value">
+            {{ form.get('taraKg')?.value || 0 | number: '1.2-2' }}
+            <span class="tara-add-total-unit">kg</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,12 @@
+<div class="theme-switcher">
+  <button
+    *ngFor="let t of themes"
+    type="button"
+    class="theme-dot"
+    [class.active]="currentTheme === t.id"
+    (click)="changeTheme(t.id)"
+    [style.--dot-color]="t.main"
+    [attr.aria-label]="t.label"
+    [attr.title]="t.label"
+  ></button>
+</div>

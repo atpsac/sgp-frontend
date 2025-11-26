@@ -1,0 +1,83 @@
+<header class="topbar shadow-sm">
+  <div class="container-fluid d-flex align-items-center gap-2">
+    <!-- Marca -->
+    <a
+      class="brand d-inline-flex align-items-center text-white text-decoration-none"
+      [routerLink]="['/dashboard']"
+    >
+      <img
+        src="assets/home/logo_original.png"
+        alt="logo"
+        class="brand-logo me-2"
+      />
+      <!-- <span class="brand-text">Gradient able</span> -->
+    </a>
+
+    <!-- Botón hamburguesa -->
+    <button
+      class="btn btn-link btn-icon"
+      type="button"
+      (click)="onToggleSidebar()"
+      aria-label="Toggle menu"
+    >
+      <span class="material-symbols-rounded">menu</span>
+    </button>
+
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <!-- Userbox -->
+      <div class="userbox" [class.open]="userMenuOpen">
+        <button
+          class="user-btn"
+          type="button"
+          (click)="toggleUserMenu()"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="userMenuOpen"
+        >
+          <img src="assets/profile.jpg" class="avatar-sm" alt="user" />
+          <span class="material-symbols-rounded">more_vert</span>
+        </button>
+
+        <!-- Dropdown -->
+        <div
+          class="dropdown-menu dropdown-menu-end user-dd p-0"
+          [class.show]="userMenuOpen"
+        >
+          <div
+            class="user-dd-head d-flex align-items-center justify-content-between p-3"
+          >
+            <div class="d-flex align-items-center gap-2">
+              <img src="assets/profile.jpg" class="avatar" alt="user" />
+              <strong>Manuel Mariñas</strong>
+            </div>
+            <span class="material-symbols-rounded text-white-50">logout</span>
+          </div>
+
+          <ul class="list-unstyled m-0">
+            <li>
+              <a class="dropdown-item" href="/perfil">
+                <span class="material-symbols-rounded">person</span>
+                Perfil
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="javascript:">
+                <span class="material-symbols-rounded">mail</span>
+                Notificaciones
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider" />
+            </li>
+            <li>
+              <a class="dropdown-item" (click)="logout()">
+                <span class="material-symbols-rounded">logout</span>
+                Cerrar Sesión
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <!-- /userbox -->
+    </div>
+  </div>
+</header>

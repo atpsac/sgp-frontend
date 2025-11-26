@@ -1,0 +1,97 @@
+:host { display: block; }
+
+/* ===== LAYOUT GENERAL ===== */
+.login-wrap { position: relative; min-height: 100dvh; }
+
+/* Fondo */
+.bg { position: fixed; inset: 0; z-index: 0; background: rgb(199 183 183 / 36%); }
+
+/* ===== COLUMNA IZQUIERDA ===== */
+.branding{
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-latam), #ffffff 15%) 0%,
+    color-mix(in srgb, var(--bg-latam), #000000 20%) 100%);
+  color:#fff;
+
+  .brand-logo{ max-width:230px; width:clamp(140px,30vw,230px); display:block; margin-inline:auto; }
+  .brand-title, .powered, a{ color:#fff; }
+  a{ text-decoration:none; border-bottom:1px solid rgba(255,255,255,.6); }
+}
+
+/* ===== COLUMNA DERECHA (FORM) ===== */
+.form-side{ background:#dfebe23d; }
+
+/* ===== CABECERA TARJETA ===== */
+.head{
+  background: var(--bg-latam);
+  border-radius:.75rem;
+  box-shadow: 0 .25rem .75rem rgba(34,243,61,.08);
+}
+
+/* ========= ESTILO AZUL DE INPUTS (UXF) ========= */
+.uxf-label{ font-size:12px; font-weight:600; color:#334155; margin-bottom:6px; }
+
+.uxf-input{
+  border: 2px solid #D9ECF2;
+  background: #F9FDFF;
+  color:#0f172a;
+  font-size:14px;
+  padding:10px 14px;
+  height:46px;
+  border-radius:8px;
+  transition:.2s;
+  outline:none;
+
+  &::placeholder{ color:#95a5a6; }
+  &:focus{
+    border-color:#cde7f0;
+    box-shadow:0 0 0 .2rem rgba(10,61,243,.15);
+    background:#fff;
+  }
+  &.is-invalid{ border-color:#dc3545; box-shadow:0 0 0 .2rem rgba(220,53,69,.12); }
+  &.is-valid{ border-color:#86e49d; box-shadow:0 0 0 .2rem rgba(25,135,84,.12); }
+}
+
+/* Ícono a la derecha SIN fondo */
+.icon-end{
+  position:absolute; top:50%; right:10px; transform:translateY(-50%);
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none;
+  .material-symbols-rounded{ font-size:22px; line-height:1; color:#94a3b8; } /* gris */
+}
+
+/* Botón del ojo, “ghost” */
+.btn-icon-ghost{
+  position:absolute; top:50%; right:8px; transform:translateY(-50%);
+  display:flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:50%;
+  border:0; background:transparent; color:#94a3b8;
+  &:hover{ background:transparent; color:#64748b; }
+}
+.pr-icon{ padding-right: 44px; } /* espacio para ícono/botón */
+
+/* Autofill webkit */
+input.uxf-input:-webkit-autofill{
+  -webkit-box-shadow: 0 0 0px 1000px #F9FDFF inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color:#0f172a;
+}
+
+/* ===== BOTÓN PRIMARY (usa tus variables del tema) ===== */
+.login-wrap{ --bs-primary: var(--bg-latam); --bs-primary-rgb: 255,87,34; }
+.btn-login,
+.btn-primary{ background-color: var(--bg-latam) !important; border-color: var(--bg-latam) !important; color: var(--hero-cta-tx) !important; }
+.btn-login:hover,
+.btn-primary:hover,
+.btn-login:focus,
+.btn-primary:focus{ background-color: var(--bg-latam) !important; border-color: var(--bg-latam) !important; color: var(--hero-cta-tx) !important; }
+
+/* ===== CHECKBOX FOCUS ===== */
+.form-check-input:focus{ box-shadow:0 0 0 .2rem rgba(10,61,243,.15); border-color:#cde7f0; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 576px){ .branding{ padding:1.25rem !important; } }
+
+/* Tipografía de Material Symbols si falta
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
+*/

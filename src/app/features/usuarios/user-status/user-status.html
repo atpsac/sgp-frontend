@@ -1,0 +1,52 @@
+<div class="uxs-modal">
+  <!-- Cerrar (X) -->
+  <button type="button" class="uxs-close" aria-label="Cerrar" (click)="cancel()">×</button>
+
+  <!-- Header -->
+  <div class="uxs-header">
+    <h3 class="uxs-title">{{ title }}</h3>
+    <p class="uxs-sub">¿Estás seguro de {{ verbLower }} el siguiente usuario?</p>
+
+    <div class="uxs-chip" *ngIf="nombre">
+      <span class="material-symbols-rounded" aria-hidden="true">person</span>
+      <strong>{{ nombre }}</strong>
+      <small *ngIf="correo">&nbsp;•&nbsp;{{ correo }}</small>
+    </div>
+  </div>
+
+  <!-- Advertencia / contexto -->
+  <div class="uxs-warning" [class.uxs-warning--inactive]="verb === 'Inactivar'">
+    <span class="material-symbols-rounded" aria-hidden="true">help</span>
+    <div>
+      <div class="uxs-warning__title">
+        {{ verb === 'Inactivar' ? 'El usuario quedará inactivo' : 'El usuario quedará activo' }}
+      </div>
+      <div class="uxs-warning__text">
+        Podrás cambiar este estado cuando lo necesites.
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="uxs-footer">
+    <button class="uxs-btn uxs-btn--ghost" (click)="cancel()" [disabled]="loading">Cancelar</button>
+    <button
+      class="uxs-btn"
+      [ngClass]="{ 'uxs-btn--ok': verb==='Activar', 'uxs-btn--warn': verb==='Inactivar' }"
+      (click)="confirm()"
+      [disabled]="loading">
+      <ng-container *ngIf="!loading">
+        {{ confirmLabel }}
+      </ng-container>
+      <ng-container *ngIf="loading">
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        Procesando…
+      </ng-container>
+    </button>
+  </div>
+
+  <!-- Overlay de carga -->
+  <div class="uxs-loading" *ngIf="loading">
+    <div class="spinner-border" role="status" aria-hidden="true"></div>
+  </div>
+</div>

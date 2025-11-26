@@ -1,0 +1,131 @@
+.topbar {
+  background: var(--bg-latam);
+  color: #fff;
+  height: 66px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1030; // menor que el modal (que va a 2000)
+}
+
+.btn-icon {
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border: none;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  .material-symbols-rounded {
+    font-size: 32px;
+    line-height: 1;
+  }
+}
+
+.brand-logo {
+  width: auto;
+  height: 45px;
+  padding-left: 20px;
+  padding-right: 20px;
+  object-fit: cover;
+  filter: hue-rotate(100deg) brightness(900%);
+}
+
+.brand-text {
+  font-weight: 600;
+}
+
+.userbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  padding: 0.25rem 0.35rem;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  .material-symbols-rounded {
+    font-size: 32px;
+    line-height: 1;
+  }
+}
+
+.avatar-sm {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+/* Dropdown usuario */
+.user-dd {
+  position: absolute;
+  right: 0;
+  top: 42px;
+  min-width: 260px;
+  border: 0;
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.18);
+  border-radius: 0.75rem;
+  display: none;
+  z-index: 1050;
+
+  &.show {
+    display: block;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    cursor: pointer;
+
+    .material-symbols-rounded {
+      font-size: 18px;
+    }
+  }
+}
+
+.user-dd-head {
+  background: var(--bg-latam);
+  color: #fff;
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+@media (max-width: 576px) {
+  .brand-text {
+    display: none;
+  }
+}
+
+/* =======================
+   AJUSTES GLOBALES MODAL
+   ======================= */
+
+/* Asegura que el modal y su backdrop estén por encima de TODO */
+.modal-backdrop.show {
+  z-index: 2000;
+}
+
+.modal.show {
+  z-index: 2050;
+}

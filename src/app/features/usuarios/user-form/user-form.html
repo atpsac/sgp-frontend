@@ -1,0 +1,210 @@
+<div class="uxf-modal">
+  <!-- Cerrar -->
+  <button type="button" class="uxf-close" aria-label="Cerrar" (click)="close()">×</button>
+
+  <!-- Header -->
+  <div class="uxf-header">
+    <h3 class="uxf-title">{{ title }}</h3>
+    <p class="uxf-sub">
+      {{ isEdit ? 'Edita los datos del usuario.' : 'Completa los campos para crear un usuario.' }}
+    </p>
+  </div>
+
+  <!-- Form -->
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="uxf-grid">
+
+      <!-- ====== BLOQUE AUTOCOMPLETABLE (API) ====== -->
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label">Documento</label>
+
+          <div class="row g-2 align-items-center">
+            <div class="col-4">
+              <div class="uxf-select">
+                <select class="uxf-control"
+                        [(ngModel)]="docSelect"
+                        [ngModelOptions]="{standalone: true}">
+                  <option value="DNI">DNI</option>
+                  <option value="CE">CE</option>
+                </select>
+                <span class="uxf-select__icon material-symbols-rounded">expand_more</span>
+              </div>
+            </div>
+
+            <div class="col-5">
+              <input type="text" class="uxf-control"
+                     [(ngModel)]="docNumber"
+                     [ngModelOptions]="{standalone: true}"
+                     placeholder="Número" />
+            </div>
+
+            <div class="col-3">
+              <button type="button"
+                      class="uxf-btn uxf-btn--primary w-100"
+                      (click)="buscarIdentidad()"
+                      [disabled]="lookupLoading">
+                <ng-container *ngIf="!lookupLoading">Buscar</ng-container>
+                <ng-container *ngIf="lookupLoading">
+                  <span class="spinner-border spinner-border-sm me-1"></span>Buscando…
+                </ng-container>
+              </button>
+            </div>
+          </div>
+
+          <div class="uxf-hint-row mt-1">
+            <small class="text-muted">
+              Se autocompletarán nombres, ubicación, fecha y sexo si el servicio devuelve datos.
+            </small>
+          </div>
+
+          <!-- valores que viajan al backend -->
+          <input type="hidden" formControlName="TipoDocumentoId" />
+          <input type="hidden" formControlName="NumeroDocumento" />
+        </div>
+      </div>
+
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label">Nacimiento / Sexo</label>
+          <div class="row g-2">
+            <div class="col-5">
+              <input type="date" class="uxf-control" formControlName="FechaNacimiento" />
+            </div>
+            <div class="col-4">
+              <div class="uxf-select">
+                <select class="uxf-control" formControlName="Sexo">
+                  <option value="">Sin especificar</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Femenino</option>
+                  <option value="O">Otro</option>
+                </select>
+                <span class="uxf-select__icon material-symbols-rounded">expand_more</span>
+              </div>
+            </div>
+            <div class="col-3">
+              <input type="number" class="uxf-control" formControlName="Edad" placeholder="Edad" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== DATOS PERSONALES ====== -->
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="nombres">Nombres <span class="req">*</span></label>
+          <input id="nombres" type="text" class="uxf-control"
+                 formControlName="Nombres"
+                 [class.is-invalid]="form.get('Nombres')?.touched && form.get('Nombres')?.invalid"
+                 placeholder="Nombres" />
+        </div>
+      </div>
+
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="apellidos">Apellidos <span class="req">*</span></label>
+          <input id="apellidos" type="text" class="uxf-control"
+                 formControlName="Apellidos"
+                 [class.is-invalid]="form.get('Apellidos')?.touched && form.get('Apellidos')?.invalid"
+                 placeholder="Apellidos" />
+        </div>
+      </div>
+
+      <div class="uxf-col-12">
+        <div class="uxf-field">
+          <label class="uxf-label">Ubicación</label>
+          <div class="row g-2">
+            <div class="col-4">
+              <input type="text" class="uxf-control" formControlName="Departamento" placeholder="Departamento" />
+            </div>
+            <div class="col-4">
+              <input type="text" class="uxf-control" formControlName="Provincia" placeholder="Provincia" />
+            </div>
+            <div class="col-4">
+              <input type="text" class="uxf-control" formControlName="Distrito" placeholder="Distrito" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== CUENTA ====== -->
+      <div class="uxf-col-5">
+        <div class="uxf-field">
+          <label class="uxf-label">Rol <span class="req">*</span></label>
+          <div class="uxf-select">
+            <select class="uxf-control" formControlName="RolId">
+              <option [ngValue]="null" disabled selected>Selecciona un rol</option>
+              <option *ngFor="let r of roleOptions" [ngValue]="r.RolId">{{ r.Nombre }}</option>
+            </select>
+            <span class="uxf-select__icon material-symbols-rounded">expand_more</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="uxf-col-4">
+        <div class="uxf-field">
+          <label class="uxf-label" for="correo">Correo <span class="req">*</span></label>
+          <input id="correo" type="email" class="uxf-control"
+                 formControlName="Correo"
+                 [class.is-invalid]="form.get('Correo')?.touched && form.get('Correo')?.invalid"
+                 placeholder="ej: usuario@correo.com" />
+        </div>
+      </div>
+
+      <div class="uxf-col-3">
+        <div class="uxf-field">
+          <label class="uxf-label" for="telefono">Teléfono</label>
+          <input id="telefono" type="text" class="uxf-control"
+                 formControlName="Telefono" placeholder="Teléfono" />
+        </div>
+      </div>
+
+      <!-- Contraseñas -->
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="pass">
+            {{ isEdit ? 'Nueva contraseña (opcional)' : 'Contraseña' }}
+            <span class="req" *ngIf="!isEdit">*</span>
+          </label>
+          <input id="pass" type="password" class="uxf-control"
+                 formControlName="Contrasena"
+                 [class.is-invalid]="form.hasError('passRequired') || form.get('Contrasena')?.touched && form.get('Contrasena')?.invalid"
+                 placeholder="{{ isEdit ? 'Deja en blanco para no cambiar' : 'Mínimo 6 caracteres' }}" />
+        </div>
+      </div>
+
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="pass2">Confirmar contraseña</label>
+          <input id="pass2" type="password" class="uxf-control"
+                 formControlName="Contrasena2"
+                 [class.is-invalid]="form.hasError('passMismatch')"
+                 placeholder="Repite la contraseña" />
+          <div class="uxf-error" *ngIf="form.hasError('passMismatch')">Las contraseñas no coinciden.</div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="uxf-footer">
+        <button type="button" class="uxf-btn uxf-btn--ghost"
+                (click)="close()" [disabled]="loading || loadingData">
+          Cancelar
+        </button>
+
+        <button type="submit" class="uxf-btn uxf-btn--primary"
+                [disabled]="loading || loadingData || form.invalid">
+          <ng-container *ngIf="!loading">{{ isEdit ? 'Actualizar' : 'Guardar' }}</ng-container>
+          <ng-container *ngIf="loading">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            {{ isEdit ? 'Actualizando…' : 'Guardando…' }}
+          </ng-container>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Loading overlay al cargar datos (edición) -->
+  <div class="uxf-loading" *ngIf="loadingData">
+    <div class="spinner-border" role="status" aria-hidden="true"></div>
+  </div>
+</div>

@@ -1,0 +1,341 @@
+:host {
+  display: block;
+}
+
+/* ================= SCOPE ================= */
+.ux-scope {
+  /* ---------- Card ---------- */
+  .ux-card {
+    border: 1px solid #e9eef6;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .ux-title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  /* ---------- Inputs / Selects ---------- */
+  .ux-input {
+    border: 2px solid #d9ecf2;
+    background: #f9fdff;
+    font-size: 14px;
+    padding: 10px 14px;
+    height: 42px;
+    border-radius: 8px;
+    transition: 0.2s;
+
+    &::placeholder {
+      color: #95a5a6;
+    }
+
+    &:focus {
+      border-color: #cde7f0;
+      box-shadow: 0 0 0 0.2rem rgba(10, 61, 243, 0.15);
+      outline: none;
+    }
+  }
+
+  .ux-select {
+    position: relative;
+    width: 100%;
+
+    select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: none;
+      padding-right: 42px;
+      height: 42px;
+    }
+
+    .ux-select__icon {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #d2edf4;
+      color: #1c1f8a;
+      font-size: 18px;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    &.ux-select--compact {
+      width: 120px;
+    }
+  }
+
+  /* ---------- Botones ---------- */
+  .ux-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 14px;
+    border-radius: 18px;
+    border: 0;
+    color: #fff;
+    transition: 0.2s;
+
+    .material-symbols-rounded {
+      font-size: 18px;
+    }
+  }
+
+  .ux-btn--primary {
+    background: #fd4a29;
+  }
+  .ux-btn--blue {
+    background: #0a3df3;
+  }
+  .ux-btn--green {
+    background: #23b345;
+  }
+
+  .ux-icon-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transition: 0.15s;
+    margin-right: 6px;
+
+    .material-symbols-rounded {
+      font-size: 16px;
+    }
+  }
+  .ux-icon-btn--amber {
+    background: #fbbf24;
+    color: #1f2937;
+  }
+  .ux-icon-btn--red {
+    background: #ef4444;
+    color: #fff;
+  }
+  .ux-icon-btn--medium {
+    background: #f8f5f5;
+    color: #fff;
+  }
+
+  /* ================= TABLA ================= */
+  .ux-table {
+    border-collapse: separate;
+    border-spacing: 0;
+
+    /* Header azul + bordes naranja extremos */
+    thead.ux-table__head {
+      position: relative;
+      z-index: 0;
+    }
+    thead.ux-table__head::before,
+    thead.ux-table__head::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: var(--bg-latam);
+      z-index: 1;
+    }
+    thead.ux-table__head::before {
+      left: 0;
+    }
+    thead.ux-table__head::after {
+      right: 0;
+    }
+    thead.ux-table__head tr {
+      background-color: var(--bg-latam) !important;
+    }
+    thead.ux-table__head th {
+      background-color: var(--bg-latam-fill) !important;
+      color: var(--bg-latam) !important;
+      border-color: var(--bg-latam) !important;
+      font-weight: 600 !important;
+      vertical-align: middle;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    /* Columnas fijas */
+    .ux-col-module {
+      width: 200px;
+      padding-left: 14px !important;
+    }
+    .ux-col-scope {
+      width: 110px;
+      text-align: center;
+    }
+    .ux-col-action {
+      width: 80px;
+      text-align: center;
+    }
+
+    /* Filas y celdas */
+    tbody tr {
+      border-bottom: 1px solid #f1f4fa;
+    }
+    tbody td {
+      padding: 6px 12px;
+      font-size: 13px;
+      vertical-align: middle;
+      line-height: 1.2;
+      background-color: transparent !important;
+      background-clip: padding-box;
+      transition: background-color 0.12s ease;
+    }
+
+    /* 👉 NO custom hover aquí: se usa el gris normal de Bootstrap (.table-hover) */
+  }
+
+  /* ---------- Check de permisos ---------- */
+  .permits-check {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: 0.15s;
+    color: transparent;
+
+    .material-symbols-rounded {
+      font-size: 18px;
+    }
+
+    &:hover {
+      border-color: #22c55e;
+    }
+
+    &.is-active {
+      background: #22c55e;
+      border-color: #22c55e;
+      color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.18);
+    }
+  }
+
+  /* ---------- Botón "Todos" ---------- */
+  .permits-all-btn {
+    border-radius: 999px;
+    border: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f97316; /* naranja */
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(249, 115, 22, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: 0.18s;
+
+    .material-symbols-rounded {
+      font-size: 16px;
+    }
+
+    &.is-active {
+      background: #0ea5e9; /* celeste cuando todas activas */
+      box-shadow: 0 4px 10px rgba(14, 165, 233, 0.28);
+    }
+
+    &:hover {
+      filter: brightness(1.05);
+    }
+  }
+
+  /* ================= RESPONSIVE (móvil) ================= */
+  @media (max-width: 768px) {
+    .ux-table thead {
+      display: none;
+    }
+    .ux-table,
+    .ux-table tbody,
+    .ux-table tr,
+    .ux-table td {
+      display: block;
+      width: 100%;
+    }
+    .ux-table tr {
+      margin-bottom: 12px;
+      border: 1px solid #eef1f6;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .ux-table td {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+    }
+    .ux-table td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: #0f172a;
+      margin-right: 12px;
+    }
+
+    /* hover en móvil: dejamos también el gris por defecto */
+  }
+
+  /* ---------- Skeleton opcional ---------- */
+  .ux-skel-row > td {
+    height: 32px;
+  }
+  .ux-skel {
+    width: 100%;
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      #f0f3f5 25%,
+      #e6e9ec 37%,
+      #f0f3f5 63%
+    );
+    background-size: 400% 100%;
+    animation: ux-skel 1.2s ease infinite;
+  }
+  .ux-skel--icon {
+    width: 16px;
+    height: 16px;
+  }
+  .ux-skel--badge {
+    width: 64px;
+    height: 18px;
+    border-radius: 999px;
+  }
+  .ux-skel--actions {
+    width: 52px;
+    height: 16px;
+    border-radius: 8px;
+  }
+
+  @keyframes ux-skel {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+}

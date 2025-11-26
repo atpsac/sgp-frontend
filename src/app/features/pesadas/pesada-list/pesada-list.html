@@ -1,0 +1,377 @@
+<div class="ux-scope">
+  <div class="card ux-card p-3">
+    <!-- ====== HEADER SUPERIOR ====== -->
+    <div class="row g-3 align-items-center mb-2 ux-header">
+      <!-- Título -->
+      <div class="col-lg-3 col-md-12">
+        <h5 class="ux-title mb-1">Pesadas</h5>
+        <p class="text-muted small mb-0">
+          Listado de tickets de pesada registrados en el sistema.
+        </p>
+      </div>
+
+      <!-- Buscador principal -->
+      <div class="col-lg-5 col-md-8 col-12 mt-2 mt-lg-0">
+        <div class="ux-search">
+          <input
+            type="text"
+            class="form-control ux-input ux-input--search"
+            placeholder="Buscar por ticket, sede u operación"
+            [(ngModel)]="filters.search"
+            (keydown.enter)="applyFilters()"
+          />
+          <button
+            type="button"
+            class="ux-search-btn"
+            (click)="applyFilters()"
+            [disabled]="isLoading"
+          >
+            <span class="material-symbols-rounded">search</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Botones principales -->
+      <div class="col-lg-4 col-md-4 col-12 mt-2 mt-lg-0">
+        <div
+          class="ux-header-actions d-flex justify-content-lg-end justify-content-start gap-2 flex-wrap"
+        >
+          <button
+            type="button"
+            class="ux-top-btn ux-top-btn--blue"
+            (click)="toggleAdvancedFilters()"
+          >
+            <span class="material-symbols-rounded">tune</span>
+            <span>Más</span>
+          </button>
+
+          <button
+            type="button"
+            class="ux-top-btn ux-top-btn--green"
+            (click)="crear()"
+            [disabled]="data.length === 0"
+          >
+            <span class="material-symbols-rounded">add</span>
+            <span>Crear</span>
+          </button>
+
+          <button
+            type="button"
+            class="ux-top-btn ux-top-btn--outline-blue"
+            (click)="exportarExcel()"
+            [disabled]="downloading || isLoading"
+          >
+            <span class="material-symbols-rounded">download</span>
+            <span *ngIf="!downloading">Exportar</span>
+            <span *ngIf="downloading">Exportando…</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== FILTROS AVANZADOS (COLAPSABLES) ====== -->
+    <div class="ux-advanced" *ngIf="showAdvancedFilters">
+      <div class="row g-3 align-items-end">
+        <!-- Sede de operación -->
+        <div class="col-lg-3 col-md-6 col-12">
+          <label class="form-label mb-1 small text-muted">Sede de operación</label>
+          <div class="ux-select">
+            <select
+              class="form-select ux-input"
+              [(ngModel)]="filters.sede"
+              (ngModelChange)="applyFilters()"
+            >
+              <option value="ALL">[Todas]</option>
+              <option *ngFor="let s of sedeOptions" [value]="s">
+                {{ s }}
+              </option>
+            </select>
+            <span class="ux-select__icon material-symbols-rounded">expand_more</span>
+          </div>
+        </div>
+
+        <!-- Operación -->
+        <div class="col-lg-3 col-md-6 col-12">
+          <label class="form-label mb-1 small text-muted">Operación</label>
+          <div class="ux-select">
+            <select
+              class="form-select ux-input"
+              [(ngModel)]="filters.operacion"
+              (ngModelChange)="applyFilters()"
+            >
+              <option value="ALL">[Todas]</option>
+              <option *ngFor="let op of operacionOptions" [value]="op">
+                {{ op }}
+              </option>
+            </select>
+            <span class="ux-select__icon material-symbols-rounded">expand_more</span>
+          </div>
+        </div>
+
+        <!-- Periodo (fecha desde / hasta) -->
+        <div class="col-lg-4 col-md-6 col-12">
+          <label class="form-label mb-1 small text-muted">Periodo</label>
+          <div class="d-flex gap-2">
+            <input
+              type="date"
+              class="form-control ux-input"
+              [(ngModel)]="filters.fechaDesde"
+            />
+            <input
+              type="date"
+              class="form-control ux-input"
+              [(ngModel)]="filters.fechaHasta"
+            />
+          </div>
+        </div>
+
+        <!-- Botones aplicar / limpiar (ocupa todo el ancho de la columna) -->
+        <div class="col-lg-2 col-md-6 col-12">
+          <div class="ux-filter-actions">
+            <button
+              type="button"
+              class="ux-btn ux-btn--primary"
+              (click)="applyFilters()"
+              [disabled]="isLoading"
+            >
+              <span class="material-symbols-rounded">check</span>
+              <span>Aplicar</span>
+            </button>
+
+            <button
+              type="button"
+              class="ux-btn ux-btn--blue"
+              (click)="resetFilters()"
+              [disabled]="isLoading"
+            >
+              <span class="material-symbols-rounded">restart_alt</span>
+              <span>Limpiar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TABLA ====== -->
+    <div class="table-responsive pt-2">
+      <table class="table table-hover ux-table m-0">
+        <thead class="ux-table__head">
+          <tr>
+            <th class="ux-col-ticket">Número de ticket</th>
+            <th class="ux-col-sede">Sede de operación</th>
+            <th>Fecha</th>
+            <th>Operación</th>
+            <th class="text-end">Peso bruto</th>
+            <th class="text-end">Peso tara</th>
+            <th class="text-end">% Merma</th>
+            <th class="text-end">Peso neto</th>
+            <th>Estado</th>
+            <th class="ux-col-activo">Activo</th>
+            <th class="ux-col-actions">Acciones</th>
+          </tr>
+        </thead>
+
+        <!-- DATA -->
+        <tbody *ngIf="!isLoading">
+          <tr *ngFor="let row of data">
+            <td class="ux-col-ticket" [attr.data-label]="'Número de ticket'">
+              <a href="javascript:void(0)" class="ux-ticket-link">
+                {{ row.NumeroTicket }}
+              </a>
+            </td>
+
+            <td class="ux-col-sede" [attr.data-label]="'Sede de operación'">
+              {{ row.SedeOperacion }}
+            </td>
+
+            <td [attr.data-label]="'Fecha'">
+              {{ row.Fecha | date: 'dd/MM/yyyy HH:mm' }}
+            </td>
+
+            <td [attr.data-label]="'Operación'">
+              {{ row.Operacion }}
+            </td>
+
+            <td class="text-end" [attr.data-label]="'Peso bruto'">
+              {{ row.PesoBruto | number: '1.2-2' }}
+            </td>
+
+            <td class="text-end" [attr.data-label]="'Peso tara'">
+              {{ row.PesoTara | number: '1.2-2' }}
+            </td>
+
+            <td class="text-end" [attr.data-label]="'% Merma'">
+              {{ row.PorcentajeMerma | number: '1.2-2' }} %
+            </td>
+
+            <td class="text-end" [attr.data-label]="'Peso neto'">
+              {{ row.PesoNeto | number: '1.2-2' }}
+            </td>
+
+            <!-- Estado (badge por tipo) -->
+            <td [attr.data-label]="'Estado'">
+              <span
+                class="ux-status-badge"
+                [ngClass]="getEstadoClass(row.Estado)"
+              >
+                {{ row.Estado }}
+              </span>
+            </td>
+
+            <!-- Activo (badge verde/rojo) -->
+            <td class="ux-col-activo" [attr.data-label]="'Activo'">
+              <span
+                class="ux-active-pill"
+                [class.ux-active-pill--yes]="row.FlagActivo === 1"
+                [class.ux-active-pill--no]="row.FlagActivo === 0"
+              >
+                {{ row.FlagActivo === 1 ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+
+            <!-- Acciones -->
+            <td class="ux-col-actions" [attr.data-label]="'Acciones'">
+              <div class="ux-actions-wrapper">
+                <button
+                  type="button"
+                  class="ux-more-btn"
+                  (click)="toggleActions(row)"
+                  title="Ver acciones"
+                >
+                  <span class="material-symbols-rounded">more_horiz</span>
+                </button>
+
+                <!-- Menú desplegable -->
+                <div
+                  class="ux-actions-menu"
+                  *ngIf="actionsOpenTicket === row.NumeroTicket"
+                >
+                  <button
+                    type="button"
+                    (click)="onAction('continuar', row)"
+                  >
+                    <span class="material-symbols-rounded ux-action-icon--primary">
+                      play_arrow
+                    </span>
+                    <span>Continuar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="onAction('generar', row)"
+                  >
+                    <span class="material-symbols-rounded ux-action-icon--blue">
+                      receipt_long
+                    </span>
+                    <span>Generar ticket</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="onAction('duplicar', row)"
+                  >
+                    <span class="material-symbols-rounded ux-action-icon--purple">
+                      content_copy
+                    </span>
+                    <span>Duplicar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="onAction('cancelar', row)"
+                  >
+                    <span class="material-symbols-rounded ux-action-icon--danger">
+                      close
+                    </span>
+                    <span>Cancelar</span>
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="data.length === 0">
+            <td colspan="11" class="text-center py-3">
+              No se encontraron resultados
+            </td>
+          </tr>
+        </tbody>
+
+        <!-- SKELETON -->
+        <tbody *ngIf="isLoading">
+          <tr class="ux-skel-row" *ngFor="let i of [1,2,3,4,5]">
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel"></div></td>
+            <td><div class="ux-skel ux-skel--actions"></div></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- FOOTER / PAGINACIÓN -->
+      <div
+        class="ux-table__footer d-flex justify-content-between align-items-center w-100 flex-wrap"
+      >
+        <div class="d-flex align-items-center gap-2">
+          <span class="ux-foot-info">
+            {{ startRecord }} - {{ endRecord }} de {{ totalRecords }} registros.
+          </span>
+          <div class="ux-select ux-select--compact">
+            <select
+              class="form-select ux-input"
+              [(ngModel)]="pageSize"
+              (change)="changePageSize(pageSize)"
+            >
+              <option *ngFor="let size of pageSizes" [value]="size">
+                {{ size }}
+              </option>
+            </select>
+            <span class="ux-select__icon material-symbols-rounded">
+              expand_more
+            </span>
+          </div>
+        </div>
+
+        <nav class="ux-pagination">
+          <ul class="pagination mb-0">
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <button class="page-link" (click)="changePage(currentPage - 1)">
+                Anterior
+              </button>
+            </li>
+
+            <li
+              class="page-item"
+              *ngFor="let page of getPageRange()"
+              [class.active]="page === currentPage"
+            >
+              <button
+                *ngIf="page > 0"
+                class="page-link"
+                (click)="changePage(page)"
+              >
+                {{ page }}
+              </button>
+              <span *ngIf="page === -1 || page === -2" class="page-link">
+                …
+              </span>
+            </li>
+
+            <li class="page-item" [class.disabled]="currentPage === totalPages">
+              <button class="page-link" (click)="changePage(currentPage + 1)">
+                Siguiente
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>

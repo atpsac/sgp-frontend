@@ -1,0 +1,92 @@
+<div class="uxf-modal">
+  <!-- Cerrar -->
+  <button type="button" class="uxf-close" aria-label="Cerrar" (click)="close()">×</button>
+
+  <!-- Header -->
+  <div class="uxf-header">
+    <h3 class="uxf-title">{{ title }}</h3>
+    <p class="uxf-sub">{{ subtitle }}</p>
+  </div>
+
+  <!-- Form -->
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="uxf-grid">
+      <!-- Código -->
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="codigo">Código <span class="req">*</span></label>
+          <input id="codigo"
+                 type="text"
+                 class="uxf-control"
+                 formControlName="Codigo"
+                 [class.is-invalid]="form.get('Codigo')?.touched && form.get('Codigo')?.invalid"
+                 placeholder="Ej: ADMIN" />
+          <div class="uxf-hint-row">
+            <div class="uxf-error" *ngIf="form.get('Codigo')?.touched && form.get('Codigo')?.hasError('required')">
+              El código es obligatorio.
+            </div>
+            <div class="uxf-error" *ngIf="form.get('Codigo')?.touched && form.get('Codigo')?.hasError('maxlength')">
+              Máximo 30 caracteres.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nombre -->
+      <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="nombre">Nombre <span class="req">*</span></label>
+          <input id="nombre"
+                 type="text"
+                 class="uxf-control"
+                 formControlName="Nombre"
+                 [class.is-invalid]="form.get('Nombre')?.touched && form.get('Nombre')?.invalid"
+                 placeholder="Ej: Administrador" />
+          <div class="uxf-hint-row">
+            <div class="uxf-error" *ngIf="form.get('Nombre')?.touched && form.get('Nombre')?.hasError('required')">
+              El nombre es obligatorio.
+            </div>
+            <div class="uxf-error" *ngIf="form.get('Nombre')?.touched && form.get('Nombre')?.hasError('maxlength')">
+              Máximo 60 caracteres.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado (opcional) -->
+      <!-- <div class="uxf-col-6">
+        <div class="uxf-field">
+          <label class="uxf-label" for="estado">Estado</label>
+          <select id="estado" class="uxf-control" formControlName="FlagActivo">
+            <option [ngValue]="1">Activo</option>
+            <option [ngValue]="0">Inactivo</option>
+          </select>
+        </div>
+      </div> -->
+
+      <!-- Footer -->
+      <div class="uxf-footer">
+        <button type="button" class="uxf-btn uxf-btn--ghost"
+                (click)="close()" [disabled]="loading || loadingData">
+          Cancelar
+        </button>
+
+        <button type="submit" class="uxf-btn uxf-btn--primary"
+                [disabled]="loading || loadingData || form.invalid">
+          <ng-container *ngIf="!loading">
+            {{ isEdit ? 'Actualizar' : 'Guardar' }}
+          </ng-container>
+          <ng-container *ngIf="loading">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            {{ isEdit ? 'Actualizando…' : 'Guardando…' }}
+          </ng-container>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Overlay de carga al iniciar edición -->
+  <div class="uxf-loading" *ngIf="loadingData">
+    <div class="spinner-border" role="status" aria-hidden="true"></div>
+  </div>
+</div>

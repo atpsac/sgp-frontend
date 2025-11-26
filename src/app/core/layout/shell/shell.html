@@ -1,0 +1,17 @@
+<div class="main-layout">
+
+    <app-navbar (toggleSidebar)="onToggleSidebar()"></app-navbar>
+
+    <div class="main-body">
+        
+        <app-navigation [collapsed]="collapsed" [openMobile]="openMobile" (close)="onCloseMobile()"></app-navigation>
+
+        <main class="app-content" [class.shift]="!collapsed" [class.shift-collapsed]="collapsed">
+            <router-outlet></router-outlet>
+
+            <app-theme-switcher></app-theme-switcher>
+        </main>
+
+    </div> <app-footer></app-footer>
+
+</div>
