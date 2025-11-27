@@ -69,6 +69,14 @@ export interface PesadaDetalle {
   styleUrl: './pesada-form.scss',
 })
 export class PesadaForm implements OnInit {
+
+
+  // Límites para el date
+  minFechaEmision!: string;
+  maxFechaEmision!: string;
+
+
+
   /* -------------------------------------
    * Paso actual (1 a 5)
    * ----------------------------------- */
@@ -178,12 +186,22 @@ export class PesadaForm implements OnInit {
     public toast: ToastService,
     private weighingService: WeighingService
   ) {
-    const today = new Date().toISOString().substring(0, 10);
+    // const today = new Date().toISOString().substring(0, 10);
+      const hoy = new Date();
+
+  // rangos: 3 días antes y 3 días después
+ const today = new Date(); // usa hora local (Perú)
+  // rangos: 3 días antes y 3 días después (en horario local)
+  this.minFechaEmision = this.shiftDateLocal(today, -3);
+  this.maxFechaEmision = this.shiftDateLocal(today,  3);
+  const todayStr = this.shiftDateLocal(today, 0);
+
+
 
     this.ticketForm = this.fb.group({
       // 1) Datos de operación
       datosOperacion: this.fb.group({
-        fechaEmision: [today, Validators.required],
+        fechaEmision: [todayStr, Validators.required],
         // ahora estos campos guardan IDs de la API
         operacion: [null, Validators.required], // OperationStation.id
         sedeOperacion: [null, Validators.required], // BuyingStation.id
@@ -248,6 +266,21 @@ export class PesadaForm implements OnInit {
       }),
     });
   }
+
+
+    private shiftDateLocal(base: Date, days: number): string {
+      const d = new Date(base.getTime());
+      d.setDate(d.getDate() + days);
+      return this.formatLocalDate(d);
+    }
+
+    private formatLocalDate(date: Date): string {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      // formato YYYY-MM-DD para el input[type=date]
+      return `${year}-${month}-${day}`;
+    }
 
   /* -------------------------------------
    * Getters rápidos

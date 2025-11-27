@@ -152,8 +152,51 @@
                   type="date"
                   class="form-control ux-input"
                   formControlName="fechaEmision"
+                  [min]="minFechaEmision"
+                  [max]="maxFechaEmision"
                 />
+
+                <div
+                  class="invalid-feedback d-block"
+                  *ngIf="
+                    datosOperacion.get('fechaEmision')?.invalid &&
+                    datosOperacion.get('fechaEmision')?.touched
+                  "
+                >
+                  La fecha debe estar entre {{ minFechaEmision | date: 'dd/MM/yyyy' }}
+                  y {{ maxFechaEmision | date: 'dd/MM/yyyy' }}.
+                </div>
               </div>
+
+
+
+
+
+                <div class="col-md-4 col-12">
+                <label class="form-label mb-1 small text-muted">
+                  Sede de operación
+                </label>
+                <div class="ux-select">
+                  <select
+                    class="form-select ux-input"
+                    formControlName="sedeOperacion"
+                    (change)="onChangeOperationStation()"
+                  >
+                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                      Selecciona una sede
+                    </option>
+                    <option *ngFor="let s of stations" [value]="s.id">
+                      {{ s.name }}
+                    </option>
+                  </select>
+                  <span class="ux-select__icon material-symbols-rounded">
+                    expand_more
+                  </span>
+                </div>
+              </div>
+
+
+
 
               <div class="col-md-5 col-12">
                 <label class="form-label mb-1 small text-muted">
@@ -180,28 +223,7 @@
                 </div>
               </div>
 
-              <div class="col-md-4 col-12">
-                <label class="form-label mb-1 small text-muted">
-                  Sede de operación
-                </label>
-                <div class="ux-select">
-                  <select
-                    class="form-select ux-input"
-                    formControlName="sedeOperacion"
-                    (change)="onChangeOperationStation()"
-                  >
-                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
-                      Selecciona una sede
-                    </option>
-                    <option *ngFor="let s of stations" [value]="s.id">
-                      {{ s.name }}
-                    </option>
-                  </select>
-                  <span class="ux-select__icon material-symbols-rounded">
-                    expand_more
-                  </span>
-                </div>
-              </div>
+            
             </div>
           </div>
         </div>
