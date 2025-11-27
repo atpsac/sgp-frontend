@@ -7,7 +7,8 @@ const STORAGE_KEY = 'aws-theme';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeLatam {
-  private currentTheme: AppTheme = 'blue';
+  private currentTheme: AppTheme = 'green';
+  // private currentTheme: AppTheme = 'blue';
   private readonly themes: AppTheme[] = ['blue', 'green', 'orange'];
   private readonly classPrefix = 'theme-';
 
@@ -19,7 +20,7 @@ export class ThemeLatam {
     if (stored && this.themes.includes(stored)) {
       this.currentTheme = stored;
     } else {
-      this.currentTheme = 'blue'; // por defecto AZUL
+      this.currentTheme = 'green'; // por defecto VERDE
     }
     this.applyTheme(this.currentTheme);
   }
