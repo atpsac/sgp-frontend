@@ -58,7 +58,7 @@ export class LoginPage {
     // ==========================
     //   LOGIN REAL CON BACKEND
     // ==========================
-    this.auth.login(login, password, { remember }).subscribe({
+    this.auth.login(login, password).subscribe({
       next: () => {
         // El AuthService ya guardó token + user en storage
         this.loading = false;

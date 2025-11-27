@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { AuthService } from '../../../core/services/auth'; // ajusta la ruta si fuera necesario
 
 @Component({
   selector: 'app-logout',
@@ -14,33 +14,32 @@ export class Logout {
   loading = false;
 
   constructor(
-    public activeModal: NgbActiveModal, // ng-bootstrap inyecta esto
-    private router: Router
+    public activeModal: NgbActiveModal,
+    private auth: AuthService
   ) {}
 
   // Cerrar con la X o botón "Cancelar"
   cancel(): void {
     if (this.loading) return;
-    this.activeModal.dismiss('cancel'); // cierra el modal
+    this.activeModal.dismiss('cancel');
   }
 
   // Botón "Cerrar sesión"
-  async confirmLogout(): Promise<void> {
+  confirmLogout(): void {
     if (this.loading) return;
     this.loading = true;
 
-    try {
-      // Limpia datos de sesión
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Cierra el modal
-      this.activeModal.close('logout');
-
-      // Redirige al login
-      await this.router.navigate(['/login']);
-    } finally {
-      this.loading = false;
-    }
+    this.auth.logout().subscribe({
+      next: () => {
+        // AuthService ya limpió sesión y navegó a /login
+        this.activeModal.close('logout');
+        this.loading = false;
+      },
+      error: () => {
+        // Por si acaso, aunque en tu logout ya haces catchError
+        this.activeModal.close('logout');
+        this.loading = false;
+      },
+    });
   }
 }

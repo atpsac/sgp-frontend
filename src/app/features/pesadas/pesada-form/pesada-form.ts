@@ -13,6 +13,12 @@ import { PesadaTara } from '../modals/pesada-tara/pesada-tara';
 import { PesadaPeso } from '../modals/pesada-peso/pesada-peso';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 
+import {
+  WeighingService,
+  BuyingStation,
+  OperationStation,
+} from '../../../core/services/weighing.service';
+
 /* =========================================================
    INTERFACES / MODELOS LOCALES
    ========================================================= */
@@ -75,25 +81,21 @@ export class PesadaForm implements OnInit {
   ticketForm: FormGroup;
 
   /* -------------------------------------
-   * Datos de combos (mock)
+   * Datos de combos desde API
    * ----------------------------------- */
-  sedeOptions: string[] = [
-    'ATP - LIMA PLANTA',
-    'ATP - BAGUA GRANDE',
-    'ATP - SAN ALEJANDRO',
-    'ATP - SATIPO',
-    'ATP - PICHARI',
-  ];
+  stations: BuyingStation[] = [];                // todas las sedes (principal + no principal)
+  principalStation: BuyingStation | null = null; // sede principal
+  operations: OperationStation[] = [];           // operaciones según sede seleccionada
 
-  operacionOptions: string[] = [
-    'RECEPCIÓN DE PRODUCTO - PLANTA PRINCIPAL',
-    'DESPACHO DE PRODUCTO - PLANTA PRINCIPAL',
-    'RECEPCIÓN DE PRODUCTO - SEDE DE ACOPIO',
-    'REPEAJE - SEDE DE ACOPIO',
-  ];
-
+  /* -------------------------------------
+   * Datos de combos mock (transporte, producto, balanza)
+   * ----------------------------------- */
   transportistasMock: { id: number; nombre: string; ruc: string }[] = [
-    { id: 1, nombre: 'TRANSPORTES Y LOGÍSTICA CAMAC E.I.R.L.', ruc: '20621451241' },
+    {
+      id: 1,
+      nombre: 'TRANSPORTES Y LOGÍSTICA CAMAC E.I.R.L.',
+      ruc: '20621451241',
+    },
     { id: 2, nombre: 'TRANSPORTES AMAZONAS S.A.C.', ruc: '20567890123' },
   ];
 
@@ -124,7 +126,6 @@ export class PesadaForm implements OnInit {
     { id: 1, placa: 'A0Z-547', placaTrailer: 'XDF-453' },
     { id: 2, placa: 'B1Z-123', placaTrailer: 'YGH-789' },
   ];
-
 
   trailerMock: { id: number; placa: string; placaTrailer?: string }[] = [
     { id: 1, placa: 'XDF-458', placaTrailer: 'XDF-453' },
@@ -165,7 +166,7 @@ export class PesadaForm implements OnInit {
    * Flags de UI
    * ----------------------------------- */
   isSavingHeader = false; // para guardar hasta paso 4 (encabezado)
-  isSavingFull = false;   // para guardar todo el ticket
+  isSavingFull = false; // para guardar todo el ticket
   isLoading = false;
 
   /* -------------------------------------
@@ -174,7 +175,8 @@ export class PesadaForm implements OnInit {
   constructor(
     private fb: FormBuilder,
     private modalService: NgbModal,
-    public toast: ToastService
+    public toast: ToastService,
+    private weighingService: WeighingService
   ) {
     const today = new Date().toISOString().substring(0, 10);
 
@@ -182,38 +184,61 @@ export class PesadaForm implements OnInit {
       // 1) Datos de operación
       datosOperacion: this.fb.group({
         fechaEmision: [today, Validators.required],
-        operacion: [this.operacionOptions[0] ?? '', Validators.required],
-        sedeOperacion: [this.sedeOptions[0] ?? '', Validators.required],
+        // ahora estos campos guardan IDs de la API
+        operacion: [null, Validators.required], // OperationStation.id
+        sedeOperacion: [null, Validators.required], // BuyingStation.id
       }),
 
       // 2) Origen / destino
       origenDestino: this.fb.group({
-        sedeOrigen: [this.sedeOptions[0] ?? '', Validators.required],
-        sedeDestino: ['ATP - LIMA PLANTA', Validators.required],
+        sedeOrigen: [null, Validators.required], // BuyingStation.id
+        sedeDestino: [null, Validators.required], // BuyingStation.id
       }),
 
       // 4) Datos del transporte (grupo completo)
       transporte: this.fb.group({
         transportista: this.fb.group({
-          transportistaId: [this.transportistasMock[0]?.id ?? null, Validators.required],
-          nombre: [this.transportistasMock[0]?.nombre ?? '', Validators.required],
+          transportistaId: [
+            this.transportistasMock[0]?.id ?? null,
+            Validators.required,
+          ],
+          nombre: [
+            this.transportistasMock[0]?.nombre ?? '',
+            Validators.required,
+          ],
           tipoDocumento: ['RUC', Validators.required],
-          numeroDocumento: [this.transportistasMock[0]?.ruc ?? '', Validators.required],
+          numeroDocumento: [
+            this.transportistasMock[0]?.ruc ?? '',
+            Validators.required,
+          ],
         }),
 
         conductor: this.fb.group({
-          conductorId: [this.conductoresMock[0]?.id ?? null, Validators.required],
-          nombre: [this.conductoresMock[0]?.nombre ?? '', Validators.required],
-          tipoDocumento: [this.conductoresMock[0]?.tipoDocumento ?? 'DNI', Validators.required],
-          numeroDocumento: [this.conductoresMock[0]?.numeroDocumento ?? '', Validators.required],
-          licenciaConducir: [this.conductoresMock[0]?.licencia ?? '', Validators.required],
+          conductorId: [
+            this.conductoresMock[0]?.id ?? null,
+            Validators.required,
+          ],
+          nombre: [
+            this.conductoresMock[0]?.nombre ?? '',
+            Validators.required,
+          ],
+          tipoDocumento: [
+            this.conductoresMock[0]?.tipoDocumento ?? 'DNI',
+            Validators.required,
+          ],
+          numeroDocumento: [
+            this.conductoresMock[0]?.numeroDocumento ?? '',
+            Validators.required,
+          ],
+          licenciaConducir: [
+            this.conductoresMock[0]?.licencia ?? '',
+            Validators.required,
+          ],
         }),
 
         vehiculo: this.fb.group({
           vehiculoId: [this.vehiculosMock[0]?.id ?? null, Validators.required],
           trailerId: [this.trailerMock[0]?.id ?? null, Validators.required],
-          // placaVehiculo: [this.vehiculosMock[0]?.placa ?? '', Validators.required],
-          // placaTrailer: [this.vehiculosMock[0]?.placaTrailer ?? ''],
         }),
       }),
 
@@ -247,7 +272,89 @@ export class PesadaForm implements OnInit {
    * Ciclo de vida
    * ----------------------------------- */
   ngOnInit(): void {
-    // Aquí podrías cargar combos desde servicios cuando tengas API.
+    this.loadStationsAndOperations();
+  }
+
+  /* =========================================================
+     CARGA DE SEDES Y OPERACIONES (APIs PESADAS)
+     ========================================================= */
+
+  private loadStationsAndOperations(): void {
+    this.isLoading = true;
+
+    // 1) Sede principal
+    this.weighingService.getPrincipalBuyingStation().subscribe({
+      next: (principal) => {
+        this.principalStation = principal;
+        this.stations = [principal];
+
+        // Valores por defecto en pasos 1 y 2
+        this.datosOperacion.patchValue({
+          sedeOperacion: principal.id,
+        });
+
+        this.origenDestino.patchValue({
+          sedeOrigen: principal.id,
+          sedeDestino: principal.id,
+        });
+
+        // 2) Sedes no principales
+        this.weighingService.getNonPrincipalBuyingStations().subscribe({
+          next: (nonPrincipal) => {
+            this.stations = [principal, ...nonPrincipal];
+          },
+          error: (err) => {
+            console.error('Error loading non-principal buying stations', err);
+          },
+          complete: () => {
+            this.isLoading = false;
+          },
+        });
+
+        // 3) Operaciones para la sede principal
+        this.loadOperationsForStation(principal.id);
+      },
+      error: (err) => {
+        console.error('Error loading principal buying station', err);
+        this.isLoading = false;
+      },
+    });
+  }
+
+  /**
+   * Cuando cambia la sede de operación (paso 1) recargamos las operaciones.
+   */
+  onChangeOperationStation(): void {
+    const stationId = Number(
+      this.datosOperacion.get('sedeOperacion')?.value || 0
+    );
+    if (!stationId) {
+      this.operations = [];
+      this.datosOperacion.patchValue({ operacion: null });
+      return;
+    }
+
+    this.loadOperationsForStation(stationId);
+  }
+
+  private loadOperationsForStation(stationId: number): void {
+    this.operations = [];
+    this.datosOperacion.patchValue({ operacion: null });
+
+    this.weighingService.getOperationsByStation(stationId).subscribe({
+      next: (ops) => {
+        this.operations = ops || [];
+        if (this.operations.length > 0) {
+          // Selecciona por defecto la primera operación
+          this.datosOperacion.patchValue({
+            operacion: this.operations[0].id,
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Error loading operations for station', err);
+      },
+    });
   }
 
   /* =========================================================
@@ -496,40 +603,17 @@ export class PesadaForm implements OnInit {
    * Útil si luego el API maneja "crear ticket" y después se van agregando detalles.
    */
   async guardarEncabezado() {
-
-
     const ok = await this.toast.confirm(
-    '¿Desea guardar el ticket de balanza?',
-    {
-      title: 'Enviar a revisión - Ticket de balanza',
-      type: 'success',
-    }
-  );
+      '¿Desea guardar el ticket de balanza?',
+      {
+        title: 'Enviar a revisión - Ticket de balanza',
+        type: 'success',
+      }
+    );
 
-  if (!ok) return;
+    if (!ok) return;
 
-
-
-    // const isValid = this.validateUpToStep(4);
-    // if (!isValid) {
-    //   this.currentStep = 1;
-    //   return;
-    // }
-
-    // this.isSavingHeader = true;
-
-    // const payloadEncabezado = {
-    //   ...this.ticketForm.value,
-    //   documentos: this.documentos, // podrías excluir todavía si quieres
-    // };
-
-    // // TODO: llamar a tu servicio HTTP para guardar encabezado.
-    // console.log('Payload encabezado ticket balanza:', payloadEncabezado);
-
-    // // Simulación
-    // setTimeout(() => {
-    //   this.isSavingHeader = false;
-    // }, 500);
+    // Aquí luego llamas a tu API real usando this.ticketForm.value
   }
 
   /**

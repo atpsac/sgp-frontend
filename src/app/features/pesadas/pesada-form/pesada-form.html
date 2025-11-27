@@ -164,13 +164,19 @@
                     class="form-select ux-input"
                     formControlName="operacion"
                   >
-                    <option *ngFor="let op of operacionOptions" [value]="op">
-                      {{ op }}
+                    <option [ngValue]="null" disabled *ngIf="operations.length === 0">
+                      Selecciona una operación
+                    </option>
+                    <option
+                      *ngFor="let op of operations"
+                      [value]="op.id"
+                    >
+                      {{ op.name }}
                     </option>
                   </select>
-                  <span class="ux-select__icon material-symbols-rounded"
-                    >expand_more</span
-                  >
+                  <span class="ux-select__icon material-symbols-rounded">
+                    expand_more
+                  </span>
                 </div>
               </div>
 
@@ -182,14 +188,18 @@
                   <select
                     class="form-select ux-input"
                     formControlName="sedeOperacion"
+                    (change)="onChangeOperationStation()"
                   >
-                    <option *ngFor="let s of sedeOptions" [value]="s">
-                      {{ s }}
+                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                      Selecciona una sede
+                    </option>
+                    <option *ngFor="let s of stations" [value]="s.id">
+                      {{ s.name }}
                     </option>
                   </select>
-                  <span class="ux-select__icon material-symbols-rounded"
-                    >expand_more</span
-                  >
+                  <span class="ux-select__icon material-symbols-rounded">
+                    expand_more
+                  </span>
                 </div>
               </div>
             </div>
@@ -216,13 +226,16 @@
                     class="form-select ux-input"
                     formControlName="sedeOrigen"
                   >
-                    <option *ngFor="let s of sedeOptions" [value]="s">
-                      {{ s }}
+                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                      Selecciona una sede
+                    </option>
+                    <option *ngFor="let s of stations" [value]="s.id">
+                      {{ s.name }}
                     </option>
                   </select>
-                  <span class="ux-select__icon material-symbols-rounded"
-                    >expand_more</span
-                  >
+                  <span class="ux-select__icon material-symbols-rounded">
+                    expand_more
+                  </span>
                 </div>
               </div>
 
@@ -235,13 +248,16 @@
                     class="form-select ux-input"
                     formControlName="sedeDestino"
                   >
-                    <option *ngFor="let s of sedeOptions" [value]="s">
-                      {{ s }}
+                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                      Selecciona una sede
+                    </option>
+                    <option *ngFor="let s of stations" [value]="s.id">
+                      {{ s.name }}
                     </option>
                   </select>
-                  <span class="ux-select__icon material-symbols-rounded"
-                    >expand_more</span
-                  >
+                  <span class="ux-select__icon material-symbols-rounded">
+                    expand_more
+                  </span>
                 </div>
               </div>
             </div>
@@ -373,9 +389,9 @@
                         {{ t.nombre }}
                       </option>
                     </select>
-                    <span class="ux-select__icon material-symbols-rounded"
-                      >expand_more</span
-                    >
+                    <span class="ux-select__icon material-symbols-rounded">
+                      expand_more
+                    </span>
                   </div>
                 </div>
 
@@ -391,9 +407,9 @@
                       <option value="RUC">RUC</option>
                       <option value="DNI">DNI</option>
                     </select>
-                    <span class="ux-select__icon material-symbols-rounded"
-                      >expand_more</span
-                    >
+                    <span class="ux-select__icon material-symbols-rounded">
+                      expand_more
+                    </span>
                   </div>
                 </div>
 
@@ -424,16 +440,13 @@
                       class="form-select ux-input"
                       formControlName="conductorId"
                     >
-                      <option
-                        *ngFor="let c of conductoresMock"
-                        [value]="c.id"
-                      >
+                      <option *ngFor="let c of conductoresMock" [value]="c.id">
                         {{ c.nombre }}
                       </option>
                     </select>
-                    <span class="ux-select__icon material-symbols-rounded"
-                      >expand_more</span
-                    >
+                    <span class="ux-select__icon material-symbols-rounded">
+                      expand_more
+                    </span>
                   </div>
                 </div>
 
@@ -449,9 +462,9 @@
                       <option value="DNI">DNI</option>
                       <option value="CE">CE</option>
                     </select>
-                    <span class="ux-select__icon material-symbols-rounded"
-                      >expand_more</span
-                    >
+                    <span class="ux-select__icon material-symbols-rounded">
+                      expand_more
+                    </span>
                   </div>
                 </div>
 
@@ -497,13 +510,11 @@
                         {{ v.placa }}
                       </option>
                     </select>
-                    <span class="ux-select__icon material-symbols-rounded"
-                      >expand_more</span
-                    >
+                    <span class="ux-select__icon material-symbols-rounded">
+                      expand_more
+                    </span>
                   </div>
                 </div>
-
-
 
                 <div class="col-md-4 col-12">
                   <label class="form-label mb-1 small text-muted">
@@ -512,41 +523,17 @@
                   <div class="ux-select">
                     <select
                       class="form-select ux-input"
-                      formControlName="vehiculoId"
+                      formControlName="trailerId"
                     >
                       <option *ngFor="let v of trailerMock" [value]="v.id">
                         {{ v.placa }}
                       </option>
                     </select>
-                    <span class="ux-select__icon material-symbols-rounded"
-                      >expand_more</span
-                    >
+                    <span class="ux-select__icon material-symbols-rounded">
+                      expand_more
+                    </span>
                   </div>
                 </div>
-
-
-
-                <!-- <div class="col-md-4 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    Placa vehículo
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="placaVehiculo"
-                  />
-                </div> -->
-
-                <!-- <div class="col-md-4 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    Placa tráiler
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="placaTrailer"
-                  />
-                </div> -->
               </div>
             </div>
           </div>
@@ -604,9 +591,7 @@
             </div>
 
             <div class="total-box total-box--input">
-              <label class="total-label mb-1">
-                Ajuste (Kg)
-              </label>
+              <label class="total-label mb-1"> Ajuste (Kg) </label>
               <input
                 type="number"
                 class="form-control ux-input total-input"
@@ -699,9 +684,9 @@
                       (click)="openTarasForPesada(p, i)"
                       title="Gestionar taras"
                     >
-                      <span class="material-symbols-rounded"
-                        >inventory_2</span
-                      >
+                      <span class="material-symbols-rounded">
+                        inventory_2
+                      </span>
                     </button>
 
                     <button

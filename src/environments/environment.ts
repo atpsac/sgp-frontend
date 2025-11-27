@@ -12,10 +12,14 @@ export const environment = {
 
     api: 'http://161.132.194.105:3000/',
   
-    apiBase: 'https://api-pharma.latamtic.com',
-    apiUrl: 'https://api-pharma.latamtic.com/api/',
-    assetsBaseUrl: 'https://api-pharma.latamtic.com/uploads/productos/', 
-    bannersBaseUrl: 'https://api-pharma.latamtic.com/uploads/tiendabanners/',
+
+    apiUrl: 'http://161.132.194.105:3000', // ← base del backend
+
+
+    // apiBase: 'https://api-pharma.latamtic.com',
+    // apiUrl: 'https://api-pharma.latamtic.com/api/',
+    // assetsBaseUrl: 'https://api-pharma.latamtic.com/uploads/productos/', 
+    // bannersBaseUrl: 'https://api-pharma.latamtic.com/uploads/tiendabanners/',
     
     
   

@@ -105,7 +105,7 @@ export interface PedidoFilters {
 @Injectable({ providedIn: 'root' })
 export class Pedidos {
   // base pública (p.ej. http://localhost/api-pharma/public)
-  readonly publicBase = environment.apiBase?.replace(/\/$/, '') || '';
+  readonly publicBase = environment.apiUrl?.replace(/\/$/, '') || '';
   // base de API
   readonly apiBase = `${this.publicBase}/api/`;
   // base para imágenes de productos por Archivo
