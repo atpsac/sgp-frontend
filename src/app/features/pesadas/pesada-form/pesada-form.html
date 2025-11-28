@@ -11,7 +11,6 @@
       </div>
 
       <div class="d-flex flex-wrap gap-2">
-        <!-- Guardar encabezado (hasta paso 4) -->
         <button
           type="button"
           class="ux-btn ux-btn--blue"
@@ -32,7 +31,6 @@
           </ng-container>
         </button>
 
-        <!-- Guardar ticket completo (solo visible en paso 5) -->
         <button
           type="button"
           class="ux-btn ux-btn--primary"
@@ -132,7 +130,7 @@
       class="step-form"
     >
       <div class="step-content" [ngSwitch]="currentStep">
-        <!-- PASO 1: DATOS DE OPERACIÓN -->
+        <!-- PASO 1 -->
         <div *ngSwitchCase="1" class="step-panel">
           <div class="section-header">
             <h6 class="section-title mb-1">Datos de operación</h6>
@@ -168,11 +166,7 @@
                 </div>
               </div>
 
-
-
-
-
-                <div class="col-md-4 col-12">
+              <div class="col-md-4 col-12">
                 <label class="form-label mb-1 small text-muted">
                   Sede de operación
                 </label>
@@ -195,9 +189,6 @@
                 </div>
               </div>
 
-
-
-
               <div class="col-md-5 col-12">
                 <label class="form-label mb-1 small text-muted">
                   Operación
@@ -210,10 +201,7 @@
                     <option [ngValue]="null" disabled *ngIf="operations.length === 0">
                       Selecciona una operación
                     </option>
-                    <option
-                      *ngFor="let op of operations"
-                      [value]="op.id"
-                    >
+                    <option *ngFor="let op of operations" [value]="op.id">
                       {{ op.name }}
                     </option>
                   </select>
@@ -222,13 +210,11 @@
                   </span>
                 </div>
               </div>
-
-            
             </div>
           </div>
         </div>
 
-        <!-- PASO 2: ORIGEN / DESTINO -->
+        <!-- PASO 2 -->
         <div *ngSwitchCase="2" class="step-panel">
           <div class="section-header">
             <h6 class="section-title mb-1">Origen / Destino</h6>
@@ -239,6 +225,7 @@
 
           <div formGroupName="origenDestino">
             <div class="row g-4">
+              <!-- Sede de origen: SOLO no principal -->
               <div class="col-md-6 col-12">
                 <label class="form-label mb-1 small text-muted">
                   Sede de origen
@@ -248,10 +235,14 @@
                     class="form-select ux-input"
                     formControlName="sedeOrigen"
                   >
-                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                    <option
+                      [ngValue]="null"
+                      disabled
+                      *ngIf="originStations.length === 0"
+                    >
                       Selecciona una sede
                     </option>
-                    <option *ngFor="let s of stations" [value]="s.id">
+                    <option *ngFor="let s of originStations" [value]="s.id">
                       {{ s.name }}
                     </option>
                   </select>
@@ -261,6 +252,7 @@
                 </div>
               </div>
 
+              <!-- Sede de destino: SOLO principal -->
               <div class="col-md-6 col-12">
                 <label class="form-label mb-1 small text-muted">
                   Sede de destino
@@ -270,10 +262,17 @@
                     class="form-select ux-input"
                     formControlName="sedeDestino"
                   >
-                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                    <option
+                      [ngValue]="null"
+                      disabled
+                      *ngIf="destinationStations.length === 0"
+                    >
                       Selecciona una sede
                     </option>
-                    <option *ngFor="let s of stations" [value]="s.id">
+                    <option
+                      *ngFor="let s of destinationStations"
+                      [value]="s.id"
+                    >
                       {{ s.name }}
                     </option>
                   </select>
@@ -561,7 +560,7 @@
           </div>
         </div>
 
-        <!-- PASO 5: DETALLE DEL TICKET (PESADAS) -->
+        <!-- PASO 5: DETALLE TICKET -->
         <div *ngSwitchCase="5" class="step-panel">
           <div class="section-header d-flex justify-content-between mb-3">
             <div>
@@ -582,7 +581,6 @@
             </button>
           </div>
 
-          <!-- TOTAlES -->
           <div class="totals-bar" formGroupName="detalleTicket">
             <div class="total-box">
               <div class="total-label">Cantidad ítems</div>
@@ -637,7 +635,6 @@
             </div>
           </div>
 
-          <!-- TABLA DE PESADAS -->
           <div class="table-responsive">
             <table class="table table-hover ux-table m-0">
               <thead class="ux-table__head">
@@ -741,13 +738,13 @@
           </div>
         </div>
 
-        <!-- Default (seguridad) -->
+        <!-- Default -->
         <div *ngSwitchDefault class="step-panel">
           <p class="mb-0">Selecciona un paso para comenzar.</p>
         </div>
       </div>
 
-      <!-- Navegación de pasos -->
+      <!-- Navegación -->
       <div
         class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2"
       >

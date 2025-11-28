@@ -24,12 +24,12 @@ import {
    ========================================================= */
 
 export interface DocumentoRelacionado {
-  id?: number; // opcional, para cuando venga de BD
+  id?: number;
   socioNegocio: string;
-  tipoDocumento: string; // EG, FA, BV, etc.
-  documento: string; // Guía de remisión electrónica, etc.
-  fechaDocumento: string; // 'YYYY-MM-DD'
-  numeroDocumento: string; // combinado serie-numero o como quieras
+  tipoDocumento: string;
+  documento: string;
+  fechaDocumento: string;
+  numeroDocumento: string;
   pesoBrutoKg: number;
   pesoNetoKg: number;
 }
@@ -53,7 +53,7 @@ export interface PesadaDetalle {
   pesoNetoKg: number;
   observaciones: string;
   tieneTara: boolean;
-  estado: string; // EN REGISTRO, CERRADA, ANULADA, etc.
+  estado: string;
   taras: TaraItem[];
 }
 
@@ -69,13 +69,9 @@ export interface PesadaDetalle {
   styleUrl: './pesada-form.scss',
 })
 export class PesadaForm implements OnInit {
-
-
   // Límites para el date
   minFechaEmision!: string;
   maxFechaEmision!: string;
-
-
 
   /* -------------------------------------
    * Paso actual (1 a 5)
@@ -84,19 +80,21 @@ export class PesadaForm implements OnInit {
   readonly maxStep = 5;
 
   /* -------------------------------------
-   * Reactive Form principal (encabezado)
+   * Reactive Form principal
    * ----------------------------------- */
   ticketForm: FormGroup;
 
   /* -------------------------------------
    * Datos de combos desde API
    * ----------------------------------- */
-  stations: BuyingStation[] = [];                // todas las sedes (principal + no principal)
-  principalStation: BuyingStation | null = null; // sede principal
-  operations: OperationStation[] = [];           // operaciones según sede seleccionada
+  stations: BuyingStation[] = [];            // todas las sedes (p/ paso 1)
+  originStations: BuyingStation[] = [];      // solo sedes de origen (no principal)
+  destinationStations: BuyingStation[] = []; // solo sedes destino (principal)
+  principalStation: BuyingStation | null = null;
+  operations: OperationStation[] = [];
 
   /* -------------------------------------
-   * Datos de combos mock (transporte, producto, balanza)
+   * Datos mock
    * ----------------------------------- */
   transportistasMock: { id: number; nombre: string; ruc: string }[] = [
     {
@@ -152,7 +150,7 @@ export class PesadaForm implements OnInit {
   ];
 
   /* -------------------------------------
-   * Tablas (arrays en memoria)
+   * Tablas en memoria
    * ----------------------------------- */
   documentos: DocumentoRelacionado[] = [];
   pesadas: PesadaDetalle[] = [];
@@ -165,16 +163,16 @@ export class PesadaForm implements OnInit {
     totalPesoBruto: 0,
     totalTara: 0,
     subtotalPesoNeto: 0,
-    ajusteKg: 0, // se puede editar desde el form (detalleTicket.ajusteKg)
+    ajusteKg: 0,
     diferenciaAjuste: 0,
     totalPesoNeto: 0,
   };
 
   /* -------------------------------------
-   * Flags de UI
+   * Flags UI
    * ----------------------------------- */
-  isSavingHeader = false; // para guardar hasta paso 4 (encabezado)
-  isSavingFull = false; // para guardar todo el ticket
+  isSavingHeader = false;
+  isSavingFull = false;
   isLoading = false;
 
   /* -------------------------------------
@@ -186,34 +184,27 @@ export class PesadaForm implements OnInit {
     public toast: ToastService,
     private weighingService: WeighingService
   ) {
-    // const today = new Date().toISOString().substring(0, 10);
-      const hoy = new Date();
+    const today = new Date(); // hora local Perú
 
-  // rangos: 3 días antes y 3 días después
- const today = new Date(); // usa hora local (Perú)
-  // rangos: 3 días antes y 3 días después (en horario local)
-  this.minFechaEmision = this.shiftDateLocal(today, -3);
-  this.maxFechaEmision = this.shiftDateLocal(today,  3);
-  const todayStr = this.shiftDateLocal(today, 0);
-
-
+    this.minFechaEmision = this.shiftDateLocal(today, -3);
+    this.maxFechaEmision = this.shiftDateLocal(today, 3);
+    const todayStr = this.shiftDateLocal(today, 0);
 
     this.ticketForm = this.fb.group({
       // 1) Datos de operación
       datosOperacion: this.fb.group({
         fechaEmision: [todayStr, Validators.required],
-        // ahora estos campos guardan IDs de la API
-        operacion: [null, Validators.required], // OperationStation.id
-        sedeOperacion: [null, Validators.required], // BuyingStation.id
+        operacion: [null, Validators.required],
+        sedeOperacion: [null, Validators.required],
       }),
 
       // 2) Origen / destino
       origenDestino: this.fb.group({
-        sedeOrigen: [null, Validators.required], // BuyingStation.id
-        sedeDestino: [null, Validators.required], // BuyingStation.id
+        sedeOrigen: [null, Validators.required],   // solo no principal
+        sedeDestino: [null, Validators.required],  // solo principal
       }),
 
-      // 4) Datos del transporte (grupo completo)
+      // 4) Transporte
       transporte: this.fb.group({
         transportista: this.fb.group({
           transportistaId: [
@@ -260,58 +251,48 @@ export class PesadaForm implements OnInit {
         }),
       }),
 
-      // 5) Detalle del ticket (campos de cabecera de totales)
+      // 5) Detalle ticket
       detalleTicket: this.fb.group({
-        ajusteKg: [0], // manual si quieres
+        ajusteKg: [0],
       }),
     });
   }
 
+  private shiftDateLocal(base: Date, days: number): string {
+    const d = new Date(base.getTime());
+    d.setDate(d.getDate() + days);
+    return this.formatLocalDate(d);
+  }
 
-    private shiftDateLocal(base: Date, days: number): string {
-      const d = new Date(base.getTime());
-      d.setDate(d.getDate() + days);
-      return this.formatLocalDate(d);
-    }
+  private formatLocalDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
-    private formatLocalDate(date: Date): string {
-      const year = date.getFullYear();
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const day = date.getDate().toString().padStart(2, '0');
-      // formato YYYY-MM-DD para el input[type=date]
-      return `${year}-${month}-${day}`;
-    }
-
-  /* -------------------------------------
-   * Getters rápidos
-   * ----------------------------------- */
+  /* Getters rápidos */
   get datosOperacion(): FormGroup {
     return this.ticketForm.get('datosOperacion') as FormGroup;
   }
-
   get origenDestino(): FormGroup {
     return this.ticketForm.get('origenDestino') as FormGroup;
   }
-
   get transporte(): FormGroup {
     return this.ticketForm.get('transporte') as FormGroup;
   }
-
   get detalleTicket(): FormGroup {
     return this.ticketForm.get('detalleTicket') as FormGroup;
   }
 
-  /* -------------------------------------
-   * Ciclo de vida
-   * ----------------------------------- */
+  /* Ciclo de vida */
   ngOnInit(): void {
     this.loadStationsAndOperations();
   }
 
   /* =========================================================
-     CARGA DE SEDES Y OPERACIONES (APIs PESADAS)
+     CARGA DE SEDES Y OPERACIONES
      ========================================================= */
-
   private loadStationsAndOperations(): void {
     this.isLoading = true;
 
@@ -319,22 +300,38 @@ export class PesadaForm implements OnInit {
     this.weighingService.getPrincipalBuyingStation().subscribe({
       next: (principal) => {
         this.principalStation = principal;
+
+        // Para paso 1: todas las sedes (luego se agregan las no principales)
         this.stations = [principal];
 
-        // Valores por defecto en pasos 1 y 2
+        // Para destino en paso 2: solo la principal
+        this.destinationStations = [principal];
+
+        // Defaults:
         this.datosOperacion.patchValue({
           sedeOperacion: principal.id,
         });
-
         this.origenDestino.patchValue({
-          sedeOrigen: principal.id,
-          sedeDestino: principal.id,
+          sedeDestino: principal.id, // destino = ATP LIMA
         });
 
-        // 2) Sedes no principales
+        // 2) Sedes NO principales (origen en paso 2)
         this.weighingService.getNonPrincipalBuyingStations().subscribe({
           next: (nonPrincipal) => {
-            this.stations = [principal, ...nonPrincipal];
+            this.stations = [principal, ...nonPrincipal]; // para paso 1
+            this.originStations = nonPrincipal || [];
+
+            // Default de origen: primera no principal si existe
+            if (this.originStations.length > 0) {
+              this.origenDestino.patchValue({
+                sedeOrigen: this.originStations[0].id,
+              });
+            } else {
+              // Si por alguna razón no hay no-principal, fallback a principal
+              this.origenDestino.patchValue({
+                sedeOrigen: principal.id,
+              });
+            }
           },
           error: (err) => {
             console.error('Error loading non-principal buying stations', err);
@@ -354,9 +351,6 @@ export class PesadaForm implements OnInit {
     });
   }
 
-  /**
-   * Cuando cambia la sede de operación (paso 1) recargamos las operaciones.
-   */
   onChangeOperationStation(): void {
     const stationId = Number(
       this.datosOperacion.get('sedeOperacion')?.value || 0
@@ -366,7 +360,6 @@ export class PesadaForm implements OnInit {
       this.datosOperacion.patchValue({ operacion: null });
       return;
     }
-
     this.loadOperationsForStation(stationId);
   }
 
@@ -378,7 +371,6 @@ export class PesadaForm implements OnInit {
       next: (ops) => {
         this.operations = ops || [];
         if (this.operations.length > 0) {
-          // Selecciona por defecto la primera operación
           this.datosOperacion.patchValue({
             operacion: this.operations[0].id,
           });
@@ -393,11 +385,9 @@ export class PesadaForm implements OnInit {
   /* =========================================================
      NAVEGACIÓN DE PASOS
      ========================================================= */
-
   goToStep(step: number): void {
     if (step < 1 || step > this.maxStep) return;
 
-    // Validar si intento ir hacia adelante
     if (step > this.currentStep) {
       const isValid = this.validateUpToStep(step - 1);
       if (!isValid) return;
@@ -408,8 +398,7 @@ export class PesadaForm implements OnInit {
 
   nextStep(): void {
     if (this.currentStep >= this.maxStep) return;
-    const target = this.currentStep + 1;
-    this.goToStep(target);
+    this.goToStep(this.currentStep + 1);
   }
 
   prevStep(): void {
@@ -417,32 +406,22 @@ export class PesadaForm implements OnInit {
     this.currentStep = this.currentStep - 1;
   }
 
-  /**
-   * Valida todos los grupos necesarios hasta determinado paso.
-   * Si algo es inválido, marca como touched para mostrar errores.
-   */
   private validateUpToStep(step: number): boolean {
     let isValid = true;
 
-    if (step >= 1) {
-      if (this.datosOperacion.invalid) {
-        this.datosOperacion.markAllAsTouched();
-        isValid = false;
-      }
+    if (step >= 1 && this.datosOperacion.invalid) {
+      this.datosOperacion.markAllAsTouched();
+      isValid = false;
     }
 
-    if (step >= 2) {
-      if (this.origenDestino.invalid) {
-        this.origenDestino.markAllAsTouched();
-        isValid = false;
-      }
+    if (step >= 2 && this.origenDestino.invalid) {
+      this.origenDestino.markAllAsTouched();
+      isValid = false;
     }
 
-    if (step >= 4) {
-      if (this.transporte.invalid) {
-        this.transporte.markAllAsTouched();
-        isValid = false;
-      }
+    if (step >= 4 && this.transporte.invalid) {
+      this.transporte.markAllAsTouched();
+      isValid = false;
     }
 
     return isValid;
@@ -451,7 +430,6 @@ export class PesadaForm implements OnInit {
   /* =========================================================
      DOCUMENTOS RELACIONADOS (PASO 3)
      ========================================================= */
-
   addDocumentoRelacionado(): void {
     this.openDocumentoModal();
   }
@@ -464,39 +442,31 @@ export class PesadaForm implements OnInit {
     this.documentos.splice(index, 1);
   }
 
-  private openDocumentoModal(
-    row?: DocumentoRelacionado,
-    index?: number
-  ): void {
+  private openDocumentoModal(row?: DocumentoRelacionado, index?: number): void {
     const modalRef = this.modalService.open(PesadaDocumento, {
       size: 'xl',
       centered: true,
       backdrop: 'static',
     });
 
-    // Pasar data inicial al modal (para editar)
     (modalRef.componentInstance as any).data = row ?? null;
 
     modalRef.result
       .then((result: DocumentoRelacionado | null | undefined) => {
         if (!result) return;
 
-        // Si vino índice -> es edición
         if (index != null) {
           this.documentos[index] = result;
         } else {
           this.documentos.push(result);
         }
       })
-      .catch(() => {
-        // cerrado sin guardar
-      });
+      .catch(() => {});
   }
 
   /* =========================================================
      PESADAS (PASO 5)
      ========================================================= */
-
   addPesada(): void {
     this.openPesadaModal();
   }
@@ -510,10 +480,6 @@ export class PesadaForm implements OnInit {
     this.recalcularTotalesPesadas();
   }
 
-  /**
-   * Modal para agregar/editar una pesada.
-   * Debe devolver un PesadaDetalle (sin taras o con taras iniciales).
-   */
   private openPesadaModal(row?: PesadaDetalle, index?: number): void {
     const modalRef = this.modalService.open(PesadaPeso, {
       size: 'xl',
@@ -531,10 +497,10 @@ export class PesadaForm implements OnInit {
       .then((result: PesadaDetalle | null | undefined) => {
         if (!result) return;
 
-        // Aseguramos estructura mínima
         if (!Array.isArray(result.taras)) {
           result.taras = [];
         }
+
         result.taraTotalKg =
           result.taras.reduce((acc, t) => acc + (t.taraKg || 0), 0) || 0;
         result.pesoNetoKg = result.pesoBrutoKg - result.taraTotalKg;
@@ -547,14 +513,9 @@ export class PesadaForm implements OnInit {
 
         this.recalcularTotalesPesadas();
       })
-      .catch(() => {
-        // cerrado sin guardar
-      });
+      .catch(() => {});
   }
 
-  /**
-   * Abre el modal de taras para una pesada específica.
-   */
   openTarasForPesada(row: PesadaDetalle, index: number): void {
     const modalRef = this.modalService.open(PesadaTara, {
       size: 'xl',
@@ -571,7 +532,6 @@ export class PesadaForm implements OnInit {
       .then((result: TaraItem[] | null | undefined) => {
         if (!result) return;
 
-        // Actualizar taras de la pesada
         this.pesadas[index].taras = result;
         this.pesadas[index].taraTotalKg =
           result.reduce((acc, t) => acc + (t.taraKg || 0), 0) || 0;
@@ -581,14 +541,9 @@ export class PesadaForm implements OnInit {
 
         this.recalcularTotalesPesadas();
       })
-      .catch(() => {
-        // cerrado sin cambios
-      });
+      .catch(() => {});
   }
 
-  /**
-   * Recalcula los totales de la sección Detalle del ticket.
-   */
   private recalcularTotalesPesadas(): void {
     const ajusteKg = Number(this.detalleTicket.get('ajusteKg')?.value || 0);
 
@@ -620,21 +575,13 @@ export class PesadaForm implements OnInit {
     };
   }
 
-  /**
-   * Cuando el usuario cambia manualmente el ajuste en el form.
-   */
   onChangeAjusteKg(): void {
     this.recalcularTotalesPesadas();
   }
 
   /* =========================================================
-     GUARDAR / ENVIAR
+     GUARDAR
      ========================================================= */
-
-  /**
-   * Guardar solo encabezado (hasta paso 4).
-   * Útil si luego el API maneja "crear ticket" y después se van agregando detalles.
-   */
   async guardarEncabezado() {
     const ok = await this.toast.confirm(
       '¿Desea guardar el ticket de balanza?',
@@ -645,17 +592,12 @@ export class PesadaForm implements OnInit {
     );
 
     if (!ok) return;
-
-    // Aquí luego llamas a tu API real usando this.ticketForm.value
+    // TODO: llamada al API
   }
 
-  /**
-   * Guardar ticket completo con detalles de pesadas y taras.
-   */
   guardarTicketCompleto(): void {
     const isValid = this.validateUpToStep(this.maxStep);
     if (!isValid) {
-      // Si algo falla, me voy al primer paso
       this.currentStep = 1;
       return;
     }
@@ -670,12 +612,10 @@ export class PesadaForm implements OnInit {
       totalesPesadas: this.totalesPesadas,
     };
 
-    // TODO: reemplazar por llamada real a tu API
     console.log('Payload COMPLETO ticket balanza:', payload);
 
     setTimeout(() => {
       this.isSavingFull = false;
-      // Aquí podrías redirigir al listado o mostrar Swal de éxito
     }, 700);
   }
 }
