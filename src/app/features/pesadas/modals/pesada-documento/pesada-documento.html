@@ -18,7 +18,7 @@
 
   <div class="modal-body pt-3">
     <form [formGroup]="form" (ngSubmit)="guardar()" novalidate>
-      <!-- Fila 1: socio, tipo doc, documento -->
+      <!-- Fila 1: socio, tipo documento (6 / 6) -->
       <div class="row g-3 mb-3">
         <!-- Socio de negocio -->
         <div class="col-lg-6 col-md-6 col-12">
@@ -32,10 +32,10 @@
             >
               <option value="">Selecciona un socio</option>
               <option
-                *ngFor="let s of socioNegocioOptions"
-                [ngValue]="s"
+                *ngFor="let s of businessPartners"
+                [value]="s.companyName"
               >
-                {{ s }}
+                {{ s.companyName }}
               </option>
             </select>
             <span class="ux-select__icon material-symbols-rounded">
@@ -45,7 +45,7 @@
         </div>
 
         <!-- Tipo documento -->
-        <div class="col-lg-3 col-md-3 col-12">
+        <div class="col-lg-6 col-md-6 col-12">
           <label class="form-label mb-1 small text-muted">
             Tipo de documento *
           </label>
@@ -54,11 +54,12 @@
               class="form-select ux-input"
               formControlName="tipoDocumento"
             >
+              <option value="">Selecciona un tipo</option>
               <option
-                *ngFor="let t of tipoDocumentoOptions"
-                [ngValue]="t.value"
+                *ngFor="let t of documentTypes"
+                [value]="t.code"
               >
-                {{ t.label }}
+                {{ t.name }} ({{ t.code }})
               </option>
             </select>
             <span class="ux-select__icon material-symbols-rounded">
@@ -66,25 +67,12 @@
             </span>
           </div>
         </div>
-
-        <!-- Documento (descripción corta) -->
-        <div class="col-lg-3 col-md-3 col-12">
-          <label class="form-label mb-1 small text-muted">
-            Documento *
-          </label>
-          <input
-            type="text"
-            class="form-control ux-input"
-            formControlName="documento"
-            placeholder="Ej: GUÍA DE REMISIÓN ELECTRÓNICA"
-          />
-        </div>
       </div>
 
-      <!-- Fila 2: fecha, serie, número -->
+      <!-- Fila 2: fecha, serie, número (4 / 4 / 4) -->
       <div class="row g-3 mb-3">
         <!-- Fecha documento -->
-        <div class="col-lg-3 col-md-4 col-12">
+        <div class="col-lg-4 col-md-4 col-12">
           <label class="form-label mb-1 small text-muted">
             Fecha del documento *
           </label>
@@ -96,7 +84,7 @@
         </div>
 
         <!-- Serie -->
-        <div class="col-lg-2 col-md-4 col-6">
+        <div class="col-lg-4 col-md-4 col-6">
           <label class="form-label mb-1 small text-muted">
             Serie *
           </label>
@@ -109,7 +97,7 @@
         </div>
 
         <!-- Número correlativo -->
-        <div class="col-lg-3 col-md-4 col-6">
+        <div class="col-lg-4 col-md-4 col-6">
           <label class="form-label mb-1 small text-muted">
             Número *
           </label>
@@ -120,25 +108,11 @@
             placeholder="0000001"
           />
         </div>
-
-        <!-- Número completo solo lectura -->
-        <div class="col-lg-4 col-12 d-flex align-items-end">
-          <div class="w-100">
-            <span class="form-label mb-1 small text-muted d-block">
-              Número documento (preview)
-            </span>
-            <div class="numero-preview">
-              {{
-                (form.value.serie || '') + '-' + (form.value.numeroCorrelativo || '')
-              }}
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Fila 3: pesos -->
+      <!-- Fila 3: pesos (4 / 4 / 4 → último queda libre por ahora) -->
       <div class="row g-3">
-        <div class="col-lg-3 col-md-4 col-12">
+        <div class="col-lg-4 col-md-4 col-12">
           <label class="form-label mb-1 small text-muted">
             Peso bruto (Kg) *
           </label>
@@ -152,7 +126,7 @@
           />
         </div>
 
-        <div class="col-lg-3 col-md-4 col-12">
+        <div class="col-lg-4 col-md-4 col-12">
           <label class="form-label mb-1 small text-muted">
             Peso neto (Kg) *
           </label>
@@ -165,6 +139,9 @@
             placeholder="0.00"
           />
         </div>
+
+        <!-- Espacio libre para futuro (tara, etc.) -->
+        <div class="col-lg-4 col-md-4 d-none d-md-block"></div>
       </div>
     </form>
   </div>

@@ -8,15 +8,21 @@ import {
 } from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
+import {
+  WeighingService,
+  BusinessPartner,
+  DocumentType,
+} from '../../../../core/services/weighing.service';
+
 export interface PesadaDocumentoModel {
   id?: number;
-  socioNegocio: string;
-  tipoDocumento: string;
-  documento: string;
-  fechaDocumento: string; // yyyy-MM-dd
+  socioNegocio: string;        // nombre del socio (companyName)
+  tipoDocumento: string;       // código del documento (EF, EG, etc.)
+  documento: string;           // nombre del documento (FACTURA ELECTRÓNICA...)
+  fechaDocumento: string;      // yyyy-MM-dd
   serie: string;
   numeroCorrelativo: string;
-  numeroDocumento: string;
+  numeroDocumento: string;     // serie-numero
   pesoBrutoKg: number;
   pesoNetoKg: number;
 }
@@ -32,31 +38,23 @@ export class PesadaDocumento implements OnInit {
   @Input() titulo = 'Agregar documento relacionado';
   @Input() data: PesadaDocumentoModel | null = null;
 
+  /** Id de operación para consultar socios y tipos de documento */
+  @Input() operationId!: number;
+
   form: FormGroup;
   isSaving = false;
 
-  // Opciones de ejemplo (puedes luego cambiarlas por las de tu API)
-  socioNegocioOptions: string[] = [
-    'AMAZONAS TRADING PERU S.A.C.',
-    'CLIENTE EXTERNO 1',
-    'CLIENTE EXTERNO 2',
-  ];
-
-  tipoDocumentoOptions: { value: string; label: string }[] = [
-    { value: 'EG', label: 'Guía de remisión electrónica (EG)' },
-    { value: 'GR', label: 'Guía de remisión (GR)' },
-    { value: 'FA', label: 'Factura' },
-    { value: 'BV', label: 'Boleta de venta' },
-  ];
+  businessPartners: BusinessPartner[] = [];
+  documentTypes: DocumentType[] = [];
 
   constructor(
     private fb: FormBuilder,
-    public activeModal: NgbActiveModal
+    public activeModal: NgbActiveModal,
+    private weighingService: WeighingService
   ) {
     this.form = this.fb.group({
       socioNegocio: ['', Validators.required],
-      tipoDocumento: ['EG', Validators.required],
-      documento: ['', Validators.required],
+      tipoDocumento: ['', Validators.required], // código del documento
       fechaDocumento: ['', Validators.required],
       serie: ['', Validators.required],
       numeroCorrelativo: ['', Validators.required],
@@ -66,13 +64,15 @@ export class PesadaDocumento implements OnInit {
   }
 
   ngOnInit(): void {
+    // Carga de combos desde API
+    this.loadBusinessPartnersAndDocuments();
+
+    // Si viene data => modo edición, seteamos valores
     if (this.data) {
-      // Modo edición
       this.titulo = 'Editar documento relacionado';
       this.form.patchValue({
         socioNegocio: this.data.socioNegocio,
-        tipoDocumento: this.data.tipoDocumento,
-        documento: this.data.documento,
+        tipoDocumento: this.data.tipoDocumento, // código
         fechaDocumento: this.toDateInputValue(this.data.fechaDocumento),
         serie: this.data.serie,
         numeroCorrelativo: this.data.numeroCorrelativo,
@@ -80,6 +80,41 @@ export class PesadaDocumento implements OnInit {
         pesoNetoKg: this.data.pesoNetoKg,
       });
     }
+  }
+
+  /** Carga socios y tipos de documento SIN dejar seleccionados por defecto */
+  private loadBusinessPartnersAndDocuments(): void {
+    if (!this.operationId) {
+      return;
+    }
+
+    // Socios de negocio por operación
+    this.weighingService
+      .getBusinessPartnersByOperation(this.operationId)
+      .subscribe({
+        next: (partners) => {
+          this.businessPartners = partners || [];
+          // IMPORTANTE: no seteamos socioNegocio si es nuevo.
+          // Si es edición, el patch del ngOnInit ya puso el valor.
+        },
+        error: (err) => {
+          console.error('Error loading business partners', err);
+        },
+      });
+
+    // Tipos de documento por operación
+    this.weighingService
+      .getDocumentTypesByOperation(this.operationId)
+      .subscribe({
+        next: (docs) => {
+          this.documentTypes = docs || [];
+          // IMPORTANTE: no seteamos tipoDocumento por defecto.
+          // En edición ya viene seteado desde ngOnInit.
+        },
+        error: (err) => {
+          console.error('Error loading document types', err);
+        },
+      });
   }
 
   private toDateInputValue(value: string | Date): string {
@@ -105,15 +140,22 @@ export class PesadaDocumento implements OnInit {
 
     const raw = this.form.value;
 
+    // Serie-numero
     const numeroDocumento = `${(raw.serie || '').trim()}-${(
       raw.numeroCorrelativo || ''
     ).trim()}`;
 
+    // Buscar descripción del tipo de documento
+    const selectedDocType = this.documentTypes.find(
+      (d) => d.code === raw.tipoDocumento
+    );
+    const docName = selectedDocType?.name ?? '';
+
     const result: PesadaDocumentoModel = {
       id: this.data?.id,
       socioNegocio: raw.socioNegocio,
-      tipoDocumento: raw.tipoDocumento,
-      documento: raw.documento,
+      tipoDocumento: raw.tipoDocumento, // código (EF, EG, etc.)
+      documento: docName,               // nombre del documento
       fechaDocumento: raw.fechaDocumento,
       serie: raw.serie,
       numeroCorrelativo: raw.numeroCorrelativo,

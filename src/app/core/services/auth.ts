@@ -5,12 +5,20 @@ import { Router } from '@angular/router';
 import { Observable, of, tap, map, catchError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export interface LoginResponse {
+// ---- NUEVAS INTERFACES SEGÚN RESPUESTA DEL BACKEND ----
+export interface LoginData {
   id: number;
   email: string;
   username: string;
   access_token: string;
   refresh_token: string;
+}
+
+// Respuesta estándar del backend: status, message, data[]
+export interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,20 +33,31 @@ export class AuthService {
 
   // Helper para armar URL absoluta usando environment
   private api(path: string): string {
-    const base = environment.apiUrl.replace(/\/+$/, '');     // quita / al final
-    const clean = path.replace(/^\/+/, '');                  // quita / al inicio
+    const base = environment.apiUrl.replace(/\/+$/, ''); // quita / al final
+    const clean = path.replace(/^\/+/, ''); // quita / al inicio
     return `${base}/${clean}`;
   }
 
   // ========= LOGIN =========
-  login(email: string, password: string): Observable<LoginResponse> {
-    const url = this.api('auth/login'); // http://161.132.194.105:3000/auth/login
-    return this.http.post<LoginResponse>(url, { email, password }).pipe(
-      tap((res) => this.storeTokensAndUser(res))
-    );
+  login(email: string, password: string): Observable<LoginData> {
+    const url = this.api('auth/login'); // http://.../auth/login
+
+    return this.http
+      .post<ApiResponse<LoginData>>(url, { email, password })
+      .pipe(
+        // Tomamos el primer elemento del array data
+        map((res) => {
+          const user = res?.data?.[0];
+          if (!user) {
+            throw new Error('Respuesta de login inválida (sin data)');
+          }
+          return user;
+        }),
+        tap((user) => this.storeTokensAndUser(user))
+      );
   }
 
-  private storeTokensAndUser(res: LoginResponse): void {
+  private storeTokensAndUser(res: LoginData): void {
     // access → sessionStorage
     sessionStorage.setItem(this.ACCESS_KEY, res.access_token);
 
@@ -85,20 +104,28 @@ export class AuthService {
     const url = this.api('auth/refresh');
 
     const headers = new HttpHeaders({
-      Authorization: `Bearer ${refresh}`,
+      Authorization: `Bearer ${refresh}`, // aquí va el refresh_token
     });
 
-    return this.http.post<any>(url, null, { headers }).pipe(
-      tap((res) => {
-        const accessToken = res?.accessToken;
-        const refreshToken = res?.refreshToken;
+    return this.http.post<ApiResponse<LoginData>>(url, null, { headers }).pipe(
+      // extraemos el primer elemento de data
+      map((res) => res?.data?.[0] ?? null),
+      tap((user) => {
+        if (!user) {
+          throw new Error('Respuesta de refresh inválida (sin data)');
+        }
 
-        if (accessToken) {
-          sessionStorage.setItem(this.ACCESS_KEY, accessToken);
+        const { access_token, refresh_token, ...userWithoutTokens } = user;
+
+        if (access_token) {
+          sessionStorage.setItem(this.ACCESS_KEY, access_token);
         }
-        if (refreshToken) {
-          localStorage.setItem(this.REFRESH_KEY, refreshToken);
+        if (refresh_token) {
+          localStorage.setItem(this.REFRESH_KEY, refresh_token);
         }
+
+        // opcional: actualizamos también los datos del usuario
+        localStorage.setItem(this.USER_KEY, JSON.stringify(userWithoutTokens));
       }),
       map(() => true),
       catchError(() => {

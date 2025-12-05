@@ -176,10 +176,10 @@
                     formControlName="sedeOperacion"
                     (change)="onChangeOperationStation()"
                   >
-                    <option [ngValue]="null" disabled *ngIf="stations.length === 0">
+                    <option [ngValue]="null" disabled>
                       Selecciona una sede
                     </option>
-                    <option *ngFor="let s of stations" [value]="s.id">
+                    <option *ngFor="let s of stations" [ngValue]="s.id">
                       {{ s.name }}
                     </option>
                   </select>
@@ -198,10 +198,10 @@
                     class="form-select ux-input"
                     formControlName="operacion"
                   >
-                    <option [ngValue]="null" disabled *ngIf="operations.length === 0">
+                    <option [ngValue]="null" disabled>
                       Selecciona una operación
                     </option>
-                    <option *ngFor="let op of operations" [value]="op.id">
+                    <option *ngFor="let op of operations" [ngValue]="op.id">
                       {{ op.name }}
                     </option>
                   </select>
@@ -225,7 +225,7 @@
 
           <div formGroupName="origenDestino">
             <div class="row g-4">
-              <!-- Sede de origen: SOLO no principal -->
+              <!-- Sede de origen -->
               <div class="col-md-6 col-12">
                 <label class="form-label mb-1 small text-muted">
                   Sede de origen
@@ -235,14 +235,10 @@
                     class="form-select ux-input"
                     formControlName="sedeOrigen"
                   >
-                    <option
-                      [ngValue]="null"
-                      disabled
-                      *ngIf="originStations.length === 0"
-                    >
+                    <option [ngValue]="null" disabled>
                       Selecciona una sede
                     </option>
-                    <option *ngFor="let s of originStations" [value]="s.id">
+                    <option *ngFor="let s of originStations" [ngValue]="s.id">
                       {{ s.name }}
                     </option>
                   </select>
@@ -252,7 +248,7 @@
                 </div>
               </div>
 
-              <!-- Sede de destino: SOLO principal -->
+              <!-- Sede de destino -->
               <div class="col-md-6 col-12">
                 <label class="form-label mb-1 small text-muted">
                   Sede de destino
@@ -262,16 +258,12 @@
                     class="form-select ux-input"
                     formControlName="sedeDestino"
                   >
-                    <option
-                      [ngValue]="null"
-                      disabled
-                      *ngIf="destinationStations.length === 0"
-                    >
+                    <option [ngValue]="null" disabled>
                       Selecciona una sede
                     </option>
                     <option
                       *ngFor="let s of destinationStations"
-                      [value]="s.id"
+                      [ngValue]="s.id"
                     >
                       {{ s.name }}
                     </option>
@@ -402,12 +394,13 @@
                     <select
                       class="form-select ux-input"
                       formControlName="transportistaId"
+                      (change)="onChangeTransportista()"
                     >
-                      <option
-                        *ngFor="let t of transportistasMock"
-                        [value]="t.id"
-                      >
-                        {{ t.nombre }}
+                      <option [ngValue]="null" disabled>
+                        Selecciona un transportista
+                      </option>
+                      <option *ngFor="let t of carriers" [ngValue]="t.id">
+                        {{ t.companyName }}
                       </option>
                     </select>
                     <span class="ux-select__icon material-symbols-rounded">
@@ -425,6 +418,7 @@
                       class="form-select ux-input"
                       formControlName="tipoDocumento"
                     >
+                      <option value="" disabled>Selecciona</option>
                       <option value="RUC">RUC</option>
                       <option value="DNI">DNI</option>
                     </select>
@@ -444,6 +438,17 @@
                     formControlName="numeroDocumento"
                   />
                 </div>
+
+                <div class="col-12">
+                  <label class="form-label mb-1 small text-muted">
+                    Razón social
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control ux-input"
+                    formControlName="nombre"
+                  />
+                </div>
               </div>
             </div>
 
@@ -460,9 +465,13 @@
                     <select
                       class="form-select ux-input"
                       formControlName="conductorId"
+                      (change)="onChangeConductor()"
                     >
-                      <option *ngFor="let c of conductoresMock" [value]="c.id">
-                        {{ c.nombre }}
+                      <option [ngValue]="null" disabled>
+                        Selecciona un conductor
+                      </option>
+                      <option *ngFor="let c of carrierDrivers" [ngValue]="c.id">
+                        {{ c.fullName }}
                       </option>
                     </select>
                     <span class="ux-select__icon material-symbols-rounded">
@@ -480,6 +489,7 @@
                       class="form-select ux-input"
                       formControlName="tipoDocumento"
                     >
+                      <option value="" disabled>Selecciona</option>
                       <option value="DNI">DNI</option>
                       <option value="CE">CE</option>
                     </select>
@@ -510,6 +520,17 @@
                     formControlName="licenciaConducir"
                   />
                 </div>
+
+                <div class="col-md-9 col-12">
+                  <label class="form-label mb-1 small text-muted">
+                    Nombre completo
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control ux-input"
+                    formControlName="nombre"
+                  />
+                </div>
               </div>
             </div>
 
@@ -527,8 +548,11 @@
                       class="form-select ux-input"
                       formControlName="vehiculoId"
                     >
-                      <option *ngFor="let v of vehiculosMock" [value]="v.id">
-                        {{ v.placa }}
+                      <option [ngValue]="null" disabled>
+                        Selecciona un vehículo
+                      </option>
+                      <option *ngFor="let v of carrierTrucks" [ngValue]="v.id">
+                        {{ getTruckPlate(v) }}
                       </option>
                     </select>
                     <span class="ux-select__icon material-symbols-rounded">
@@ -546,8 +570,14 @@
                       class="form-select ux-input"
                       formControlName="trailerId"
                     >
-                      <option *ngFor="let v of trailerMock" [value]="v.id">
-                        {{ v.placa }}
+                      <option [ngValue]="null" disabled>
+                        Selecciona un trailer
+                      </option>
+                      <option
+                        *ngFor="let v of carrierTrailers"
+                        [ngValue]="v.id"
+                      >
+                        {{ getTrailerPlate(v) }}
                       </option>
                     </select>
                     <span class="ux-select__icon material-symbols-rounded">

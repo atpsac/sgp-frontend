@@ -17,6 +17,10 @@ import {
   WeighingService,
   BuyingStation,
   OperationStation,
+  Carrier,
+  CarrierDriver,
+  CarrierTruck,
+  CarrierTrailer,
 } from '../../../core/services/weighing.service';
 
 /* =========================================================
@@ -87,57 +91,22 @@ export class PesadaForm implements OnInit {
   /* -------------------------------------
    * Datos de combos desde API
    * ----------------------------------- */
-  stations: BuyingStation[] = [];            // todas las sedes (p/ paso 1)
-  originStations: BuyingStation[] = [];      // solo sedes de origen (no principal)
-  destinationStations: BuyingStation[] = []; // solo sedes destino (principal)
+  // Sedes / operaciones
+  stations: BuyingStation[] = [];
+  originStations: BuyingStation[] = [];
+  destinationStations: BuyingStation[] = [];
   principalStation: BuyingStation | null = null;
   operations: OperationStation[] = [];
 
+  // Transporte desde API
+  carriers: Carrier[] = [];
+  carrierDrivers: CarrierDriver[] = [];
+  carrierTrucks: CarrierTruck[] = [];
+  carrierTrailers: CarrierTrailer[] = [];
+
   /* -------------------------------------
-   * Datos mock
+   * Datos mock (productos / balanzas)
    * ----------------------------------- */
-  transportistasMock: { id: number; nombre: string; ruc: string }[] = [
-    {
-      id: 1,
-      nombre: 'TRANSPORTES Y LOGÍSTICA CAMAC E.I.R.L.',
-      ruc: '20621451241',
-    },
-    { id: 2, nombre: 'TRANSPORTES AMAZONAS S.A.C.', ruc: '20567890123' },
-  ];
-
-  conductoresMock: {
-    id: number;
-    nombre: string;
-    tipoDocumento: string;
-    numeroDocumento: string;
-    licencia: string;
-  }[] = [
-    {
-      id: 1,
-      nombre: 'CRISTIAN PAUL ANGULO ANYOSA',
-      tipoDocumento: 'DNI',
-      numeroDocumento: '45865258',
-      licencia: 'Q4568528',
-    },
-    {
-      id: 2,
-      nombre: 'JUAN CARLOS PÉREZ RAMÍREZ',
-      tipoDocumento: 'DNI',
-      numeroDocumento: '42345678',
-      licencia: 'B7896541',
-    },
-  ];
-
-  vehiculosMock: { id: number; placa: string; placaTrailer?: string }[] = [
-    { id: 1, placa: 'A0Z-547', placaTrailer: 'XDF-453' },
-    { id: 2, placa: 'B1Z-123', placaTrailer: 'YGH-789' },
-  ];
-
-  trailerMock: { id: number; placa: string; placaTrailer?: string }[] = [
-    { id: 1, placa: 'XDF-458', placaTrailer: 'XDF-453' },
-    { id: 2, placa: 'XDF-459', placaTrailer: 'YGH-789' },
-  ];
-
   productosMock: string[] = [
     'CACAO EN GRANO HÚMEDO',
     'CACAO EN GRANO SECO',
@@ -200,54 +169,30 @@ export class PesadaForm implements OnInit {
 
       // 2) Origen / destino
       origenDestino: this.fb.group({
-        sedeOrigen: [null, Validators.required],   // solo no principal
-        sedeDestino: [null, Validators.required],  // solo principal
+        sedeOrigen: [null, Validators.required],
+        sedeDestino: [null, Validators.required],
       }),
 
       // 4) Transporte
       transporte: this.fb.group({
         transportista: this.fb.group({
-          transportistaId: [
-            this.transportistasMock[0]?.id ?? null,
-            Validators.required,
-          ],
-          nombre: [
-            this.transportistasMock[0]?.nombre ?? '',
-            Validators.required,
-          ],
-          tipoDocumento: ['RUC', Validators.required],
-          numeroDocumento: [
-            this.transportistasMock[0]?.ruc ?? '',
-            Validators.required,
-          ],
+          transportistaId: [null, Validators.required],
+          nombre: ['', Validators.required],
+          tipoDocumento: ['', Validators.required],
+          numeroDocumento: ['', Validators.required],
         }),
 
         conductor: this.fb.group({
-          conductorId: [
-            this.conductoresMock[0]?.id ?? null,
-            Validators.required,
-          ],
-          nombre: [
-            this.conductoresMock[0]?.nombre ?? '',
-            Validators.required,
-          ],
-          tipoDocumento: [
-            this.conductoresMock[0]?.tipoDocumento ?? 'DNI',
-            Validators.required,
-          ],
-          numeroDocumento: [
-            this.conductoresMock[0]?.numeroDocumento ?? '',
-            Validators.required,
-          ],
-          licenciaConducir: [
-            this.conductoresMock[0]?.licencia ?? '',
-            Validators.required,
-          ],
+          conductorId: [null, Validators.required],
+          nombre: ['', Validators.required],
+          tipoDocumento: ['', Validators.required],
+          numeroDocumento: ['', Validators.required],
+          licenciaConducir: ['', Validators.required],
         }),
 
         vehiculo: this.fb.group({
-          vehiculoId: [this.vehiculosMock[0]?.id ?? null, Validators.required],
-          trailerId: [this.trailerMock[0]?.id ?? null, Validators.required],
+          vehiculoId: [null, Validators.required],
+          trailerId: [null, Validators.required],
         }),
       }),
 
@@ -258,6 +203,9 @@ export class PesadaForm implements OnInit {
     });
   }
 
+  /* -------------------------------------
+   * Helpers de fecha
+   * ----------------------------------- */
   private shiftDateLocal(base: Date, days: number): string {
     const d = new Date(base.getTime());
     d.setDate(d.getDate() + days);
@@ -285,9 +233,22 @@ export class PesadaForm implements OnInit {
     return this.ticketForm.get('detalleTicket') as FormGroup;
   }
 
+  get transportistaGroup(): FormGroup {
+    return this.transporte.get('transportista') as FormGroup;
+  }
+
+  get conductorGroup(): FormGroup {
+    return this.transporte.get('conductor') as FormGroup;
+  }
+
+  get vehiculoGroup(): FormGroup {
+    return this.transporte.get('vehiculo') as FormGroup;
+  }
+
   /* Ciclo de vida */
   ngOnInit(): void {
     this.loadStationsAndOperations();
+    this.loadCarriers();
   }
 
   /* =========================================================
@@ -296,42 +257,30 @@ export class PesadaForm implements OnInit {
   private loadStationsAndOperations(): void {
     this.isLoading = true;
 
-    // 1) Sede principal
     this.weighingService.getPrincipalBuyingStation().subscribe({
-      next: (principal) => {
+      next: (principal: BuyingStation) => {
         this.principalStation = principal;
 
-        // Para paso 1: todas las sedes (luego se agregan las no principales)
+        // Sedes disponibles, pero SIN asignar por defecto en el formulario
         this.stations = [principal];
-
-        // Para destino en paso 2: solo la principal
         this.destinationStations = [principal];
+        this.operations = [];
 
-        // Defaults:
+        // Aseguramos que los controles sigan en null
         this.datosOperacion.patchValue({
-          sedeOperacion: principal.id,
+          sedeOperacion: null,
+          operacion: null,
         });
         this.origenDestino.patchValue({
-          sedeDestino: principal.id, // destino = ATP LIMA
+          sedeOrigen: null,
+          sedeDestino: null,
         });
 
-        // 2) Sedes NO principales (origen en paso 2)
+        // Sedes NO principales
         this.weighingService.getNonPrincipalBuyingStations().subscribe({
-          next: (nonPrincipal) => {
-            this.stations = [principal, ...nonPrincipal]; // para paso 1
+          next: (nonPrincipal: BuyingStation[]) => {
+            this.stations = [principal, ...(nonPrincipal || [])];
             this.originStations = nonPrincipal || [];
-
-            // Default de origen: primera no principal si existe
-            if (this.originStations.length > 0) {
-              this.origenDestino.patchValue({
-                sedeOrigen: this.originStations[0].id,
-              });
-            } else {
-              // Si por alguna razón no hay no-principal, fallback a principal
-              this.origenDestino.patchValue({
-                sedeOrigen: principal.id,
-              });
-            }
           },
           error: (err) => {
             console.error('Error loading non-principal buying stations', err);
@@ -341,8 +290,8 @@ export class PesadaForm implements OnInit {
           },
         });
 
-        // 3) Operaciones para la sede principal
-        this.loadOperationsForStation(principal.id);
+        // OJO: ya NO cargamos operaciones de la sede principal por defecto.
+        // Solo se cargarán cuando el usuario seleccione una sede en el combo.
       },
       error: (err) => {
         console.error('Error loading principal buying station', err);
@@ -368,18 +317,196 @@ export class PesadaForm implements OnInit {
     this.datosOperacion.patchValue({ operacion: null });
 
     this.weighingService.getOperationsByStation(stationId).subscribe({
-      next: (ops) => {
+      next: (ops: OperationStation[]) => {
         this.operations = ops || [];
-        if (this.operations.length > 0) {
-          this.datosOperacion.patchValue({
-            operacion: this.operations[0].id,
-          });
-        }
+        // Ya NO seleccionamos la primera operación por defecto.
       },
       error: (err) => {
         console.error('Error loading operations for station', err);
       },
     });
+  }
+
+  /* =========================================================
+     CARGA DE TRANSPORTISTAS / CONDUCTORES / VEHÍCULOS
+     ========================================================= */
+  private loadCarriers(): void {
+    this.weighingService.getCarriers().subscribe({
+      next: (data: Carrier[]) => {
+        this.carriers = data || [];
+
+        // Todo en null al inicio
+        this.transportistaGroup.patchValue({
+          transportistaId: null,
+          nombre: '',
+          tipoDocumento: '',
+          numeroDocumento: '',
+        });
+
+        this.carrierDrivers = [];
+        this.carrierTrucks = [];
+        this.carrierTrailers = [];
+
+        this.conductorGroup.patchValue({
+          conductorId: null,
+          nombre: '',
+          tipoDocumento: '',
+          numeroDocumento: '',
+          licenciaConducir: '',
+        });
+
+        this.vehiculoGroup.patchValue({
+          vehiculoId: null,
+          trailerId: null,
+        });
+      },
+      error: (err) => {
+        console.error('Error loading carriers', err);
+      },
+    });
+  }
+
+  onChangeTransportista(): void {
+    const carrierId = Number(
+      this.transportistaGroup.get('transportistaId')?.value || 0
+    );
+
+    if (!carrierId) {
+      // Limpia dependientes
+      this.transportistaGroup.patchValue({
+        nombre: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+      });
+      this.carrierDrivers = [];
+      this.carrierTrucks = [];
+      this.carrierTrailers = [];
+
+      this.conductorGroup.patchValue({
+        conductorId: null,
+        nombre: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+        licenciaConducir: '',
+      });
+
+      this.vehiculoGroup.patchValue({
+        vehiculoId: null,
+        trailerId: null,
+      });
+
+      return;
+    }
+
+    const carrier = this.carriers.find((c) => c.id === carrierId);
+    if (carrier) {
+      this.transportistaGroup.patchValue({
+        nombre: carrier.companyName,
+        tipoDocumento: carrier.documentTypeCode || 'RUC',
+        numeroDocumento: carrier.documentNumber,
+      });
+    }
+
+    // Conductores
+    this.weighingService.getCarrierDrivers(carrierId).subscribe({
+      next: (drivers: CarrierDriver[]) => {
+        this.carrierDrivers = drivers || [];
+        this.conductorGroup.patchValue({
+          conductorId: null,
+          nombre: '',
+          tipoDocumento: '',
+          numeroDocumento: '',
+          licenciaConducir: '',
+        });
+        // Usuario elegirá el conductor manualmente
+      },
+      error: (err) => {
+        console.error('Error loading carrier drivers', err);
+      },
+    });
+
+    // Camiones
+    this.weighingService.getCarrierTrucks(carrierId).subscribe({
+      next: (trucks: CarrierTruck[]) => {
+        this.carrierTrucks = trucks || [];
+        this.vehiculoGroup.patchValue({
+          vehiculoId: null,
+          // trailerId lo resetea la llamada de trailers
+        });
+        // Usuario elegirá el vehículo manualmente
+      },
+      error: (err) => {
+        console.error('Error loading carrier trucks', err);
+      },
+    });
+
+    // Trailers
+    this.weighingService.getCarrierTrailers(carrierId).subscribe({
+      next: (trailers: CarrierTrailer[]) => {
+        this.carrierTrailers = trailers || [];
+        this.vehiculoGroup.patchValue({
+          ...this.vehiculoGroup.value,
+          trailerId: null,
+        });
+        // Usuario elegirá el trailer manualmente
+      },
+      error: (err) => {
+        console.error('Error loading carrier trailers', err);
+      },
+    });
+  }
+
+  onChangeConductor(): void {
+    const conductorId = Number(
+      this.conductorGroup.get('conductorId')?.value || 0
+    );
+
+    if (!conductorId) {
+      this.conductorGroup.patchValue({
+        nombre: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+        licenciaConducir: '',
+      });
+      return;
+    }
+
+    const driver = this.carrierDrivers.find((d) => d.id === conductorId);
+    if (!driver) return;
+
+    this.conductorGroup.patchValue({
+      nombre: driver.fullName,
+      tipoDocumento: driver.documentTypeCode || 'DNI',
+      numeroDocumento: driver.documentNumber,
+      licenciaConducir: driver.license,
+    });
+  }
+
+  /* =========================================================
+     HELPERS PARA MOSTRAR PLACA
+     ========================================================= */
+  getTruckPlate(truck: CarrierTruck): string {
+    const t: any = truck as any;
+    return (
+      t.plateNumber ||
+      t.plate ||
+      t.licensePlate ||
+      t.placa ||
+      t.description ||
+      ''
+    );
+  }
+
+  getTrailerPlate(trailer: CarrierTrailer): string {
+    const t: any = trailer as any;
+    return (
+      t.plateNumber ||
+      t.plate ||
+      t.licensePlate ||
+      t.placa ||
+      t.description ||
+      ''
+    );
   }
 
   /* =========================================================
@@ -442,13 +569,18 @@ export class PesadaForm implements OnInit {
     this.documentos.splice(index, 1);
   }
 
-  private openDocumentoModal(row?: DocumentoRelacionado, index?: number): void {
+  private openDocumentoModal(
+    row?: DocumentoRelacionado,
+    index?: number
+  ): void {
     const modalRef = this.modalService.open(PesadaDocumento, {
       size: 'xl',
       centered: true,
       backdrop: 'static',
     });
 
+    const opId = Number(this.datosOperacion.get('operacion')?.value || 0);
+    (modalRef.componentInstance as any).operationId = opId;
     (modalRef.componentInstance as any).data = row ?? null;
 
     modalRef.result
@@ -592,7 +724,7 @@ export class PesadaForm implements OnInit {
     );
 
     if (!ok) return;
-    // TODO: llamada al API
+    // TODO: llamada al API real
   }
 
   guardarTicketCompleto(): void {
