@@ -1,1 +1,168 @@
-<p>paso-detalle-ticket works!</p>
+<div class="section-header d-flex justify-content-between mb-3">
+  <div>
+    <h6 class="section-title mb-1">Detalle del ticket</h6>
+    <p class="section-subtitle mb-0">
+      Registra las pesadas del ticket y asocia las taras por empaque a cada una
+      de ellas.
+    </p>
+  </div>
+
+  <button type="button" class="ux-btn ux-btn--green" (click)="onAdd()">
+    <span class="material-symbols-rounded">add</span>
+    <span>Agregar pesada</span>
+  </button>
+</div>
+
+<div class="totals-bar" [formGroup]="formGroup">
+  <div class="total-box">
+    <div class="total-label">Cantidad ítems</div>
+    <div class="total-value">
+      {{ totales?.cantidadItems || 0 }}
+    </div>
+  </div>
+
+  <div class="total-box">
+    <div class="total-label">Total peso bruto (Kg)</div>
+    <div class="total-value">
+      {{ totales?.totalPesoBruto | number: '1.2-2' }}
+    </div>
+  </div>
+
+  <div class="total-box">
+    <div class="total-label">Total tara (Kg)</div>
+    <div class="total-value">
+      {{ totales?.totalTara | number: '1.2-2' }}
+    </div>
+  </div>
+
+  <div class="total-box">
+    <div class="total-label">Subtotal peso neto (Kg)</div>
+    <div class="total-value">
+      {{ totales?.subtotalPesoNeto | number: '1.2-2' }}
+    </div>
+  </div>
+
+  <div class="total-box total-box--input">
+    <label class="total-label mb-1"> Ajuste (Kg) </label>
+    <input
+      type="number"
+      class="form-control ux-input total-input"
+      formControlName="ajusteKg"
+      (change)="onAjusteChange()"
+    />
+  </div>
+
+  <div class="total-box">
+    <div class="total-label">Diferencia ajuste (Kg)</div>
+    <div class="total-value">
+      {{ totales?.diferenciaAjuste | number: '1.2-2' }}
+    </div>
+  </div>
+
+  <div class="total-box">
+    <div class="total-label">Total peso neto (Kg)</div>
+    <div class="total-value total-value--highlight">
+      {{ totales?.totalPesoNeto | number: '1.2-2' }}
+    </div>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover ux-table m-0">
+    <thead class="ux-table__head">
+      <tr>
+        <th class="ux-col-idx">Item</th>
+        <th>Producto</th>
+        <th>Balanza</th>
+        <th class="text-end">Peso bruto (Kg)</th>
+        <th class="text-end">Tara (Kg)</th>
+        <th class="text-end">Peso neto (Kg)</th>
+        <th>Observaciones</th>
+        <th>Tara</th>
+        <th>Estado</th>
+        <th class="ux-col-actions">Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let p of pesadas; let i = index">
+        <td class="ux-col-idx" [attr.data-label]="'Item'">
+          {{ i + 1 | number: '2.0-0' }}
+        </td>
+        <td [attr.data-label]="'Producto'">
+          {{ p.producto }}
+        </td>
+        <td [attr.data-label]="'Balanza'">
+          {{ p.balanza }}
+        </td>
+        <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
+          {{ p.pesoBrutoKg | number: '1.2-2' }}
+        </td>
+        <td class="text-end" [attr.data-label]="'Tara (Kg)'">
+          {{ p.taraTotalKg | number: '1.2-2' }}
+        </td>
+        <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
+          {{ p.pesoNetoKg | number: '1.2-2' }}
+        </td>
+        <td [attr.data-label]="'Observaciones'">
+          {{ p.observaciones || '-' }}
+        </td>
+        <td [attr.data-label]="'Tara'">
+          <span
+            class="ux-badge"
+            [class.ux-badge--ok]="p.tieneTara"
+            [class.ux-badge--bad]="!p.tieneTara"
+          >
+            {{ p.tieneTara ? 'SI' : 'NO' }}
+          </span>
+        </td>
+        <td [attr.data-label]="'Estado'">
+          <span
+            class="status-pill"
+            [ngClass]="{
+              'status-pill--registro': p.estado === 'EN REGISTRO',
+              'status-pill--cerrada': p.estado === 'CERRADA',
+              'status-pill--anulada': p.estado === 'ANULADA'
+            }"
+          >
+            {{ p.estado || 'EN REGISTRO' }}
+          </span>
+        </td>
+        <td class="ux-col-actions" [attr.data-label]="'Acciones'">
+          <button
+            type="button"
+            class="ux-icon-btn ux-icon-btn--medium"
+            (click)="onManageTaras(i)"
+            title="Gestionar taras"
+          >
+            <span class="material-symbols-rounded">inventory_2</span>
+          </button>
+
+          <button
+            type="button"
+            class="ux-icon-btn ux-icon-btn--medium"
+            (click)="onEdit(i)"
+            title="Editar pesada"
+          >
+            <span class="material-symbols-rounded">edit</span>
+          </button>
+
+          <button
+            type="button"
+            class="ux-icon-btn ux-icon-btn--medium"
+            (click)="onDelete(i)"
+            title="Eliminar"
+          >
+            <span class="material-symbols-rounded">delete</span>
+          </button>
+        </td>
+      </tr>
+
+      <tr *ngIf="pesadas.length === 0">
+        <td colspan="10" class="text-center py-3">
+          Aún no se han registrado pesadas para este ticket.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

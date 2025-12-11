@@ -1,1 +1,85 @@
-<p>paso-documentos works!</p>
+<div class="section-header d-flex justify-content-between mb-3">
+  <div>
+    <h6 class="section-title mb-1">Documentos relacionados</h6>
+    <p class="section-subtitle mb-0">
+      Agrega las guías de remisión y otros documentos que respaldan el
+      movimiento de producto.
+    </p>
+  </div>
+
+  <button type="button" class="ux-btn ux-btn--green" (click)="onAdd()">
+    <span class="material-symbols-rounded">add</span>
+    <span>Agregar documento</span>
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover ux-table m-0">
+    <thead class="ux-table__head">
+      <tr>
+        <th class="ux-col-idx">Item</th>
+        <th>Socio de negocio</th>
+        <th>Tipo doc.</th>
+        <th>Documento</th>
+        <th>Fecha doc.</th>
+        <th>Número documento</th>
+        <th class="text-end">Peso bruto (Kg)</th>
+        <th class="text-end">Peso neto (Kg)</th>
+        <th class="ux-col-actions">Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let doc of documentos; let i = index">
+        <td class="ux-col-idx" [attr.data-label]="'Item'">
+          {{ i + 1 | number: '2.0-0' }}
+        </td>
+        <td [attr.data-label]="'Socio de negocio'">
+          {{ doc.socioNegocio }}
+        </td>
+        <td [attr.data-label]="'Tipo doc.'">
+          {{ doc.tipoDocumento }}
+        </td>
+        <td [attr.data-label]="'Documento'">
+          {{ doc.documento }}
+        </td>
+        <td [attr.data-label]="'Fecha doc.'">
+          {{ doc.fechaDocumento | date: 'dd/MM/yyyy' }}
+        </td>
+        <td [attr.data-label]="'Número documento'">
+          {{ doc.numeroDocumento }}
+        </td>
+        <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
+          {{ doc.pesoBrutoKg | number: '1.2-2' }}
+        </td>
+        <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
+          {{ doc.pesoNetoKg | number: '1.2-2' }}
+        </td>
+        <td class="ux-col-actions" [attr.data-label]="'Acciones'">
+          <button
+            type="button"
+            class="ux-icon-btn ux-icon-btn--medium"
+            (click)="onEdit(i)"
+            title="Editar"
+          >
+            <span class="material-symbols-rounded">edit</span>
+          </button>
+          <button
+            type="button"
+            class="ux-icon-btn ux-icon-btn--medium"
+            (click)="onDelete(i)"
+            title="Eliminar"
+          >
+            <span class="material-symbols-rounded">delete</span>
+          </button>
+        </td>
+      </tr>
+
+      <tr *ngIf="documentos.length === 0">
+        <td colspan="9" class="text-center py-3">
+          No hay documentos relacionados registrados.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

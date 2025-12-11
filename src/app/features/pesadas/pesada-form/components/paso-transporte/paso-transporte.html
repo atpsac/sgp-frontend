@@ -1,1 +1,175 @@
-<p>paso-transporte works!</p>
+<div class="section-header">
+  <h6 class="section-title mb-1">Datos del transporte</h6>
+  <p class="section-subtitle mb-0">
+    Completa los datos del transportista, conductor y vehículo que realizarán
+    el traslado.
+  </p>
+</div>
+
+<div [formGroup]="formGroup" class="transport-section">
+  <!-- Transportista -->
+  <div class="section-block" formGroupName="transportista">
+    <h6 class="section-block__title">Datos del transportista</h6>
+
+    <div class="row g-3">
+      <div class="col-md-6 col-12">
+        <label class="form-label mb-1 small text-muted"> Transportista </label>
+        <div class="ux-select">
+          <select
+            class="form-select ux-input"
+            formControlName="transportistaId"
+            (change)="onTransportistaChange()"
+          >
+            <option [ngValue]="null" disabled>Selecciona un transportista</option>
+            <option *ngFor="let t of carriers" [ngValue]="t.id">
+              {{ t.companyName }}
+            </option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">
+            expand_more
+          </span>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <label class="form-label mb-1 small text-muted"> Tipo documento </label>
+        <div class="ux-select">
+          <select class="form-select ux-input" formControlName="tipoDocumento">
+            <option value="" disabled>Selecciona</option>
+            <option value="RUC">RUC</option>
+            <option value="DNI">DNI</option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">
+            expand_more
+          </span>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <label class="form-label mb-1 small text-muted">
+          Número documento
+        </label>
+        <input
+          type="text"
+          class="form-control ux-input"
+          formControlName="numeroDocumento"
+        />
+      </div>
+
+      <div class="col-12">
+        <label class="form-label mb-1 small text-muted"> Razón social </label>
+        <input
+          type="text"
+          class="form-control ux-input"
+          formControlName="nombre"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Conductor -->
+  <div class="section-block" formGroupName="conductor">
+    <h6 class="section-block__title">Datos del conductor</h6>
+
+    <div class="row g-3">
+      <div class="col-md-6 col-12">
+        <label class="form-label mb-1 small text-muted"> Conductor </label>
+        <div class="ux-select">
+          <select
+            class="form-select ux-input"
+            formControlName="conductorId"
+            (change)="onConductorChange()"
+          >
+            <option [ngValue]="null" disabled>Selecciona un conductor</option>
+            <option *ngFor="let c of carrierDrivers" [ngValue]="c.id">
+              {{ c.fullName }}
+            </option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">
+            expand_more
+          </span>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <label class="form-label mb-1 small text-muted"> Tipo documento </label>
+        <div class="ux-select">
+          <select class="form-select ux-input" formControlName="tipoDocumento">
+            <option value="" disabled>Selecciona</option>
+            <option value="DNI">DNI</option>
+            <option value="CE">CE</option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">
+            expand_more
+          </span>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <label class="form-label mb-1 small text-muted"> N° documento </label>
+        <input
+          type="text"
+          class="form-control ux-input"
+          formControlName="numeroDocumento"
+        />
+      </div>
+
+      <div class="col-md-3 col-6">
+        <label class="form-label mb-1 small text-muted">
+          Licencia de conducir
+        </label>
+        <input
+          type="text"
+          class="form-control ux-input"
+          formControlName="licenciaConducir"
+        />
+      </div>
+
+      <div class="col-md-9 col-12">
+        <label class="form-label mb-1 small text-muted"> Nombre completo </label>
+        <input
+          type="text"
+          class="form-control ux-input"
+          formControlName="nombre"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Vehículo -->
+  <div class="section-block" formGroupName="vehiculo">
+    <h6 class="section-block__title">Datos del vehículo</h6>
+
+    <div class="row g-3">
+      <div class="col-md-4 col-12">
+        <label class="form-label mb-1 small text-muted"> Vehículo </label>
+        <div class="ux-select">
+          <select class="form-select ux-input" formControlName="vehiculoId">
+            <option [ngValue]="null" disabled>Selecciona un vehículo</option>
+            <option *ngFor="let v of carrierTrucks" [ngValue]="v.id">
+              {{ getTruckPlate(v) }}
+            </option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">
+            expand_more
+          </span>
+        </div>
+      </div>
+
+      <div class="col-md-4 col-12">
+        <label class="form-label mb-1 small text-muted"> Trailer </label>
+        <div class="ux-select">
+          <select class="form-select ux-input" formControlName="trailerId">
+            <option [ngValue]="null" disabled>Selecciona un trailer</option>
+            <option *ngFor="let v of carrierTrailers" [ngValue]="v.id">
+              {{ getTrailerPlate(v) }}
+            </option>
+          </select>
+          <span class="ux-select__icon material-symbols-rounded">
+            expand_more
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

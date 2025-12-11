@@ -1,1 +1,24 @@
-<p>stepper-nav works!</p>
+<nav class="stepper">
+  <button
+    type="button"
+    class="stepper__item"
+    *ngFor="let step of steps; trackBy: trackById"
+    [class.stepper__item--active]="step.id === currentStep"
+    [class.stepper__item--disabled]="step.disabled"
+    [class.stepper__item--completed]="step.completed && step.id !== currentStep && !step.disabled"
+    (click)="onStepClick(step)"
+  >
+    <div class="stepper__index">
+      {{ step.id }}
+    </div>
+
+    <div class="stepper__content">
+      <div class="stepper__label">
+        {{ step.label }}
+      </div>
+      <div class="stepper__hint" *ngIf="step.hint">
+        {{ step.hint }}
+      </div>
+    </div>
+  </button>
+</nav>

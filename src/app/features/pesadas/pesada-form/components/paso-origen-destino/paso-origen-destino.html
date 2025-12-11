@@ -1,1 +1,42 @@
-<p>paso-origen-destino works!</p>
+<div class="section-header">
+  <h6 class="section-title mb-1">Origen / Destino</h6>
+  <p class="section-subtitle mb-0">
+    Configura la sede de origen y la sede de destino del producto.
+  </p>
+</div>
+
+<div [formGroup]="formGroup">
+  <div class="row g-4">
+    <!-- Sede de origen -->
+    <div class="col-md-6 col-12">
+      <label class="form-label mb-1 small text-muted"> Sede de origen </label>
+      <div class="ux-select">
+        <select class="form-select ux-input" formControlName="sedeOrigen">
+          <option [ngValue]="null" disabled>Selecciona una sede</option>
+          <option *ngFor="let s of originStations" [ngValue]="s.id">
+            {{ s.name }}
+          </option>
+        </select>
+        <span class="ux-select__icon material-symbols-rounded">
+          expand_more
+        </span>
+      </div>
+    </div>
+
+    <!-- Sede de destino -->
+    <div class="col-md-6 col-12">
+      <label class="form-label mb-1 small text-muted"> Sede de destino </label>
+      <div class="ux-select">
+        <select class="form-select ux-input" formControlName="sedeDestino">
+          <option [ngValue]="null" disabled>Selecciona una sede</option>
+          <option *ngFor="let s of destinationStations" [ngValue]="s.id">
+            {{ s.name }}
+          </option>
+        </select>
+        <span class="ux-select__icon material-symbols-rounded">
+          expand_more
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

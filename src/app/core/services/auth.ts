@@ -58,10 +58,8 @@ export class AuthService {
   }
 
   private storeTokensAndUser(res: LoginData): void {
-    // access → sessionStorage
-    sessionStorage.setItem(this.ACCESS_KEY, res.access_token);
-
-    // refresh → localStorage
+    // AHORA TODO VA A localStorage PARA COMPARTIR ENTRE PESTAÑAS
+    localStorage.setItem(this.ACCESS_KEY, res.access_token);
     localStorage.setItem(this.REFRESH_KEY, res.refresh_token);
 
     // usuario sin tokens → localStorage
@@ -117,15 +115,19 @@ export class AuthService {
 
         const { access_token, refresh_token, ...userWithoutTokens } = user;
 
+        // ACTUALIZAMOS SI VIENEN NUEVOS TOKENS
         if (access_token) {
-          sessionStorage.setItem(this.ACCESS_KEY, access_token);
+          localStorage.setItem(this.ACCESS_KEY, access_token);
         }
         if (refresh_token) {
           localStorage.setItem(this.REFRESH_KEY, refresh_token);
         }
 
         // opcional: actualizamos también los datos del usuario
-        localStorage.setItem(this.USER_KEY, JSON.stringify(userWithoutTokens));
+        localStorage.setItem(
+          this.USER_KEY,
+          JSON.stringify(userWithoutTokens)
+        );
       }),
       map(() => true),
       catchError(() => {
@@ -136,15 +138,15 @@ export class AuthService {
   }
 
   // ========= MÉTODOS USADOS POR GUARDS / INTERCEPTORES =========
-  // Tu authGuard ya usa esto
+  // Consideramos “logueado” si hay refresh token
   isLoggedIn(): boolean {
-    // Consideramos “logueado” si hay refresh token
     return !!this.getRefreshToken();
   }
 
   // Tu api-interceptor usa esto para el header Authorization
   getToken(): string | null {
-    return sessionStorage.getItem(this.ACCESS_KEY);
+    // AHORA LEE DESDE localStorage
+    return localStorage.getItem(this.ACCESS_KEY);
   }
 
   getRefreshToken(): string | null {
@@ -157,7 +159,8 @@ export class AuthService {
   }
 
   clearSession(): void {
-    sessionStorage.removeItem(this.ACCESS_KEY);
+    // Limpiamos todo lo relacionado a auth
+    localStorage.removeItem(this.ACCESS_KEY);
     localStorage.removeItem(this.REFRESH_KEY);
     localStorage.removeItem(this.USER_KEY);
   }

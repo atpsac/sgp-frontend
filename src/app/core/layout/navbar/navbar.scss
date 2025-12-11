@@ -1,3 +1,7 @@
+/* =======================
+   TOPBAR / NAV SUPERIOR
+   ======================= */
+
 .topbar {
   background: var(--bg-latam);
   color: #fff;
@@ -6,7 +10,8 @@
   align-items: center;
   position: sticky;
   top: 0;
-  z-index: 1030; // menor que el modal (que va a 2000)
+  // Barra por encima del contenido, pero POR DEBAJO de alerts/toasts/modals
+  z-index: 1000;
 }
 
 .btn-icon {
@@ -80,7 +85,7 @@
   box-shadow: 0 12px 30px rgba(16, 24, 40, 0.18);
   border-radius: 0.75rem;
   display: none;
-  z-index: 1050;
+  z-index: 1100; // un poco por encima de la barra
 
   &.show {
     display: block;
@@ -118,14 +123,51 @@
 }
 
 /* =======================
-   AJUSTES GLOBALES MODAL
+   MODALES
    ======================= */
 
-/* Asegura que el modal y su backdrop estén por encima de TODO */
 .modal-backdrop.show {
+  // por encima de topbar y dropdowns
   z-index: 2000;
 }
 
 .modal.show {
+  // por encima del backdrop
   z-index: 2050;
+}
+
+/* =======================
+   ALERTAS / TOASTS GLOBALES
+   ======================= */
+
+/* SweetAlert2: SIEMPRE por encima de todo */
+.swal2-container {
+  z-index: 3000 !important;
+}
+
+/* Que se pegue al borde superior, incluso encima de la barra */
+.swal2-container.swal2-top,
+.swal2-container.swal2-top-end,
+.swal2-container.swal2-top-right {
+  top: 10px !important;   // <--- antes lo teníamos en 80px
+}
+
+/* Si usas ngx-toastr u otro sistema de toasts */
+.toast-container {
+  position: fixed !important;
+  z-index: 3000 !important;
+}
+
+.toast-top-right,
+.toast-top-center,
+.toast-top-left {
+  top: 10px !important;   // también por encima de la barra
+}
+
+/* Si tienes alerts propias tipo tarjeta flotante */
+.alert-global {
+  position: fixed;
+  top: 10px;
+  right: 24px;
+  z-index: 3000;
 }

@@ -1,1 +1,68 @@
-<p>paso-datos-operacion works!</p>
+<div class="section-header">
+  <h6 class="section-title mb-1">Datos de operación</h6>
+  <p class="section-subtitle mb-0">
+    Define la fecha de emisión, el tipo de operación y la sede donde se realiza
+    la pesada.
+  </p>
+</div>
+
+<div [formGroup]="formGroup">
+  <div class="row g-3">
+    <div class="col-md-3 col-12">
+      <label class="form-label mb-1 small text-muted"> Fecha de emisión </label>
+      <input
+        type="date"
+        class="form-control ux-input"
+        formControlName="fechaEmision"
+        [min]="minFechaEmision"
+        [max]="maxFechaEmision"
+      />
+
+      <div
+        class="invalid-feedback d-block"
+        *ngIf="
+          formGroup.get('fechaEmision')?.invalid &&
+          formGroup.get('fechaEmision')?.touched
+        "
+      >
+        La fecha debe estar entre
+        {{ minFechaEmision | date: 'dd/MM/yyyy' }} y
+        {{ maxFechaEmision | date: 'dd/MM/yyyy' }}.
+      </div>
+    </div>
+
+    <div class="col-md-4 col-12">
+      <label class="form-label mb-1 small text-muted"> Sede de operación </label>
+      <div class="ux-select">
+        <select
+          class="form-select ux-input"
+          formControlName="sedeOperacion"
+          (change)="onStationChange()"
+        >
+          <option [ngValue]="null" disabled>Selecciona una sede</option>
+          <option *ngFor="let s of stations" [ngValue]="s.id">
+            {{ s.name }}
+          </option>
+        </select>
+        <span class="ux-select__icon material-symbols-rounded">
+          expand_more
+        </span>
+      </div>
+    </div>
+
+    <div class="col-md-5 col-12">
+      <label class="form-label mb-1 small text-muted"> Operación </label>
+      <div class="ux-select">
+        <select class="form-select ux-input" formControlName="operacion">
+          <option [ngValue]="null" disabled>Selecciona una operación</option>
+          <option *ngFor="let op of operations" [ngValue]="op.id">
+            {{ op.name }}
+          </option>
+        </select>
+        <span class="ux-select__icon material-symbols-rounded">
+          expand_more
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

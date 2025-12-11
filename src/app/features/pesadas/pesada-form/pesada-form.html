@@ -55,72 +55,12 @@
     </div>
 
     <!-- STEPPER -->
-    <div class="stepper mb-3">
-      <button
-        type="button"
-        class="stepper__item"
-        [class.stepper__item--active]="currentStep === 1"
-        (click)="goToStep(1)"
-      >
-        <div class="stepper__index">1</div>
-        <div class="stepper__content">
-          <div class="stepper__label">Datos de operación</div>
-          <div class="stepper__hint">Fecha, operación y sede</div>
-        </div>
-      </button>
-
-      <button
-        type="button"
-        class="stepper__item"
-        [class.stepper__item--active]="currentStep === 2"
-        (click)="goToStep(2)"
-      >
-        <div class="stepper__index">2</div>
-        <div class="stepper__content">
-          <div class="stepper__label">Origen / Destino</div>
-          <div class="stepper__hint">Sede de origen y destino</div>
-        </div>
-      </button>
-
-      <button
-        type="button"
-        class="stepper__item"
-        [class.stepper__item--active]="currentStep === 3"
-        (click)="goToStep(3)"
-      >
-        <div class="stepper__index">3</div>
-        <div class="stepper__content">
-          <div class="stepper__label">Documentos relacionados</div>
-          <div class="stepper__hint">Guías y comprobantes</div>
-        </div>
-      </button>
-
-      <button
-        type="button"
-        class="stepper__item"
-        [class.stepper__item--active]="currentStep === 4"
-        (click)="goToStep(4)"
-      >
-        <div class="stepper__index">4</div>
-        <div class="stepper__content">
-          <div class="stepper__label">Datos del transporte</div>
-          <div class="stepper__hint">Empresa, conductor y vehículo</div>
-        </div>
-      </button>
-
-      <button
-        type="button"
-        class="stepper__item"
-        [class.stepper__item--active]="currentStep === 5"
-        (click)="goToStep(5)"
-      >
-        <div class="stepper__index">5</div>
-        <div class="stepper__content">
-          <div class="stepper__label">Detalle del ticket</div>
-          <div class="stepper__hint">Pesadas y taras</div>
-        </div>
-      </button>
-    </div>
+    <app-stepper-nav
+      class="mb-3"
+      [steps]="steps"
+      [currentStep]="currentStep"
+      (stepChange)="onStepChange($event)"
+    ></app-stepper-nav>
 
     <!-- FORM -->
     <form
@@ -132,640 +72,62 @@
       <div class="step-content" [ngSwitch]="currentStep">
         <!-- PASO 1 -->
         <div *ngSwitchCase="1" class="step-panel">
-          <div class="section-header">
-            <h6 class="section-title mb-1">Datos de operación</h6>
-            <p class="section-subtitle mb-0">
-              Define la fecha de emisión, el tipo de operación y la sede donde se
-              realiza la pesada.
-            </p>
-          </div>
-
-          <div formGroupName="datosOperacion">
-            <div class="row g-3">
-              <div class="col-md-3 col-12">
-                <label class="form-label mb-1 small text-muted">
-                  Fecha de emisión
-                </label>
-                <input
-                  type="date"
-                  class="form-control ux-input"
-                  formControlName="fechaEmision"
-                  [min]="minFechaEmision"
-                  [max]="maxFechaEmision"
-                />
-
-                <div
-                  class="invalid-feedback d-block"
-                  *ngIf="
-                    datosOperacion.get('fechaEmision')?.invalid &&
-                    datosOperacion.get('fechaEmision')?.touched
-                  "
-                >
-                  La fecha debe estar entre {{ minFechaEmision | date: 'dd/MM/yyyy' }}
-                  y {{ maxFechaEmision | date: 'dd/MM/yyyy' }}.
-                </div>
-              </div>
-
-              <div class="col-md-4 col-12">
-                <label class="form-label mb-1 small text-muted">
-                  Sede de operación
-                </label>
-                <div class="ux-select">
-                  <select
-                    class="form-select ux-input"
-                    formControlName="sedeOperacion"
-                    (change)="onChangeOperationStation()"
-                  >
-                    <option [ngValue]="null" disabled>
-                      Selecciona una sede
-                    </option>
-                    <option *ngFor="let s of stations" [ngValue]="s.id">
-                      {{ s.name }}
-                    </option>
-                  </select>
-                  <span class="ux-select__icon material-symbols-rounded">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-
-              <div class="col-md-5 col-12">
-                <label class="form-label mb-1 small text-muted">
-                  Operación
-                </label>
-                <div class="ux-select">
-                  <select
-                    class="form-select ux-input"
-                    formControlName="operacion"
-                  >
-                    <option [ngValue]="null" disabled>
-                      Selecciona una operación
-                    </option>
-                    <option *ngFor="let op of operations" [ngValue]="op.id">
-                      {{ op.name }}
-                    </option>
-                  </select>
-                  <span class="ux-select__icon material-symbols-rounded">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <app-paso-datos-operacion
+            [formGroup]="datosOperacion"
+            [stations]="stations"
+            [operations]="operations"
+            [minFechaEmision]="minFechaEmision"
+            [maxFechaEmision]="maxFechaEmision"
+            (stationChange)="onChangeOperationStation()"
+          ></app-paso-datos-operacion>
         </div>
 
         <!-- PASO 2 -->
         <div *ngSwitchCase="2" class="step-panel">
-          <div class="section-header">
-            <h6 class="section-title mb-1">Origen / Destino</h6>
-            <p class="section-subtitle mb-0">
-              Configura la sede de origen y la sede de destino del producto.
-            </p>
-          </div>
-
-          <div formGroupName="origenDestino">
-            <div class="row g-4">
-              <!-- Sede de origen -->
-              <div class="col-md-6 col-12">
-                <label class="form-label mb-1 small text-muted">
-                  Sede de origen
-                </label>
-                <div class="ux-select">
-                  <select
-                    class="form-select ux-input"
-                    formControlName="sedeOrigen"
-                  >
-                    <option [ngValue]="null" disabled>
-                      Selecciona una sede
-                    </option>
-                    <option *ngFor="let s of originStations" [ngValue]="s.id">
-                      {{ s.name }}
-                    </option>
-                  </select>
-                  <span class="ux-select__icon material-symbols-rounded">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-
-              <!-- Sede de destino -->
-              <div class="col-md-6 col-12">
-                <label class="form-label mb-1 small text-muted">
-                  Sede de destino
-                </label>
-                <div class="ux-select">
-                  <select
-                    class="form-select ux-input"
-                    formControlName="sedeDestino"
-                  >
-                    <option [ngValue]="null" disabled>
-                      Selecciona una sede
-                    </option>
-                    <option
-                      *ngFor="let s of destinationStations"
-                      [ngValue]="s.id"
-                    >
-                      {{ s.name }}
-                    </option>
-                  </select>
-                  <span class="ux-select__icon material-symbols-rounded">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <app-paso-origen-destino
+            [formGroup]="origenDestino"
+            [originStations]="originStations"
+            [destinationStations]="destinationStations"
+          ></app-paso-origen-destino>
         </div>
 
         <!-- PASO 3: DOCUMENTOS RELACIONADOS -->
         <div *ngSwitchCase="3" class="step-panel">
-          <div class="section-header d-flex justify-content-between mb-3">
-            <div>
-              <h6 class="section-title mb-1">Documentos relacionados</h6>
-              <p class="section-subtitle mb-0">
-                Agrega las guías de remisión y otros documentos que respaldan el
-                movimiento de producto.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              class="ux-btn ux-btn--green"
-              (click)="addDocumentoRelacionado()"
-            >
-              <span class="material-symbols-rounded">add</span>
-              <span>Agregar documento</span>
-            </button>
-          </div>
-
-          <div class="table-responsive">
-            <table class="table table-hover ux-table m-0">
-              <thead class="ux-table__head">
-                <tr>
-                  <th class="ux-col-idx">Item</th>
-                  <th>Socio de negocio</th>
-                  <th>Tipo doc.</th>
-                  <th>Documento</th>
-                  <th>Fecha doc.</th>
-                  <th>Número documento</th>
-                  <th class="text-end">Peso bruto (Kg)</th>
-                  <th class="text-end">Peso neto (Kg)</th>
-                  <th class="ux-col-actions">Acciones</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <tr *ngFor="let doc of documentos; let i = index">
-                  <td class="ux-col-idx" [attr.data-label]="'Item'">
-                    {{ i + 1 | number: '2.0-0' }}
-                  </td>
-                  <td [attr.data-label]="'Socio de negocio'">
-                    {{ doc.socioNegocio }}
-                  </td>
-                  <td [attr.data-label]="'Tipo doc.'">
-                    {{ doc.tipoDocumento }}
-                  </td>
-                  <td [attr.data-label]="'Documento'">
-                    {{ doc.documento }}
-                  </td>
-                  <td [attr.data-label]="'Fecha doc.'">
-                    {{ doc.fechaDocumento | date: 'dd/MM/yyyy' }}
-                  </td>
-                  <td [attr.data-label]="'Número documento'">
-                    {{ doc.numeroDocumento }}
-                  </td>
-                  <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
-                    {{ doc.pesoBrutoKg | number: '1.2-2' }}
-                  </td>
-                  <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
-                    {{ doc.pesoNetoKg | number: '1.2-2' }}
-                  </td>
-                  <td class="ux-col-actions" [attr.data-label]="'Acciones'">
-                    <button
-                      type="button"
-                      class="ux-icon-btn ux-icon-btn--medium"
-                      (click)="editDocumentoRelacionado(doc, i)"
-                      title="Editar"
-                    >
-                      <span class="material-symbols-rounded">edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="ux-icon-btn ux-icon-btn--medium"
-                      (click)="deleteDocumentoRelacionado(i)"
-                      title="Eliminar"
-                    >
-                      <span class="material-symbols-rounded">delete</span>
-                    </button>
-                  </td>
-                </tr>
-
-                <tr *ngIf="documentos.length === 0">
-                  <td colspan="9" class="text-center py-3">
-                    No hay documentos relacionados registrados.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <app-paso-documentos
+            [documentos]="documentos"
+            (addDocumento)="addDocumentoRelacionado()"
+            (editDocumento)="editDocumentoRelacionado(documentos[$event], $event)"
+            (deleteDocumento)="deleteDocumentoRelacionado($event)"
+          ></app-paso-documentos>
         </div>
 
         <!-- PASO 4: DATOS DEL TRANSPORTE -->
         <div *ngSwitchCase="4" class="step-panel">
-          <div class="section-header">
-            <h6 class="section-title mb-1">Datos del transporte</h6>
-            <p class="section-subtitle mb-0">
-              Completa los datos del transportista, conductor y vehículo que
-              realizarán el traslado.
-            </p>
-          </div>
-
-          <div formGroupName="transporte" class="transport-section">
-            <!-- Transportista -->
-            <div class="section-block" formGroupName="transportista">
-              <h6 class="section-block__title">Datos del transportista</h6>
-
-              <div class="row g-3">
-                <div class="col-md-6 col-12">
-                  <label class="form-label mb-1 small text-muted">
-                    Transportista
-                  </label>
-                  <div class="ux-select">
-                    <select
-                      class="form-select ux-input"
-                      formControlName="transportistaId"
-                      (change)="onChangeTransportista()"
-                    >
-                      <option [ngValue]="null" disabled>
-                        Selecciona un transportista
-                      </option>
-                      <option *ngFor="let t of carriers" [ngValue]="t.id">
-                        {{ t.companyName }}
-                      </option>
-                    </select>
-                    <span class="ux-select__icon material-symbols-rounded">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-md-3 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    Tipo documento
-                  </label>
-                  <div class="ux-select">
-                    <select
-                      class="form-select ux-input"
-                      formControlName="tipoDocumento"
-                    >
-                      <option value="" disabled>Selecciona</option>
-                      <option value="RUC">RUC</option>
-                      <option value="DNI">DNI</option>
-                    </select>
-                    <span class="ux-select__icon material-symbols-rounded">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-md-3 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    Número documento
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="numeroDocumento"
-                  />
-                </div>
-
-                <div class="col-12">
-                  <label class="form-label mb-1 small text-muted">
-                    Razón social
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="nombre"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Conductor -->
-            <div class="section-block" formGroupName="conductor">
-              <h6 class="section-block__title">Datos del conductor</h6>
-
-              <div class="row g-3">
-                <div class="col-md-6 col-12">
-                  <label class="form-label mb-1 small text-muted">
-                    Conductor
-                  </label>
-                  <div class="ux-select">
-                    <select
-                      class="form-select ux-input"
-                      formControlName="conductorId"
-                      (change)="onChangeConductor()"
-                    >
-                      <option [ngValue]="null" disabled>
-                        Selecciona un conductor
-                      </option>
-                      <option *ngFor="let c of carrierDrivers" [ngValue]="c.id">
-                        {{ c.fullName }}
-                      </option>
-                    </select>
-                    <span class="ux-select__icon material-symbols-rounded">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-md-3 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    Tipo documento
-                  </label>
-                  <div class="ux-select">
-                    <select
-                      class="form-select ux-input"
-                      formControlName="tipoDocumento"
-                    >
-                      <option value="" disabled>Selecciona</option>
-                      <option value="DNI">DNI</option>
-                      <option value="CE">CE</option>
-                    </select>
-                    <span class="ux-select__icon material-symbols-rounded">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-md-3 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    N° documento
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="numeroDocumento"
-                  />
-                </div>
-
-                <div class="col-md-3 col-6">
-                  <label class="form-label mb-1 small text-muted">
-                    Licencia de conducir
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="licenciaConducir"
-                  />
-                </div>
-
-                <div class="col-md-9 col-12">
-                  <label class="form-label mb-1 small text-muted">
-                    Nombre completo
-                  </label>
-                  <input
-                    type="text"
-                    class="form-control ux-input"
-                    formControlName="nombre"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Vehículo -->
-            <div class="section-block" formGroupName="vehiculo">
-              <h6 class="section-block__title">Datos del vehículo</h6>
-
-              <div class="row g-3">
-                <div class="col-md-4 col-12">
-                  <label class="form-label mb-1 small text-muted">
-                    Vehículo
-                  </label>
-                  <div class="ux-select">
-                    <select
-                      class="form-select ux-input"
-                      formControlName="vehiculoId"
-                    >
-                      <option [ngValue]="null" disabled>
-                        Selecciona un vehículo
-                      </option>
-                      <option *ngFor="let v of carrierTrucks" [ngValue]="v.id">
-                        {{ getTruckPlate(v) }}
-                      </option>
-                    </select>
-                    <span class="ux-select__icon material-symbols-rounded">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-
-                <div class="col-md-4 col-12">
-                  <label class="form-label mb-1 small text-muted">
-                    Trailer
-                  </label>
-                  <div class="ux-select">
-                    <select
-                      class="form-select ux-input"
-                      formControlName="trailerId"
-                    >
-                      <option [ngValue]="null" disabled>
-                        Selecciona un trailer
-                      </option>
-                      <option
-                        *ngFor="let v of carrierTrailers"
-                        [ngValue]="v.id"
-                      >
-                        {{ getTrailerPlate(v) }}
-                      </option>
-                    </select>
-                    <span class="ux-select__icon material-symbols-rounded">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <app-paso-transporte
+            [formGroup]="transporte"
+            [carriers]="carriers"
+            [carrierDrivers]="carrierDrivers"
+            [carrierTrucks]="carrierTrucks"
+            [carrierTrailers]="carrierTrailers"
+            [getTruckPlate]="getTruckPlate.bind(this)"
+            [getTrailerPlate]="getTrailerPlate.bind(this)"
+            (transportistaChange)="onChangeTransportista()"
+            (conductorChange)="onChangeConductor()"
+          ></app-paso-transporte>
         </div>
 
         <!-- PASO 5: DETALLE TICKET -->
         <div *ngSwitchCase="5" class="step-panel">
-          <div class="section-header d-flex justify-content-between mb-3">
-            <div>
-              <h6 class="section-title mb-1">Detalle del ticket</h6>
-              <p class="section-subtitle mb-0">
-                Registra las pesadas del ticket y asocia las taras por empaque a
-                cada una de ellas.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              class="ux-btn ux-btn--green"
-              (click)="addPesada()"
-            >
-              <span class="material-symbols-rounded">add</span>
-              <span>Agregar pesada</span>
-            </button>
-          </div>
-
-          <div class="totals-bar" formGroupName="detalleTicket">
-            <div class="total-box">
-              <div class="total-label">Cantidad ítems</div>
-              <div class="total-value">
-                {{ totalesPesadas.cantidadItems || 0 }}
-              </div>
-            </div>
-
-            <div class="total-box">
-              <div class="total-label">Total peso bruto (Kg)</div>
-              <div class="total-value">
-                {{ totalesPesadas.totalPesoBruto | number: '1.2-2' }}
-              </div>
-            </div>
-
-            <div class="total-box">
-              <div class="total-label">Total tara (Kg)</div>
-              <div class="total-value">
-                {{ totalesPesadas.totalTara | number: '1.2-2' }}
-              </div>
-            </div>
-
-            <div class="total-box">
-              <div class="total-label">Subtotal peso neto (Kg)</div>
-              <div class="total-value">
-                {{ totalesPesadas.subtotalPesoNeto | number: '1.2-2' }}
-              </div>
-            </div>
-
-            <div class="total-box total-box--input">
-              <label class="total-label mb-1"> Ajuste (Kg) </label>
-              <input
-                type="number"
-                class="form-control ux-input total-input"
-                formControlName="ajusteKg"
-                (change)="onChangeAjusteKg()"
-              />
-            </div>
-
-            <div class="total-box">
-              <div class="total-label">Diferencia ajuste (Kg)</div>
-              <div class="total-value">
-                {{ totalesPesadas.diferenciaAjuste | number: '1.2-2' }}
-              </div>
-            </div>
-
-            <div class="total-box">
-              <div class="total-label">Total peso neto (Kg)</div>
-              <div class="total-value total-value--highlight">
-                {{ totalesPesadas.totalPesoNeto | number: '1.2-2' }}
-              </div>
-            </div>
-          </div>
-
-          <div class="table-responsive">
-            <table class="table table-hover ux-table m-0">
-              <thead class="ux-table__head">
-                <tr>
-                  <th class="ux-col-idx">Item</th>
-                  <th>Producto</th>
-                  <th>Balanza</th>
-                  <th class="text-end">Peso bruto (Kg)</th>
-                  <th class="text-end">Tara (Kg)</th>
-                  <th class="text-end">Peso neto (Kg)</th>
-                  <th>Observaciones</th>
-                  <th>Tara</th>
-                  <th>Estado</th>
-                  <th class="ux-col-actions">Acciones</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <tr *ngFor="let p of pesadas; let i = index">
-                  <td class="ux-col-idx" [attr.data-label]="'Item'">
-                    {{ i + 1 | number: '2.0-0' }}
-                  </td>
-                  <td [attr.data-label]="'Producto'">
-                    {{ p.producto }}
-                  </td>
-                  <td [attr.data-label]="'Balanza'">
-                    {{ p.balanza }}
-                  </td>
-                  <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
-                    {{ p.pesoBrutoKg | number: '1.2-2' }}
-                  </td>
-                  <td class="text-end" [attr.data-label]="'Tara (Kg)'">
-                    {{ p.taraTotalKg | number: '1.2-2' }}
-                  </td>
-                  <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
-                    {{ p.pesoNetoKg | number: '1.2-2' }}
-                  </td>
-                  <td [attr.data-label]="'Observaciones'">
-                    {{ p.observaciones || '-' }}
-                  </td>
-                  <td [attr.data-label]="'Tara'">
-                    <span
-                      class="ux-badge"
-                      [class.ux-badge--ok]="p.tieneTara"
-                      [class.ux-badge--bad]="!p.tieneTara"
-                    >
-                      {{ p.tieneTara ? 'SI' : 'NO' }}
-                    </span>
-                  </td>
-                  <td [attr.data-label]="'Estado'">
-                    <span
-                      class="status-pill"
-                      [ngClass]="{
-                        'status-pill--registro': p.estado === 'EN REGISTRO',
-                        'status-pill--cerrada': p.estado === 'CERRADA',
-                        'status-pill--anulada': p.estado === 'ANULADA'
-                      }"
-                    >
-                      {{ p.estado || 'EN REGISTRO' }}
-                    </span>
-                  </td>
-                  <td class="ux-col-actions" [attr.data-label]="'Acciones'">
-                    <button
-                      type="button"
-                      class="ux-icon-btn ux-icon-btn--medium"
-                      (click)="openTarasForPesada(p, i)"
-                      title="Gestionar taras"
-                    >
-                      <span class="material-symbols-rounded">
-                        inventory_2
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      class="ux-icon-btn ux-icon-btn--medium"
-                      (click)="editPesada(p, i)"
-                      title="Editar pesada"
-                    >
-                      <span class="material-symbols-rounded">edit</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      class="ux-icon-btn ux-icon-btn--medium"
-                      (click)="deletePesada(i)"
-                      title="Eliminar"
-                    >
-                      <span class="material-symbols-rounded">delete</span>
-                    </button>
-                  </td>
-                </tr>
-
-                <tr *ngIf="pesadas.length === 0">
-                  <td colspan="10" class="text-center py-3">
-                    Aún no se han registrado pesadas para este ticket.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <app-paso-detalle-ticket
+            [formGroup]="detalleTicket"
+            [pesadas]="pesadas"
+            [totales]="totalesPesadas"
+            (addPesada)="addPesada()"
+            (editPesada)="editPesada(pesadas[$event], $event)"
+            (deletePesada)="deletePesada($event)"
+            (manageTaras)="openTarasForPesada(pesadas[$event], $event)"
+            (ajusteChange)="onChangeAjusteKg()"
+          ></app-paso-detalle-ticket>
         </div>
 
         <!-- Default -->
