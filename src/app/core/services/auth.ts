@@ -5,6 +5,49 @@ import { Router } from '@angular/router';
 import { Observable, of, tap, map, catchError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+
+
+
+export interface CreateScaleTicketPayload {
+  ticket: {
+    idBuyingStations: number;
+    idBuyingStationsOrigin: number;
+    idBuyingStationsDestination: number;
+    idEmployees?: number | null;
+    idOperations: number;
+    idBusinessPartnersCarriers: number;
+    idBusinessPartnersDrivers: number;
+    idTrucks: number;
+    idTrailers: number;
+    idScaleTicketStatus?: number;
+    creationDate: string;
+
+    // opcionales (si tu backend los soporta)
+    totalGrossWeight?: number;
+    totalTareWeight?: number;
+    totalTareAdjustment?: number;
+  };
+  documents: Array<{
+    idDocumentTypes: number | null;
+    idBusinessPartners: number | null;
+    documentSerial: string;
+    documentNumber: string;
+    documentDate: string;
+    documentGrossWeight: number;
+    documentNetWeight: number;
+  }>;
+}
+
+export interface ScaleTicketCreated {
+  id?: number;                 // backend puede devolver "id"
+  scaleTicketId?: number;      // o "scaleTicketId"
+  ScaleTicketId?: number;      // o PascalCase
+  [key: string]: any;
+}
+
+
+
+
 // ---- NUEVAS INTERFACES SEGÚN RESPUESTA DEL BACKEND ----
 export interface LoginData {
   id: number;
@@ -164,4 +207,35 @@ export class AuthService {
     localStorage.removeItem(this.REFRESH_KEY);
     localStorage.removeItem(this.USER_KEY);
   }
+
+
+
+
+
+
+
+
+  /**
+   * Registra cabecera del ticket + documentos
+   * POST /scale-tickets
+   */
+  createScaleTicketHeader(
+    payload: CreateScaleTicketPayload
+  ): Observable<ScaleTicketCreated> {
+    return this.http
+      .post<ApiResponse<ScaleTicketCreated>>(`scale-tickets`, payload)
+      .pipe(
+        map((res) => {
+          const row = res?.data?.[0];
+          if (!row) {
+            throw new Error('No se recibió data al crear el ticket de balanza.');
+          }
+          return row;
+        })
+      );
+  }
+
+
+
+
 }

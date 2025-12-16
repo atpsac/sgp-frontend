@@ -8,29 +8,35 @@
           Registro paso a paso del ticket de balanza, documentos relacionados,
           datos de transporte y pesadas asociadas.
         </p>
+
+        <!-- Estado cabecera -->
+        <div class="mt-2">
+          <span
+            class="badge"
+            [ngClass]="headerSaved ? 'text-bg-success' : 'text-bg-secondary'"
+          >
+            {{ headerSaved ? 'Encabezado guardado' : 'Encabezado pendiente' }}
+          </span>
+
+          <span class="ms-2 text-muted" *ngIf="headerSaved && headerTicketId">
+            ID: {{ headerTicketId }}
+          </span>
+        </div>
       </div>
 
-      <div class="d-flex flex-wrap gap-2">
+      <div class="d-flex flex-wrap gap-2 align-items-start">
+        <!-- ✅ BOTÓN X (Reiniciar / borrar localStorage draft) -->
         <button
           type="button"
-          class="ux-btn ux-btn--blue"
-          (click)="guardarEncabezado()"
-          [disabled]="isSavingHeader"
+          class="ux-icon-btn ux-icon-btn--danger"
+          title="Reiniciar ticket (borrar avance)"
+          (click)="resetDraftConfirm()"
+          [disabled]="!hasDraft || isSavingHeader || isSavingFull"
         >
-          <ng-container *ngIf="!isSavingHeader">
-            <span class="material-symbols-rounded">save</span>
-            <span>Guardar encabezado</span>
-          </ng-container>
-          <ng-container *ngIf="isSavingHeader">
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
-            <span>Guardando…</span>
-          </ng-container>
+          <span class="material-symbols-rounded">close</span>
         </button>
 
+        <!-- Solo aparece en el PASO 5 -->
         <button
           type="button"
           class="ux-btn ux-btn--primary"
@@ -91,7 +97,7 @@
           ></app-paso-origen-destino>
         </div>
 
-        <!-- PASO 3: DOCUMENTOS RELACIONADOS -->
+        <!-- PASO 3 -->
         <div *ngSwitchCase="3" class="step-panel">
           <app-paso-documentos
             [documentos]="documentos"
@@ -101,7 +107,7 @@
           ></app-paso-documentos>
         </div>
 
-        <!-- PASO 4: DATOS DEL TRANSPORTE -->
+        <!-- PASO 4 -->
         <div *ngSwitchCase="4" class="step-panel">
           <app-paso-transporte
             [formGroup]="transporte"
@@ -114,9 +120,18 @@
             (transportistaChange)="onChangeTransportista()"
             (conductorChange)="onChangeConductor()"
           ></app-paso-transporte>
+
+          <div class="alert alert-info mt-3 mb-0" *ngIf="!headerSaved">
+            <strong>Importante:</strong> al presionar <b>Siguiente</b>, se guardará la cabecera del ticket
+            (operación, origen/destino, documentos y transporte). Luego se habilitará el Paso 5.
+          </div>
+
+          <div class="alert alert-success mt-3 mb-0" *ngIf="headerSaved">
+            <strong>Listo:</strong> la cabecera ya fue guardada. Puedes continuar al Paso 5.
+          </div>
         </div>
 
-        <!-- PASO 5: DETALLE TICKET -->
+        <!-- PASO 5 -->
         <div *ngSwitchCase="5" class="step-panel">
           <app-paso-detalle-ticket
             [formGroup]="detalleTicket"
@@ -130,21 +145,18 @@
           ></app-paso-detalle-ticket>
         </div>
 
-        <!-- Default -->
         <div *ngSwitchDefault class="step-panel">
           <p class="mb-0">Selecciona un paso para comenzar.</p>
         </div>
       </div>
 
       <!-- Navegación -->
-      <div
-        class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2"
-      >
+      <div class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <button
           type="button"
           class="ux-btn ux-btn--blue"
           (click)="prevStep()"
-          [disabled]="currentStep === 1"
+          [disabled]="currentStep === 1 || isSavingHeader"
         >
           <span class="material-symbols-rounded">arrow_back</span>
           <span>Volver</span>
@@ -156,9 +168,24 @@
             class="ux-btn ux-btn--green"
             (click)="nextStep()"
             *ngIf="currentStep < maxStep"
+            [disabled]="isSavingHeader"
           >
-            <span>Siguiente</span>
-            <span class="material-symbols-rounded">arrow_forward</span>
+            <ng-container *ngIf="currentStep !== 4">
+              <span>Siguiente</span>
+              <span class="material-symbols-rounded">arrow_forward</span>
+            </ng-container>
+
+            <ng-container *ngIf="currentStep === 4">
+              <ng-container *ngIf="!isSavingHeader">
+                <span>{{ headerSaved ? 'Continuar' : 'Guardar encabezado y continuar' }}</span>
+                <span class="material-symbols-rounded">arrow_forward</span>
+              </ng-container>
+
+              <ng-container *ngIf="isSavingHeader">
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                <span>Guardando…</span>
+              </ng-container>
+            </ng-container>
           </button>
         </div>
       </div>

@@ -16,13 +16,21 @@ import {
 
 export interface PesadaDocumentoModel {
   id?: number;
-  socioNegocio: string;        // nombre del socio (companyName)
-  tipoDocumento: string;       // código del documento (EF, EG, etc.)
-  documento: string;           // nombre del documento (FACTURA ELECTRÓNICA...)
-  fechaDocumento: string;      // yyyy-MM-dd
-  serie: string;
+
+  // IDs para backend
+  idBusinessPartners?: number;
+  idDocumentTypes?: number;
+
+  // UI
+  socioNegocio: string;
+  tipoDocumento: string; // code
+  documento: string;     // name
+  fechaDocumento: string;
+
+  serie: string;               // ✅ máx 4
   numeroCorrelativo: string;
-  numeroDocumento: string;     // serie-numero
+  numeroDocumento: string;
+
   pesoBrutoKg: number;
   pesoNetoKg: number;
 }
@@ -47,16 +55,26 @@ export class PesadaDocumento implements OnInit {
   businessPartners: BusinessPartner[] = [];
   documentTypes: DocumentType[] = [];
 
+  loadingPartners = false;
+  loadingDocs = false;
+
   constructor(
     private fb: FormBuilder,
     public activeModal: NgbActiveModal,
     private weighingService: WeighingService
   ) {
     this.form = this.fb.group({
-      socioNegocio: ['', Validators.required],
-      tipoDocumento: ['', Validators.required], // código del documento
+      idBusinessPartners: [null, Validators.required],
+      idDocumentTypes: [null, Validators.required],
+
       fechaDocumento: ['', Validators.required],
-      serie: ['', Validators.required],
+
+      // ✅ serie: requerido, min 1, max 4
+      serie: [
+        '',
+        [Validators.required, Validators.minLength(1), Validators.maxLength(4)],
+      ],
+
       numeroCorrelativo: ['', Validators.required],
       pesoBrutoKg: [null, [Validators.required, Validators.min(0)]],
       pesoNetoKg: [null, [Validators.required, Validators.min(0)]],
@@ -64,66 +82,121 @@ export class PesadaDocumento implements OnInit {
   }
 
   ngOnInit(): void {
-    // Carga de combos desde API
     this.loadBusinessPartnersAndDocuments();
 
-    // Si viene data => modo edición, seteamos valores
     if (this.data) {
       this.titulo = 'Editar documento relacionado';
       this.form.patchValue({
-        socioNegocio: this.data.socioNegocio,
-        tipoDocumento: this.data.tipoDocumento, // código
+        idBusinessPartners: this.data.idBusinessPartners ?? null,
+        idDocumentTypes: this.data.idDocumentTypes ?? null,
         fechaDocumento: this.toDateInputValue(this.data.fechaDocumento),
-        serie: this.data.serie,
-        numeroCorrelativo: this.data.numeroCorrelativo,
+        serie: this.data.serie ?? '',
+        numeroCorrelativo: this.data.numeroCorrelativo ?? '',
         pesoBrutoKg: this.data.pesoBrutoKg,
         pesoNetoKg: this.data.pesoNetoKg,
       });
     }
   }
 
-  /** Carga socios y tipos de documento SIN dejar seleccionados por defecto */
   private loadBusinessPartnersAndDocuments(): void {
-    if (!this.operationId) {
-      return;
-    }
+    if (!this.operationId) return;
 
-    // Socios de negocio por operación
+    this.loadingPartners = true;
     this.weighingService
       .getBusinessPartnersByOperation(this.operationId)
       .subscribe({
-        next: (partners) => {
-          this.businessPartners = partners || [];
-          // IMPORTANTE: no seteamos socioNegocio si es nuevo.
-          // Si es edición, el patch del ngOnInit ya puso el valor.
+        next: (res: any) => {
+          const data = (res?.data ?? res) as BusinessPartner[] | null;
+          this.businessPartners = Array.isArray(data) ? data : [];
+          this.tryPatchIdsFromNamesIfEdit();
         },
-        error: (err) => {
-          console.error('Error loading business partners', err);
-        },
+        error: (err) => console.error('Error loading business partners', err),
+        complete: () => (this.loadingPartners = false),
       });
 
-    // Tipos de documento por operación
-    this.weighingService
-      .getDocumentTypesByOperation(this.operationId)
-      .subscribe({
-        next: (docs) => {
-          this.documentTypes = docs || [];
-          // IMPORTANTE: no seteamos tipoDocumento por defecto.
-          // En edición ya viene seteado desde ngOnInit.
-        },
-        error: (err) => {
-          console.error('Error loading document types', err);
-        },
-      });
+    this.loadingDocs = true;
+    this.weighingService.getDocumentTypesByOperation(this.operationId).subscribe({
+      next: (res: any) => {
+        const data = res?.data ?? res;
+        const flatDocs: DocumentType[] = [];
+
+        if (Array.isArray(data)) {
+          if (data.length && data[0]?.code && data[0]?.name) {
+            flatDocs.push(...(data as DocumentType[]));
+          } else {
+            for (const op of data) {
+              const docs = op?.documents;
+              if (Array.isArray(docs)) {
+                for (const d of docs) flatDocs.push(d);
+              }
+            }
+          }
+        }
+
+        const seen = new Set<number>();
+        this.documentTypes = flatDocs.filter((d: any) => {
+          const id = Number(d?.id || 0);
+          if (!id) return false;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+
+        this.tryPatchIdsFromNamesIfEdit();
+      },
+      error: (err) => console.error('Error loading document types', err),
+      complete: () => (this.loadingDocs = false),
+    });
+  }
+
+  private tryPatchIdsFromNamesIfEdit(): void {
+    if (!this.data) return;
+
+    const currentBP = this.form.get('idBusinessPartners')?.value;
+    const currentDT = this.form.get('idDocumentTypes')?.value;
+
+    if (!currentBP && this.data.socioNegocio && this.businessPartners.length) {
+      const name = String(this.data.socioNegocio).trim().toLowerCase();
+      const bp = this.businessPartners.find(
+        (x: any) => String(x.companyName || '').trim().toLowerCase() === name
+      );
+      if (bp?.id) {
+        this.form.patchValue({ idBusinessPartners: bp.id }, { emitEvent: false });
+      }
+    }
+
+    if (!currentDT && this.documentTypes.length) {
+      const code = String(this.data.tipoDocumento || '').trim().toLowerCase();
+      const nm = String(this.data.documento || '').trim().toLowerCase();
+
+      const byCode = this.documentTypes.find(
+        (x: any) => String(x.code || '').trim().toLowerCase() === code
+      );
+      const byName = this.documentTypes.find(
+        (x: any) => String(x.name || '').trim().toLowerCase() === nm
+      );
+
+      const found = byCode ?? byName;
+      if (found?.id) {
+        this.form.patchValue({ idDocumentTypes: found.id }, { emitEvent: false });
+      }
+    }
+  }
+
+  /** ✅ Forzar mayúsculas y cortar a 4 */
+  onSerieInput(): void {
+    const ctrl = this.form.get('serie');
+    const v = String(ctrl?.value || '')
+      .toUpperCase()
+      .replace(/\s+/g, '');
+    const cut = v.substring(0, 4);
+    if (cut !== ctrl?.value) ctrl?.setValue(cut, { emitEvent: false });
   }
 
   private toDateInputValue(value: string | Date): string {
     if (!value) return '';
-    if (value instanceof Date) {
-      return value.toISOString().substring(0, 10);
-    }
-    // Asumimos que viene como yyyy-MM-dd o ISO
-    return value.substring(0, 10);
+    if (value instanceof Date) return value.toISOString().substring(0, 10);
+    return String(value).substring(0, 10);
   }
 
   cancelar(): void {
@@ -140,31 +213,45 @@ export class PesadaDocumento implements OnInit {
 
     const raw = this.form.value;
 
-    // Serie-numero
-    const numeroDocumento = `${(raw.serie || '').trim()}-${(
-      raw.numeroCorrelativo || ''
-    ).trim()}`;
+    const idBusinessPartners = Number(raw.idBusinessPartners);
+    const idDocumentTypes = Number(raw.idDocumentTypes);
 
-    // Buscar descripción del tipo de documento
-    const selectedDocType = this.documentTypes.find(
-      (d) => d.code === raw.tipoDocumento
-    );
-    const docName = selectedDocType?.name ?? '';
+    const bp = this.businessPartners.find((x: any) => Number(x.id) === idBusinessPartners);
+    const dt = this.documentTypes.find((x: any) => Number(x.id) === idDocumentTypes);
+
+    if (!bp || !dt) {
+      this.isSaving = false;
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const serie = String(raw.serie || '').trim().toUpperCase().substring(0, 4);
+    const numeroCorrelativo = String(raw.numeroCorrelativo || '').trim();
+    const numeroDocumento = `${serie}-${numeroCorrelativo}`;
 
     const result: PesadaDocumentoModel = {
       id: this.data?.id,
-      socioNegocio: raw.socioNegocio,
-      tipoDocumento: raw.tipoDocumento, // código (EF, EG, etc.)
-      documento: docName,               // nombre del documento
+
+      idBusinessPartners,
+      idDocumentTypes,
+
+      socioNegocio: bp.companyName,
+      tipoDocumento: dt.code,
+      documento: dt.name,
+
       fechaDocumento: raw.fechaDocumento,
-      serie: raw.serie,
-      numeroCorrelativo: raw.numeroCorrelativo,
+      serie,
+      numeroCorrelativo,
       numeroDocumento,
+
       pesoBrutoKg: Number(raw.pesoBrutoKg),
       pesoNetoKg: Number(raw.pesoNetoKg),
     };
 
-    // Devuelve el documento al componente padre (PesadaForm)
     this.activeModal.close(result);
+  }
+
+  get f() {
+    return this.form.controls as any;
   }
 }

@@ -8,6 +8,47 @@ import { AuthService } from './auth';
    INTERFACES
    ========================================================= */
 
+
+   export interface CreateScaleTicketPayload {
+  ticket: {
+    idBuyingStations: number;
+    idBuyingStationsOrigin: number;
+    idBuyingStationsDestination: number;
+    idEmployees?: number | null;
+    idOperations: number;
+    idBusinessPartnersCarriers: number;
+    idBusinessPartnersDrivers: number;
+    idTrucks: number;
+    idTrailers: number;
+    idScaleTicketStatus?: number;
+    creationDate: string;
+
+    // opcionales (si tu backend los soporta)
+    totalGrossWeight?: number;
+    totalTareWeight?: number;
+    totalTareAdjustment?: number;
+  };
+  documents: Array<{
+    idDocumentTypes: number | null;
+    idBusinessPartners: number | null;
+    documentSerial: string;
+    documentNumber: string;
+    documentDate: string;
+    documentGrossWeight: number;
+    documentNetWeight: number;
+  }>;
+}
+
+export interface ScaleTicketCreated {
+  id?: number;                 // backend puede devolver "id"
+  scaleTicketId?: number;      // o "scaleTicketId"
+  ScaleTicketId?: number;      // o PascalCase
+  [key: string]: any;
+}
+
+
+
+
 export interface BuyingStation {
   id: number;
   name: string;
@@ -262,4 +303,31 @@ export class WeighingService {
       .get<ApiResponse<CarrierTruck>>(`carriers/${carrierId}/trucks`)
       .pipe(map((res) => res?.data ?? []));
   }
+
+
+
+
+
+  
+/**
+ * Registra cabecera del ticket + documentos
+ * POST /scale-tickets
+ */
+createScaleTicketHeader(
+  payload: CreateScaleTicketPayload
+): Observable<ScaleTicketCreated> {
+  return this.http
+    .post<ApiResponse<ScaleTicketCreated>>(`scale-tickets`, payload)
+    .pipe(
+      map((res) => {
+        const row = res?.data?.[0];
+        if (!row) {
+          throw new Error('No se recibió data al crear el ticket de balanza.');
+        }
+        return row;
+      })
+    );
+}
+
+
 }
