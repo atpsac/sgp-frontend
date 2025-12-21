@@ -1,0 +1,114 @@
+<div class="ux-scope pesada-test">
+  <div class="card ux-card p-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h5 class="m-0">Pesada Test (PrintNode)</h5>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" type="button" (click)="onValidate()">
+          Validar
+        </button>
+        <button class="btn btn-success" type="button" (click)="onConnect()">
+          Conectar
+        </button>
+        <button class="btn btn-danger" type="button" (click)="onDisconnect()">
+          Desconectar
+        </button>
+      </div>
+    </div>
+
+    <hr class="my-3" />
+
+    <form [formGroup]="form" class="row g-2">
+      <!-- API Key -->
+      <div class="col-12 col-lg-6">
+        <label class="form-label">API Key</label>
+        <input
+          class="form-control"
+          type="password"
+          formControlName="apiKey"
+          placeholder="Pega tu API Key"
+        />
+        <small class="text-danger" *ngIf="form.controls.apiKey.touched && form.controls.apiKey.invalid">
+          API Key requerida
+        </small>
+      </div>
+
+      <!-- ComputerId -->
+      <div class="col-6 col-lg-2">
+        <label class="form-label">ComputerId</label>
+        <input class="form-control" type="number" formControlName="computerId" />
+      </div>
+
+      <!-- DeviceName -->
+      <div class="col-12 col-lg-3">
+        <label class="form-label">DeviceName</label>
+        <input class="form-control" formControlName="deviceName" />
+      </div>
+
+      <!-- DeviceNum -->
+      <div class="col-6 col-lg-1">
+        <label class="form-label">Num</label>
+        <input class="form-control" type="number" formControlName="deviceNum" />
+      </div>
+    </form>
+
+    <hr class="my-3" />
+
+    <!-- STATUS -->
+    <div class="status-row">
+      <div>
+        <span class="label">Status:</span>
+        <span class="value">{{ (svc.status$ | async) }}</span>
+      </div>
+
+      <div class="text-danger" *ngIf="(svc.error$ | async) as err">
+        <span class="label">Error:</span>
+        <span class="value">{{ err.message }}</span>
+      </div>
+    </div>
+
+    <!-- DEVICE INFO -->
+    <div class="device-box" *ngIf="(svc.deviceInfo$ | async) as d">
+      <div class="device-title">Dispositivo</div>
+      <div class="device-grid">
+        <div><b>Name:</b> {{ d.deviceName }}</div>
+        <div><b>Num:</b> {{ d.deviceNum }}</div>
+        <div><b>Port:</b> {{ d.port }}</div>
+        <div><b>Vendor:</b> {{ d.vendor }}</div>
+        <div><b>Product:</b> {{ d.product }}</div>
+      </div>
+    </div>
+
+    <!-- READING -->
+    <div class="reading" *ngIf="(svc.reading$ | async) as r">
+      <div class="reading-main">
+        <div class="reading-kg">
+          {{ r.weightKg | number : '1.2-2' }}
+          <small>kg</small>
+        </div>
+
+        <div class="reading-meta">
+          <div>Original: <b>{{ r.value | number : '1.2-2' }}</b> {{ r.unit }}</div>
+          <div>
+            Estable:
+            <span class="pill" [class.pill-ok]="r.isStable" [class.pill-bad]="!r.isStable">
+              {{ r.isStable ? 'SI' : 'NO' }}
+            </span>
+          </div>
+          <div class="ts">{{ r.timestamp }}</div>
+        </div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary" type="button" [disabled]="!r.isStable" (click)="captureIfStable()">
+          Capturar (solo si estable)
+        </button>
+      </div>
+    </div>
+
+    <!-- EMPTY -->
+    <div class="empty" *ngIf="!(svc.reading$ | async)">
+      Aún no hay lecturas. Presiona <b>Conectar</b>.
+    </div>
+  </div>
+</div>

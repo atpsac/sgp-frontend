@@ -2,12 +2,20 @@
   <div>
     <h6 class="section-title mb-1">Detalle del ticket</h6>
     <p class="section-subtitle mb-0">
-      Registra las pesadas del ticket y asocia las taras por empaque a cada una
-      de ellas.
+      Registra las pesadas del ticket y asocia las taras por empaque a cada una de ellas.
     </p>
+
+    <div class="alert alert-warning mt-2 mb-0" *ngIf="locked">
+      El ticket está en proceso de guardado. Espera un momento para continuar.
+    </div>
   </div>
 
-  <button type="button" class="ux-btn ux-btn--green" (click)="onAdd()">
+  <button
+    type="button"
+    class="ux-btn ux-btn--green"
+    (click)="onAdd()"
+    [disabled]="locked"
+  >
     <span class="material-symbols-rounded">add</span>
     <span>Agregar pesada</span>
   </button>
@@ -16,47 +24,40 @@
 <div class="totals-bar" [formGroup]="formGroup">
   <div class="total-box">
     <div class="total-label">Cantidad ítems</div>
-    <div class="total-value">
-      {{ totales?.cantidadItems || 0 }}
-    </div>
+    <div class="total-value">{{ totales?.cantidadItems || 0 }}</div>
   </div>
 
   <div class="total-box">
     <div class="total-label">Total peso bruto (Kg)</div>
-    <div class="total-value">
-      {{ totales?.totalPesoBruto | number: '1.2-2' }}
-    </div>
+    <div class="total-value">{{ totales?.totalPesoBruto | number: '1.2-2' }}</div>
   </div>
 
   <div class="total-box">
     <div class="total-label">Total tara (Kg)</div>
-    <div class="total-value">
-      {{ totales?.totalTara | number: '1.2-2' }}
-    </div>
+    <div class="total-value">{{ totales?.totalTara | number: '1.2-2' }}</div>
   </div>
 
   <div class="total-box">
     <div class="total-label">Subtotal peso neto (Kg)</div>
-    <div class="total-value">
-      {{ totales?.subtotalPesoNeto | number: '1.2-2' }}
-    </div>
+    <div class="total-value">{{ totales?.subtotalPesoNeto | number: '1.2-2' }}</div>
   </div>
 
   <div class="total-box total-box--input">
-    <label class="total-label mb-1"> Ajuste (Kg) </label>
+    <label class="total-label mb-1">Ajuste (Kg)</label>
     <input
       type="number"
       class="form-control ux-input total-input"
       formControlName="ajusteKg"
+      [disabled]="locked"
+      inputmode="decimal"
+      step="0.01"
       (change)="onAjusteChange()"
     />
   </div>
 
   <div class="total-box">
     <div class="total-label">Diferencia ajuste (Kg)</div>
-    <div class="total-value">
-      {{ totales?.diferenciaAjuste | number: '1.2-2' }}
-    </div>
+    <div class="total-value">{{ totales?.diferenciaAjuste | number: '1.2-2' }}</div>
   </div>
 
   <div class="total-box">
@@ -89,12 +90,9 @@
         <td class="ux-col-idx" [attr.data-label]="'Item'">
           {{ i + 1 | number: '2.0-0' }}
         </td>
-        <td [attr.data-label]="'Producto'">
-          {{ p.producto }}
-        </td>
-        <td [attr.data-label]="'Balanza'">
-          {{ p.balanza }}
-        </td>
+        <td [attr.data-label]="'Producto'">{{ p.producto }}</td>
+        <td [attr.data-label]="'Balanza'">{{ p.balanza }}</td>
+
         <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
           {{ p.pesoBrutoKg | number: '1.2-2' }}
         </td>
@@ -104,9 +102,9 @@
         <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
           {{ p.pesoNetoKg | number: '1.2-2' }}
         </td>
-        <td [attr.data-label]="'Observaciones'">
-          {{ p.observaciones || '-' }}
-        </td>
+
+        <td [attr.data-label]="'Observaciones'">{{ p.observaciones || '-' }}</td>
+
         <td [attr.data-label]="'Tara'">
           <span
             class="ux-badge"
@@ -116,6 +114,7 @@
             {{ p.tieneTara ? 'SI' : 'NO' }}
           </span>
         </td>
+
         <td [attr.data-label]="'Estado'">
           <span
             class="status-pill"
@@ -128,12 +127,14 @@
             {{ p.estado || 'EN REGISTRO' }}
           </span>
         </td>
+
         <td class="ux-col-actions" [attr.data-label]="'Acciones'">
           <button
             type="button"
             class="ux-icon-btn ux-icon-btn--medium"
             (click)="onManageTaras(i)"
             title="Gestionar taras"
+            [disabled]="locked"
           >
             <span class="material-symbols-rounded">inventory_2</span>
           </button>
@@ -143,6 +144,7 @@
             class="ux-icon-btn ux-icon-btn--medium"
             (click)="onEdit(i)"
             title="Editar pesada"
+            [disabled]="locked"
           >
             <span class="material-symbols-rounded">edit</span>
           </button>
@@ -152,13 +154,14 @@
             class="ux-icon-btn ux-icon-btn--medium"
             (click)="onDelete(i)"
             title="Eliminar"
+            [disabled]="locked"
           >
             <span class="material-symbols-rounded">delete</span>
           </button>
         </td>
       </tr>
 
-      <tr *ngIf="pesadas.length === 0">
+      <tr *ngIf="(pesadas?.length || 0) === 0">
         <td colspan="10" class="text-center py-3">
           Aún no se han registrado pesadas para este ticket.
         </td>

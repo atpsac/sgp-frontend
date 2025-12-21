@@ -119,6 +119,17 @@ export interface CarrierTruck {
   configuration: string;
 }
 
+
+
+export interface ProductByOperation {
+  productId: number;
+  productCode: string;
+  productName: string;
+  productTypeId: number;
+  productTypeName: string;
+}
+
+
 /* ------- Respuesta estándar ------- */
 
 interface ApiResponse<T> {
@@ -328,6 +339,22 @@ createScaleTicketHeader(
       })
     );
 }
+
+
+
+/**
+   * Productos por operación
+   * GET /products/operation/{operationId}
+   */
+  getProductsByOperation(operationId: number): Observable<ProductByOperation[]> {
+    return this.http
+      .get<ApiResponse<ProductByOperation>>(`products/operation/${operationId}`)
+      .pipe(map((res) => res?.data ?? []));
+  }
+
+
+
+
 
 
 }

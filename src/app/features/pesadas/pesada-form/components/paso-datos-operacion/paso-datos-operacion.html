@@ -34,19 +34,13 @@
     <div class="col-md-4 col-12">
       <label class="form-label mb-1 small text-muted"> Sede de operación </label>
       <div class="ux-select">
-        <select
-          class="form-select ux-input"
-          formControlName="sedeOperacion"
-          (change)="onStationChange()"
-        >
+        <select class="form-select ux-input" formControlName="sedeOperacion">
           <option [ngValue]="null" disabled>Selecciona una sede</option>
           <option *ngFor="let s of stations" [ngValue]="s.id">
             {{ s.name }}
           </option>
         </select>
-        <span class="ux-select__icon material-symbols-rounded">
-          expand_more
-        </span>
+        <span class="ux-select__icon material-symbols-rounded">expand_more</span>
       </div>
     </div>
 
@@ -59,9 +53,7 @@
             {{ op.name }}
           </option>
         </select>
-        <span class="ux-select__icon material-symbols-rounded">
-          expand_more
-        </span>
+        <span class="ux-select__icon material-symbols-rounded">expand_more</span>
       </div>
     </div>
   </div>

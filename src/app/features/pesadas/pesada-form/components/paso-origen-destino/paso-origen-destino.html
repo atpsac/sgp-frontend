@@ -3,6 +3,10 @@
   <p class="section-subtitle mb-0">
     Configura la sede de origen y la sede de destino del producto.
   </p>
+
+  <div class="alert alert-warning mt-2 mb-0" *ngIf="locked">
+    El encabezado ya fue guardado. No se puede modificar Origen/Destino.
+  </div>
 </div>
 
 <div [formGroup]="formGroup">
@@ -11,15 +15,18 @@
     <div class="col-md-6 col-12">
       <label class="form-label mb-1 small text-muted"> Sede de origen </label>
       <div class="ux-select">
-        <select class="form-select ux-input" formControlName="sedeOrigen">
+        <select
+          class="form-select ux-input"
+          formControlName="sedeOrigen"
+          (change)="onOrigenChange()"
+          [disabled]="locked"
+        >
           <option [ngValue]="null" disabled>Selecciona una sede</option>
-          <option *ngFor="let s of originStations" [ngValue]="s.id">
+          <option *ngFor="let s of originOptions" [ngValue]="s.id">
             {{ s.name }}
           </option>
         </select>
-        <span class="ux-select__icon material-symbols-rounded">
-          expand_more
-        </span>
+        <span class="ux-select__icon material-symbols-rounded">expand_more</span>
       </div>
     </div>
 
@@ -27,15 +34,18 @@
     <div class="col-md-6 col-12">
       <label class="form-label mb-1 small text-muted"> Sede de destino </label>
       <div class="ux-select">
-        <select class="form-select ux-input" formControlName="sedeDestino">
+        <select
+          class="form-select ux-input"
+          formControlName="sedeDestino"
+          (change)="onDestinoChange()"
+          [disabled]="locked"
+        >
           <option [ngValue]="null" disabled>Selecciona una sede</option>
-          <option *ngFor="let s of destinationStations" [ngValue]="s.id">
+          <option *ngFor="let s of destinationOptions" [ngValue]="s.id">
             {{ s.name }}
           </option>
         </select>
-        <span class="ux-select__icon material-symbols-rounded">
-          expand_more
-        </span>
+        <span class="ux-select__icon material-symbols-rounded">expand_more</span>
       </div>
     </div>
   </div>

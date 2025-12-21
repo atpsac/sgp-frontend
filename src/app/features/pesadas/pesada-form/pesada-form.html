@@ -11,10 +11,7 @@
 
         <!-- Estado cabecera -->
         <div class="mt-2">
-          <span
-            class="badge"
-            [ngClass]="headerSaved ? 'text-bg-success' : 'text-bg-secondary'"
-          >
+          <span class="badge" [ngClass]="headerSaved ? 'text-bg-success' : 'text-bg-secondary'">
             {{ headerSaved ? 'Encabezado guardado' : 'Encabezado pendiente' }}
           </span>
 
@@ -25,7 +22,7 @@
       </div>
 
       <div class="d-flex flex-wrap gap-2 align-items-start">
-        <!-- ✅ BOTÓN X (Reiniciar / borrar localStorage draft) -->
+        <!-- ✅ BOTÓN X -->
         <button
           type="button"
           class="ux-icon-btn ux-icon-btn--danger"
@@ -36,7 +33,7 @@
           <span class="material-symbols-rounded">close</span>
         </button>
 
-        <!-- Solo aparece en el PASO 5 -->
+        <!-- Guardar ticket final (solo en paso 5) -->
         <button
           type="button"
           class="ux-btn ux-btn--primary"
@@ -48,12 +45,9 @@
             <span class="material-symbols-rounded">done_all</span>
             <span>Guardar ticket</span>
           </ng-container>
+
           <ng-container *ngIf="isSavingFull">
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
             <span>Guardando…</span>
           </ng-container>
         </button>
@@ -69,22 +63,18 @@
     ></app-stepper-nav>
 
     <!-- FORM -->
-    <form
-      [formGroup]="ticketForm"
-      novalidate
-      autocomplete="off"
-      class="step-form"
-    >
+    <form [formGroup]="ticketForm" novalidate autocomplete="off" class="step-form">
       <div class="step-content" [ngSwitch]="currentStep">
+
         <!-- PASO 1 -->
         <div *ngSwitchCase="1" class="step-panel">
           <app-paso-datos-operacion
             [formGroup]="datosOperacion"
-            [stations]="stations"
-            [operations]="operations"
+            [locked]="headerSaved"
             [minFechaEmision]="minFechaEmision"
             [maxFechaEmision]="maxFechaEmision"
-            (stationChange)="onChangeOperationStation()"
+            (stationsReady)="onStationsReady($event)"
+            (operationChange)="onOperationChange($event)"
           ></app-paso-datos-operacion>
         </div>
 
@@ -94,16 +84,17 @@
             [formGroup]="origenDestino"
             [originStations]="originStations"
             [destinationStations]="destinationStations"
+            [locked]="headerSaved"
           ></app-paso-origen-destino>
         </div>
 
         <!-- PASO 3 -->
         <div *ngSwitchCase="3" class="step-panel">
           <app-paso-documentos
+            [operationId]="operationIdSelected"
+            [locked]="headerSaved"
             [documentos]="documentos"
-            (addDocumento)="addDocumentoRelacionado()"
-            (editDocumento)="editDocumentoRelacionado(documentos[$event], $event)"
-            (deleteDocumento)="deleteDocumentoRelacionado($event)"
+            (documentosChange)="onDocumentosChange($event)"
           ></app-paso-documentos>
         </div>
 
@@ -111,19 +102,12 @@
         <div *ngSwitchCase="4" class="step-panel">
           <app-paso-transporte
             [formGroup]="transporte"
-            [carriers]="carriers"
-            [carrierDrivers]="carrierDrivers"
-            [carrierTrucks]="carrierTrucks"
-            [carrierTrailers]="carrierTrailers"
-            [getTruckPlate]="getTruckPlate.bind(this)"
-            [getTrailerPlate]="getTrailerPlate.bind(this)"
-            (transportistaChange)="onChangeTransportista()"
-            (conductorChange)="onChangeConductor()"
+            [locked]="headerSaved"
           ></app-paso-transporte>
 
           <div class="alert alert-info mt-3 mb-0" *ngIf="!headerSaved">
-            <strong>Importante:</strong> al presionar <b>Siguiente</b>, se guardará la cabecera del ticket
-            (operación, origen/destino, documentos y transporte). Luego se habilitará el Paso 5.
+            <strong>Importante:</strong> al presionar <b>Siguiente</b>, se guardará la cabecera del ticket.
+            Luego se habilitará el Paso 5.
           </div>
 
           <div class="alert alert-success mt-3 mb-0" *ngIf="headerSaved">
@@ -133,16 +117,31 @@
 
         <!-- PASO 5 -->
         <div *ngSwitchCase="5" class="step-panel">
-          <app-paso-detalle-ticket
+          <!-- <app-paso-detalle-ticket
             [formGroup]="detalleTicket"
             [pesadas]="pesadas"
             [totales]="totalesPesadas"
-            (addPesada)="addPesada()"
-            (editPesada)="editPesada(pesadas[$event], $event)"
-            (deletePesada)="deletePesada($event)"
-            (manageTaras)="openTarasForPesada(pesadas[$event], $event)"
+            [productos]="productosMock"
+            [balanzas]="balanzasMock"
+            [locked]="isSavingFull || isSavingHeader"
+            (pesadasChange)="onPesadasChange($event)"
             (ajusteChange)="onChangeAjusteKg()"
-          ></app-paso-detalle-ticket>
+          ></app-paso-detalle-ticket> -->
+
+          <app-paso-detalle-ticket
+          [formGroup]="detalleTicket"
+          [operationId]="operationIdSelected"
+
+          [pesadas]="pesadas"
+          [totales]="totalesPesadas"
+          [balanzas]="balanzasMock"
+          [locked]="isSavingFull || isSavingHeader"
+          (pesadasChange)="onPesadasChange($event)"
+          (ajusteChange)="onChangeAjusteKg()"
+        ></app-paso-detalle-ticket>
+
+
+
         </div>
 
         <div *ngSwitchDefault class="step-panel">
@@ -162,32 +161,30 @@
           <span>Volver</span>
         </button>
 
-        <div class="d-flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="ux-btn ux-btn--green"
-            (click)="nextStep()"
-            *ngIf="currentStep < maxStep"
-            [disabled]="isSavingHeader"
-          >
-            <ng-container *ngIf="currentStep !== 4">
-              <span>Siguiente</span>
+        <button
+          type="button"
+          class="ux-btn ux-btn--green"
+          (click)="nextStep()"
+          *ngIf="currentStep < maxStep"
+          [disabled]="isSavingHeader"
+        >
+          <ng-container *ngIf="currentStep !== 4">
+            <span>Siguiente</span>
+            <span class="material-symbols-rounded">arrow_forward</span>
+          </ng-container>
+
+          <ng-container *ngIf="currentStep === 4">
+            <ng-container *ngIf="!isSavingHeader">
+              <span>{{ headerSaved ? 'Continuar' : 'Guardar encabezado y continuar' }}</span>
               <span class="material-symbols-rounded">arrow_forward</span>
             </ng-container>
 
-            <ng-container *ngIf="currentStep === 4">
-              <ng-container *ngIf="!isSavingHeader">
-                <span>{{ headerSaved ? 'Continuar' : 'Guardar encabezado y continuar' }}</span>
-                <span class="material-symbols-rounded">arrow_forward</span>
-              </ng-container>
-
-              <ng-container *ngIf="isSavingHeader">
-                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                <span>Guardando…</span>
-              </ng-container>
+            <ng-container *ngIf="isSavingHeader">
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              <span>Guardando…</span>
             </ng-container>
-          </button>
-        </div>
+          </ng-container>
+        </button>
       </div>
     </form>
   </div>

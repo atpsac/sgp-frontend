@@ -1,27 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
+  AbstractControl,
   FormBuilder,
   FormGroup,
   Validators,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { firstValueFrom } from 'rxjs';
+import Swal from 'sweetalert2';
 
-import { PesadaDocumento } from '../modals/pesada-documento/pesada-documento';
-import { PesadaTara } from '../modals/pesada-tara/pesada-tara';
-import { PesadaPeso } from '../modals/pesada-peso/pesada-peso';
 import { ToastService } from '../../../shared/components/toast/toast.service';
-
 import {
   WeighingService,
   BuyingStation,
-  OperationStation,
-  Carrier,
-  CarrierDriver,
-  CarrierTruck,
-  CarrierTrailer,
 } from '../../../core/services/weighing.service';
 
 import { StepperNav, WizardStep } from './components/stepper-nav/stepper-nav';
@@ -32,38 +24,24 @@ import { PasoTransporte } from './components/paso-transporte/paso-transporte';
 import { PasoDetalleTicket } from './components/paso-detalle-ticket/paso-detalle-ticket';
 
 import { TicketDraftService } from './services/ticket-draft.service';
-import Swal from 'sweetalert2';
 
 /* =========================================================
-   INTERFACES / MODELOS LOCALES
+   MODELOS (se exportan porque los pasos los importan)
    ========================================================= */
-
-export interface BusinessPartnerLite {
-  id: number;
-  companyName: string;
-}
-
-export interface DocumentTypeLite {
-  id: number;
-  code: string;
-  name: string;
-}
 
 export interface DocumentoRelacionado {
   id?: number;
 
+  // IMPORTANTES para guardar cabecera
   idDocumentTypes?: number;
   idBusinessPartners?: number;
 
-  socioNegocio: string;
-  tipoDocumento: string;
-  documento: string;
-
+  // Para armar serie/numero si viene junto
   serie?: string;
   numeroCorrelativo?: string;
+  numeroDocumento?: string;
 
   fechaDocumento: string;
-  numeroDocumento: string;
 
   pesoBrutoKg: number;
   pesoNetoKg: number;
@@ -126,8 +104,6 @@ export interface TotalesPesadas {
 export class PesadaForm implements OnInit {
   minFechaEmision!: string;
   maxFechaEmision!: string;
-
-  /** ✅ para resetear al “hoy” */
   private todayStr!: string;
 
   currentStep = 1;
@@ -143,31 +119,15 @@ export class PesadaForm implements OnInit {
 
   ticketForm: FormGroup;
 
-  stations: BuyingStation[] = [];
+  // estaciones para paso 2 (vienen del paso 1)
   originStations: BuyingStation[] = [];
   destinationStations: BuyingStation[] = [];
-  principalStation: BuyingStation | null = null;
-  operations: OperationStation[] = [];
 
-  carriers: Carrier[] = [];
-  carrierDrivers: CarrierDriver[] = [];
-  carrierTrucks: CarrierTruck[] = [];
-  carrierTrailers: CarrierTrailer[] = [];
-
-  productosMock: string[] = [
-    'CACAO EN GRANO HÚMEDO',
-    'CACAO EN GRANO SECO',
-    'CAFÉ VERDE',
-  ];
-
-  balanzasMock: string[] = [
-    '001-METTLER TOLEDO PBA430',
-    '002-METTLER TOLEDO PBA430',
-  ];
-
+  // data de pasos 3 y 5
   documentos: DocumentoRelacionado[] = [];
   pesadas: PesadaDetalle[] = [];
 
+  // totales paso 5
   totalesPesadas: TotalesPesadas = {
     cantidadItems: 0,
     totalPesoBruto: 0,
@@ -178,15 +138,16 @@ export class PesadaForm implements OnInit {
     totalPesoNeto: 0,
   };
 
+  // estados
   isSavingHeader = false;
   isSavingFull = false;
-  isLoading = false;
 
   headerSaved = false;
   headerTicketId: number | null = null;
 
-  businessPartners: BusinessPartnerLite[] = [];
-  documentTypes: DocumentTypeLite[] = [];
+  // mocks (puedes cambiarlos luego a catálogo real)
+  productosMock: string[] = ['CACAO EN GRANO HÚMEDO', 'CACAO EN GRANO SECO', 'CAFÉ VERDE'];
+  balanzasMock: string[] = ['001-METTLER TOLEDO PBA430', '002-METTLER TOLEDO PBA430'];
 
   /** ✅ botón reiniciar solo si hay algo guardado/cargando */
   get hasDraft(): boolean {
@@ -201,7 +162,6 @@ export class PesadaForm implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private modalService: NgbModal,
     public toast: ToastService,
     private weighingService: WeighingService,
     private ticketDraftService: TicketDraftService
@@ -268,9 +228,11 @@ export class PesadaForm implements OnInit {
   get transporte(): FormGroup { return this.ticketForm.get('transporte') as FormGroup; }
   get detalleTicket(): FormGroup { return this.ticketForm.get('detalleTicket') as FormGroup; }
 
-  get transportistaGroup(): FormGroup { return this.transporte.get('transportista') as FormGroup; }
-  get conductorGroup(): FormGroup { return this.transporte.get('conductor') as FormGroup; }
-  get vehiculoGroup(): FormGroup { return this.transporte.get('vehiculo') as FormGroup; }
+  /** ✅ helper: un control DISABLED debe contar como “ok” */
+  private ok(ctrl: AbstractControl | null | undefined): boolean {
+    if (!ctrl) return false;
+    return ctrl.valid || ctrl.disabled;
+  }
 
   /* =========================================================
      INIT
@@ -278,16 +240,10 @@ export class PesadaForm implements OnInit {
   ngOnInit(): void {
     this.loadDraftFromStorage();
 
-    this.loadStationsAndOperations();
-    this.loadCarriers();
+    // recalcular totales (por si venía del draft)
+    this.recalcularTotalesPesadas();
 
-    const opIdInit = Number(this.datosOperacion.get('operacion')?.value || 0);
-    if (opIdInit) {
-      this.loadDocumentCatalogsForOperation(opIdInit);
-      this.documentos = this.documentos.map(d => this.normalizeDocumentoRelacionado(d));
-      this.saveDraftToStorage();
-    }
-
+    // cambios relevantes para draft y stepper
     this.datosOperacion.valueChanges.subscribe(() => {
       this.updateStepsState();
       this.saveDraftToStorage();
@@ -308,65 +264,92 @@ export class PesadaForm implements OnInit {
       this.saveDraftToStorage();
     });
 
-    this.updateStepsState();
+    // si ya estaba guardado, bloquear edición del header
+    if (this.headerSaved) this.lockHeaderEdition();
 
-    if (this.headerSaved) {
-      this.lockHeaderEdition();
-    }
+    this.updateStepsState();
+  }
+
+  /* =========================================================
+     ✅ EVENTOS DESDE HIJOS
+     ========================================================= */
+
+  onStationsReady(payload: { principal: BuyingStation; nonPrincipal: BuyingStation[]; all: BuyingStation[] }) {
+    // Paso 2: origen = no principal, destino = principal (según tu regla)
+    this.destinationStations = payload?.principal ? [payload.principal] : [];
+    this.originStations = payload?.nonPrincipal || [];
+    this.saveDraftToStorage();
+  }
+
+  onOperationChange(opId: number) {
+    if (this.headerSaved) return;
+
+    // si cambia la operación: limpiar docs para evitar inconsistencias
+    this.documentos = [];
+    this.updateStepsState();
+    this.saveDraftToStorage();
+  }
+
+  onDocumentosChange(list: DocumentoRelacionado[]) {
+    if (this.headerSaved) return; // seguridad (aunque el hijo ya debería bloquear)
+    this.documentos = list || [];
+    this.updateStepsState();
+    this.saveDraftToStorage();
+  }
+
+  onPesadasChange(list: PesadaDetalle[]) {
+    // OJO: NO BLOQUEAR por headerSaved (la cabecera guardada NO debe bloquear pesadas)
+    this.pesadas = list || [];
+    this.recalcularTotalesPesadas();
+    this.updateStepsState();
+    this.saveDraftToStorage();
+  }
+
+  onChangeAjusteKg(): void {
+    this.recalcularTotalesPesadas();
+    this.saveDraftToStorage();
   }
 
   /* =========================================================
      ✅ REINICIAR / BORRAR DRAFT (BOTÓN X)
      ========================================================= */
   async resetDraftConfirm(): Promise<void> {
-  if (this.isSavingHeader || this.isSavingFull) return;
+    if (this.isSavingHeader || this.isSavingFull) return;
 
-  const ok = await this.toast.confirm(
-    'Se borrará el avance guardado y se limpiarán los pasos, documentos y pesadas. Esta acción no se puede deshacer.',
-    {
-      title: '¿Reiniciar ticket de balanza?',
-      type: 'warning', // ✅ warning como pediste
-      // si tu componente soporta textos personalizados:
-      // confirmText: 'Sí, reiniciar',
-      // cancelText: 'Cancelar',
-    }
-  );
+    const ok = await this.toast.confirm(
+      'Se borrará el avance guardado y se limpiarán los pasos, documentos y pesadas. Esta acción no se puede deshacer.',
+      { title: '¿Reiniciar ticket de balanza?', type: 'warning' }
+    );
+    if (!ok) return;
 
-  if (!ok) return;
+    this.resetAllState();
 
-  this.resetAllState();
-
-  // opcional: si quieres mensaje final (puede ser tu toast success)
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: 'Avance borrado. Puedes crear un nuevo ticket.',
-    showConfirmButton: false,
-    timer: 2500,
-    timerProgressBar: true,
-  });
-}
-
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Avance borrado. Puedes crear un nuevo ticket.',
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+    });
+  }
 
   private resetAllState(): void {
-    // 1) limpiar storage
     this.clearDraftFromStorage();
 
-    // 2) liberar estado ticket
     this.headerSaved = false;
     this.headerTicketId = null;
 
     this.isSavingHeader = false;
     this.isSavingFull = false;
 
-    // 3) limpiar colecciones
     this.documentos = [];
     this.pesadas = [];
-    this.businessPartners = [];
-    this.documentTypes = [];
 
-    // 4) reset totales
+    this.originStations = [];
+    this.destinationStations = [];
+
     this.totalesPesadas = {
       cantidadItems: 0,
       totalPesoBruto: 0,
@@ -377,46 +360,21 @@ export class PesadaForm implements OnInit {
       totalPesoNeto: 0,
     };
 
-    // 5) reset form + habilitar
     this.ticketForm.enable({ emitEvent: false });
     this.ticketForm.reset(
       {
-        datosOperacion: {
-          fechaEmision: this.todayStr,
-          operacion: null,
-          sedeOperacion: null,
-        },
-        origenDestino: {
-          sedeOrigen: null,
-          sedeDestino: null,
-        },
+        datosOperacion: { fechaEmision: this.todayStr, operacion: null, sedeOperacion: null },
+        origenDestino: { sedeOrigen: null, sedeDestino: null },
         transporte: {
-          transportista: {
-            transportistaId: null,
-            nombre: '',
-            tipoDocumento: '',
-            numeroDocumento: '',
-          },
-          conductor: {
-            conductorId: null,
-            nombre: '',
-            tipoDocumento: '',
-            numeroDocumento: '',
-            licenciaConducir: '',
-          },
-          vehiculo: {
-            vehiculoId: null,
-            trailerId: null,
-          },
+          transportista: { transportistaId: null, nombre: '', tipoDocumento: '', numeroDocumento: '' },
+          conductor: { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+          vehiculo: { vehiculoId: null, trailerId: null },
         },
-        detalleTicket: {
-          ajusteKg: 0,
-        },
+        detalleTicket: { ajusteKg: 0 },
       },
       { emitEvent: false }
     );
 
-    // 6) reset stepper
     this.currentStep = 1;
     this.steps = [
       { id: 1, label: 'Datos de operación', hint: 'Fecha, operación y sede', disabled: false, completed: false },
@@ -426,32 +384,40 @@ export class PesadaForm implements OnInit {
       { id: 5, label: 'Detalle del ticket', hint: 'Pesadas y taras', disabled: true, completed: false },
     ];
 
-    // 7) reset catálogos dependientes (transporte)
-    this.carrierDrivers = [];
-    this.carrierTrucks = [];
-    this.carrierTrailers = [];
-
-    // 8) recargar catálogos principales (opcional pero recomendado)
-    this.loadStationsAndOperations();
-    this.loadCarriers();
-
     this.updateStepsState();
   }
 
   /* =========================================================
-     STORAGE
+     STORAGE (draft)
      ========================================================= */
   private saveDraftToStorage(): void {
     const draft = {
-      form: this.ticketForm.value,
+      // form: this.ticketForm.value,
+      form: this.ticketForm.getRawValue(),
       documentos: this.documentos,
       pesadas: this.pesadas,
       currentStep: this.currentStep,
       headerSaved: this.headerSaved,
       headerTicketId: this.headerTicketId,
+      originStations: this.originStations,
+      destinationStations: this.destinationStations,
     };
     this.ticketDraftService.saveDraft(draft as any);
   }
+
+
+  get operationIdSelected(): number {
+  // raw para no depender de disabled
+  const raw: any = this.datosOperacion.getRawValue?.() ?? this.datosOperacion.value;
+  const v = raw?.operacion;
+
+  // si viniera objeto {id,...}
+  if (v && typeof v === 'object' && 'id' in v) return Number((v as any).id || 0);
+
+  return Number(v || 0);
+}
+
+
 
   private loadDraftFromStorage(): void {
     const draft: any = this.ticketDraftService.loadDraft();
@@ -459,6 +425,7 @@ export class PesadaForm implements OnInit {
 
     try {
       if (draft.form) this.ticketForm.patchValue(draft.form);
+
       this.documentos = draft.documentos || [];
       this.pesadas = draft.pesadas || [];
       this.currentStep = draft.currentStep || 1;
@@ -466,8 +433,10 @@ export class PesadaForm implements OnInit {
       this.headerSaved = !!draft.headerSaved;
       this.headerTicketId = typeof draft.headerTicketId === 'number' ? draft.headerTicketId : null;
 
-      this.recalcularTotalesPesadas();
-      this.updateStepsState();
+      this.originStations = draft.originStations || [];
+      this.destinationStations = draft.destinationStations || [];
+
+      if (this.headerSaved) this.lockHeaderEdition();
     } catch (error) {
       console.error('Error aplicando borrador de ticket', error);
     }
@@ -475,331 +444,6 @@ export class PesadaForm implements OnInit {
 
   private clearDraftFromStorage(): void {
     this.ticketDraftService.clearDraft();
-  }
-
-  /* =========================================================
-     ✅ CATÁLOGOS PASO 3 (por operación)
-     ========================================================= */
-
-  private loadDocumentCatalogsForOperation(operationId: number): void {
-    if (!operationId) {
-      this.businessPartners = [];
-      this.documentTypes = [];
-      return;
-    }
-
-    this.weighingService.getBusinessPartnersByOperation(operationId).subscribe({
-      next: (res: any) => {
-        this.businessPartners = (res?.data || []) as BusinessPartnerLite[];
-        this.documentos = this.documentos.map(d => this.normalizeDocumentoRelacionado(d));
-        this.saveDraftToStorage();
-      },
-      error: (err) => console.error('Error cargando socios de negocio por operación', err),
-    });
-
-    this.weighingService.getDocumentTypesByOperation(operationId).subscribe({
-      next: (res: any) => {
-        const rows = res?.data || [];
-        const flat: DocumentTypeLite[] = [];
-        for (const r of rows) {
-          const docs = r?.documents || [];
-          for (const d of docs) {
-            flat.push({ id: d.id, code: d.code, name: d.name });
-          }
-        }
-        this.documentTypes = flat;
-        this.documentos = this.documentos.map(d => this.normalizeDocumentoRelacionado(d));
-        this.saveDraftToStorage();
-      },
-      error: (err) => console.error('Error cargando tipos de documento por operación', err),
-    });
-  }
-
-  private normalizeDocumentoRelacionado(doc: DocumentoRelacionado): DocumentoRelacionado {
-    const d: any = { ...doc };
-
-    if (!d.serie || !d.numeroCorrelativo) {
-      const nd = String(d.numeroDocumento || '');
-      if (nd.includes('-')) {
-        const [ser, cor] = nd.split('-', 2);
-        d.serie = d.serie || ser?.trim();
-        d.numeroCorrelativo = d.numeroCorrelativo || cor?.trim();
-      }
-    }
-
-    if (d.serie && d.numeroCorrelativo) {
-      d.numeroDocumento = `${d.serie}-${d.numeroCorrelativo}`;
-    }
-
-    if (!this.isValidInt(d.idBusinessPartners)) {
-      const bp = this.businessPartners.find(x => this.safeEq(x.companyName, d.socioNegocio));
-      if (bp) d.idBusinessPartners = bp.id;
-    }
-
-    if (!this.isValidInt(d.idDocumentTypes)) {
-      const byCode = this.documentTypes.find(x => this.safeEq(x.code, d.tipoDocumento));
-      const byName = this.documentTypes.find(x => this.safeEq(x.name, d.documento));
-      const found = byCode || byName;
-      if (found) d.idDocumentTypes = found.id;
-    }
-
-    return d as DocumentoRelacionado;
-  }
-
-  private safeEq(a: any, b: any): boolean {
-    return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
-  }
-
-  private isValidInt(val: any): boolean {
-    return Number.isInteger(val) && Number(val) > 0;
-  }
-
-  private getSerialNumberFromDoc(d: DocumentoRelacionado): { serial: string; number: string } {
-    const serial = String((d as any).serie || '').trim();
-    const number = String((d as any).numeroCorrelativo || '').trim();
-
-    if (serial && number) return { serial, number };
-
-    const nd = String(d.numeroDocumento || '');
-    if (nd.includes('-')) {
-      const [ser, cor] = nd.split('-', 2);
-      return { serial: (ser || '').trim(), number: (cor || '').trim() };
-    }
-
-    return { serial: serial || 'SN', number: number || '0' };
-  }
-
-  /* =========================================================
-     SEDES / OPERACIONES
-     ========================================================= */
-
-  private loadStationsAndOperations(): void {
-    this.isLoading = true;
-
-    this.weighingService.getPrincipalBuyingStation().subscribe({
-      next: (principal: BuyingStation) => {
-        this.principalStation = principal;
-
-        this.stations = [principal];
-        this.destinationStations = [principal];
-        this.operations = [];
-
-        const datosOp = this.datosOperacion.value;
-        const origenDest = this.origenDestino.value;
-
-        if (!datosOp?.sedeOperacion && !datosOp?.operacion) {
-          this.datosOperacion.patchValue({ sedeOperacion: null, operacion: null });
-        }
-
-        if (!origenDest?.sedeOrigen && !origenDest?.sedeDestino) {
-          this.origenDestino.patchValue({ sedeOrigen: null, sedeDestino: null });
-        }
-
-        this.weighingService.getNonPrincipalBuyingStations().subscribe({
-          next: (nonPrincipal: BuyingStation[]) => {
-            this.stations = [principal, ...(nonPrincipal || [])];
-            this.originStations = nonPrincipal || [];
-
-            const savedStationId = Number(this.datosOperacion.get('sedeOperacion')?.value || 0);
-            if (savedStationId) this.loadOperationsForStation(savedStationId, true);
-
-            const opId = Number(this.datosOperacion.get('operacion')?.value || 0);
-            if (opId) this.loadDocumentCatalogsForOperation(opId);
-          },
-          error: (err) => console.error('Error loading non-principal buying stations', err),
-          complete: () => { this.isLoading = false; },
-        });
-      },
-      error: (err) => {
-        console.error('Error loading principal buying station', err);
-        this.isLoading = false;
-      },
-    });
-  }
-
-  onChangeOperationStation(): void {
-    if (this.headerSaved) return;
-
-    const stationId = Number(this.datosOperacion.get('sedeOperacion')?.value || 0);
-    if (!stationId) {
-      this.operations = [];
-      this.datosOperacion.patchValue({ operacion: null });
-      this.businessPartners = [];
-      this.documentTypes = [];
-      return;
-    }
-    this.loadOperationsForStation(stationId, false);
-  }
-
-  private loadOperationsForStation(stationId: number, keepOperation: boolean = false): void {
-    this.operations = [];
-    if (!keepOperation) {
-      this.datosOperacion.patchValue({ operacion: null });
-      this.businessPartners = [];
-      this.documentTypes = [];
-    }
-
-    this.weighingService.getOperationsByStation(stationId).subscribe({
-      next: (ops: OperationStation[]) => {
-        this.operations = ops || [];
-
-        if (keepOperation) {
-          const currentOpId = this.datosOperacion.get('operacion')?.value;
-          if (currentOpId && !this.operations.some((op) => op.id === currentOpId)) {
-            this.datosOperacion.patchValue({ operacion: null });
-          }
-        }
-      },
-      error: (err) => console.error('Error loading operations for station', err),
-    });
-  }
-
-  onChangeOperacion(): void {
-    if (this.headerSaved) return;
-
-    const opId = Number(this.datosOperacion.get('operacion')?.value || 0);
-    this.loadDocumentCatalogsForOperation(opId);
-
-    this.documentos = this.documentos.map(d => this.normalizeDocumentoRelacionado(d));
-    this.saveDraftToStorage();
-  }
-
-  /* =========================================================
-     TRANSPORTE
-     ========================================================= */
-
-  private loadCarriers(): void {
-    this.weighingService.getCarriers().subscribe({
-      next: (data: Carrier[]) => {
-        this.carriers = data || [];
-        this.ensureTransportRelationsAfterLoad();
-      },
-      error: (err) => console.error('Error loading carriers', err),
-    });
-  }
-
-  private ensureTransportRelationsAfterLoad(): void {
-    const carrierId = Number(this.transportistaGroup.get('transportistaId')?.value || 0);
-    if (!carrierId) return;
-    this.fetchCarrierRelations(carrierId, true);
-  }
-
-  private fetchCarrierRelations(carrierId: number, keepValues: boolean): void {
-    this.weighingService.getCarrierDrivers(carrierId).subscribe({
-      next: (drivers: CarrierDriver[]) => {
-        this.carrierDrivers = drivers || [];
-
-        if (!keepValues) {
-          this.conductorGroup.patchValue({
-            conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '',
-          });
-        } else {
-          const currentId = this.conductorGroup.get('conductorId')?.value;
-          if (currentId && !this.carrierDrivers.some((d) => d.id === currentId)) {
-            this.conductorGroup.patchValue({
-              conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '',
-            });
-          }
-        }
-      },
-      error: (err) => console.error('Error loading carrier drivers', err),
-    });
-
-    this.weighingService.getCarrierTrucks(carrierId).subscribe({
-      next: (trucks: CarrierTruck[]) => {
-        this.carrierTrucks = trucks || [];
-
-        if (!keepValues) {
-          this.vehiculoGroup.patchValue({ vehiculoId: null });
-        } else {
-          const currentId = this.vehiculoGroup.get('vehiculoId')?.value;
-          if (currentId && !this.carrierTrucks.some((t) => t.id === currentId)) {
-            this.vehiculoGroup.patchValue({ vehiculoId: null });
-          }
-        }
-      },
-      error: (err) => console.error('Error loading carrier trucks', err),
-    });
-
-    this.weighingService.getCarrierTrailers(carrierId).subscribe({
-      next: (trailers: CarrierTrailer[]) => {
-        this.carrierTrailers = trailers || [];
-
-        if (!keepValues) {
-          this.vehiculoGroup.patchValue({ ...this.vehiculoGroup.value, trailerId: null });
-        } else {
-          const currentId = this.vehiculoGroup.get('trailerId')?.value;
-          if (currentId && !this.carrierTrailers.some((t) => t.id === currentId)) {
-            this.vehiculoGroup.patchValue({ ...this.vehiculoGroup.value, trailerId: null });
-          }
-        }
-      },
-      error: (err) => console.error('Error loading carrier trailers', err),
-    });
-  }
-
-  onChangeTransportista(): void {
-    if (this.headerSaved) return;
-
-    const carrierId = Number(this.transportistaGroup.get('transportistaId')?.value || 0);
-
-    if (!carrierId) {
-      this.transportistaGroup.patchValue({ nombre: '', tipoDocumento: '', numeroDocumento: '' });
-      this.carrierDrivers = [];
-      this.carrierTrucks = [];
-      this.carrierTrailers = [];
-
-      this.conductorGroup.patchValue({ conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' });
-      this.vehiculoGroup.patchValue({ vehiculoId: null, trailerId: null });
-
-      this.saveDraftToStorage();
-      return;
-    }
-
-    const carrier = this.carriers.find((c) => c.id === carrierId);
-    if (carrier) {
-      this.transportistaGroup.patchValue({
-        nombre: carrier.companyName,
-        tipoDocumento: (carrier as any).documentTypeCode || 'RUC',
-        numeroDocumento: (carrier as any).documentNumber,
-      });
-    }
-
-    this.fetchCarrierRelations(carrierId, false);
-    this.saveDraftToStorage();
-  }
-
-  onChangeConductor(): void {
-    if (this.headerSaved) return;
-
-    const conductorId = Number(this.conductorGroup.get('conductorId')?.value || 0);
-
-    if (!conductorId) {
-      this.conductorGroup.patchValue({ nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' });
-      this.saveDraftToStorage();
-      return;
-    }
-
-    const driver = this.carrierDrivers.find((d) => d.id === conductorId);
-    if (!driver) return;
-
-    this.conductorGroup.patchValue({
-      nombre: (driver as any).fullName,
-      tipoDocumento: (driver as any).documentTypeCode || 'DNI',
-      numeroDocumento: (driver as any).documentNumber,
-      licenciaConducir: (driver as any).license,
-    });
-
-    this.saveDraftToStorage();
-  }
-
-  getTruckPlate(truck: CarrierTruck): string {
-    const t: any = truck as any;
-    return t.plateNumber || t.plate || t.licensePlate || t.placa || t.description || '';
-  }
-  getTrailerPlate(trailer: CarrierTrailer): string {
-    const t: any = trailer as any;
-    return t.plateNumber || t.plate || t.licensePlate || t.placa || t.description || '';
   }
 
   /* =========================================================
@@ -827,6 +471,7 @@ export class PesadaForm implements OnInit {
   async nextStep(): Promise<void> {
     if (this.currentStep >= this.maxStep) return;
 
+    // al salir del paso 4: guardar cabecera
     if (this.currentStep === 4) {
       const ok = await this.confirmAndSaveHeader();
       if (!ok) return;
@@ -872,15 +517,14 @@ export class PesadaForm implements OnInit {
     }
 
     if (step >= 3) {
-      if (this.documentos.length === 0) {
+      if ((this.documentos?.length || 0) === 0) {
         this.showStepWarning('Agrega al menos un documento relacionado antes de continuar.');
         return false;
       }
 
-      const invalidIdx = this.documentos.findIndex(d => {
-        const nd = this.normalizeDocumentoRelacionado(d);
-        return !this.isValidInt(nd.idDocumentTypes) || !this.isValidInt(nd.idBusinessPartners);
-      });
+      const invalidIdx = this.documentos.findIndex(d =>
+        !this.isValidInt(d.idDocumentTypes) || !this.isValidInt(d.idBusinessPartners)
+      );
 
       if (invalidIdx >= 0) {
         this.showStepWarning(`Revisa el documento #${invalidIdx + 1}: falta seleccionar Socio de Negocio o Tipo de Documento.`);
@@ -894,7 +538,7 @@ export class PesadaForm implements OnInit {
       return false;
     }
 
-    if (step >= 5 && this.pesadas.length === 0) {
+    if (step >= 5 && (this.pesadas?.length || 0) === 0) {
       this.showStepWarning('Registra al menos una pesada en el detalle del ticket.');
       return false;
     }
@@ -902,12 +546,13 @@ export class PesadaForm implements OnInit {
     return true;
   }
 
+  /** ✅ Stepper: paso 5 se habilita cuando headerSaved=true */
   private updateStepsState(): void {
-    const step1Completed = this.datosOperacion.valid;
-    const step2Completed = this.origenDestino.valid;
-    const step3Completed = this.documentos.length > 0;
-    const step4Completed = this.transporte.valid;
-    const step5Completed = this.pesadas.length > 0;
+    const step1Completed = this.ok(this.datosOperacion);
+    const step2Completed = this.ok(this.origenDestino);
+    const step3Completed = (this.documentos?.length || 0) > 0;
+    const step4Completed = this.ok(this.transporte);
+    const step5Completed = (this.pesadas?.length || 0) > 0;
 
     this.steps = this.steps.map((step) => {
       const updated: WizardStep = { ...step };
@@ -917,18 +562,22 @@ export class PesadaForm implements OnInit {
           updated.disabled = false;
           updated.completed = step1Completed;
           break;
+
         case 2:
           updated.disabled = !step1Completed;
           updated.completed = step2Completed;
           break;
+
         case 3:
           updated.disabled = !(step1Completed && step2Completed);
           updated.completed = step3Completed;
           break;
+
         case 4:
           updated.disabled = !(step1Completed && step2Completed && step3Completed);
           updated.completed = step4Completed;
           break;
+
         case 5:
           updated.disabled = !(
             step1Completed &&
@@ -952,148 +601,15 @@ export class PesadaForm implements OnInit {
   }
 
   /* =========================================================
-     DOCUMENTOS (PASO 3)
+     PESADAS: totales
      ========================================================= */
-  addDocumentoRelacionado(): void {
-    if (this.headerSaved) {
-      this.showStepWarning('El encabezado ya fue guardado. No se pueden modificar documentos.');
-      return;
-    }
-    this.openDocumentoModal();
-  }
-
-  editDocumentoRelacionado(row: DocumentoRelacionado, index: number): void {
-    if (this.headerSaved) {
-      this.showStepWarning('El encabezado ya fue guardado. No se pueden modificar documentos.');
-      return;
-    }
-    this.openDocumentoModal(row, index);
-  }
-
-  deleteDocumentoRelacionado(index: number): void {
-    if (this.headerSaved) {
-      this.showStepWarning('El encabezado ya fue guardado. No se pueden modificar documentos.');
-      return;
-    }
-    this.documentos.splice(index, 1);
-    this.updateStepsState();
-    this.saveDraftToStorage();
-  }
-
-  private openDocumentoModal(row?: DocumentoRelacionado, index?: number): void {
-    const modalRef = this.modalService.open(PesadaDocumento, {
-      size: 'xl',
-      centered: true,
-      backdrop: 'static',
-    });
-
-    const opId = Number(this.datosOperacion.get('operacion')?.value || 0);
-
-    (modalRef.componentInstance as any).operationId = opId;
-    (modalRef.componentInstance as any).businessPartners = this.businessPartners;
-    (modalRef.componentInstance as any).documentTypes = this.documentTypes;
-    (modalRef.componentInstance as any).data = row ? this.normalizeDocumentoRelacionado(row) : null;
-
-    modalRef.result
-      .then((result: DocumentoRelacionado | null | undefined) => {
-        if (!result) return;
-
-        const fixed = this.normalizeDocumentoRelacionado(result);
-
-        if (index != null) this.documentos[index] = fixed;
-        else this.documentos.push(fixed);
-
-        this.updateStepsState();
-        this.saveDraftToStorage();
-      })
-      .catch(() => {});
-  }
-
-  /* =========================================================
-     PESADAS (PASO 5)
-     ========================================================= */
-  addPesada(): void {
-    this.openPesadaModal();
-  }
-
-  editPesada(row: PesadaDetalle, index: number): void {
-    this.openPesadaModal(row, index);
-  }
-
-  deletePesada(index: number): void {
-    this.pesadas.splice(index, 1);
-    this.recalcularTotalesPesadas();
-    this.updateStepsState();
-    this.saveDraftToStorage();
-  }
-
-  private openPesadaModal(row?: PesadaDetalle, index?: number): void {
-    const modalRef = this.modalService.open(PesadaPeso, {
-      size: 'xl',
-      centered: true,
-      backdrop: 'static',
-    });
-
-    (modalRef.componentInstance as any).data = {
-      pesada: row ?? null,
-      productos: this.productosMock,
-      balanzas: this.balanzasMock,
-    };
-
-    modalRef.result
-      .then((result: PesadaDetalle | null | undefined) => {
-        if (!result) return;
-
-        if (!Array.isArray(result.taras)) result.taras = [];
-
-        result.taraTotalKg = result.taras.reduce((acc, t) => acc + (t.taraKg || 0), 0) || 0;
-        result.pesoNetoKg = result.pesoBrutoKg - result.taraTotalKg;
-
-        if (index != null) this.pesadas[index] = result;
-        else this.pesadas.push(result);
-
-        this.recalcularTotalesPesadas();
-        this.updateStepsState();
-        this.saveDraftToStorage();
-      })
-      .catch(() => {});
-  }
-
-  openTarasForPesada(row: PesadaDetalle, index: number): void {
-    const modalRef = this.modalService.open(PesadaTara, {
-      size: 'xl',
-      centered: true,
-      backdrop: 'static',
-    });
-
-    (modalRef.componentInstance as any).data = {
-      pesada: row,
-      taras: row.taras ?? [],
-    };
-
-    modalRef.result
-      .then((result: TaraItem[] | null | undefined) => {
-        if (!result) return;
-
-        this.pesadas[index].taras = result;
-        this.pesadas[index].taraTotalKg = result.reduce((acc, t) => acc + (t.taraKg || 0), 0) || 0;
-        this.pesadas[index].tieneTara = this.pesadas[index].taraTotalKg > 0;
-        this.pesadas[index].pesoNetoKg = this.pesadas[index].pesoBrutoKg - this.pesadas[index].taraTotalKg;
-
-        this.recalcularTotalesPesadas();
-        this.updateStepsState();
-        this.saveDraftToStorage();
-      })
-      .catch(() => {});
-  }
-
   private recalcularTotalesPesadas(): void {
     const ajusteKg = Number(this.detalleTicket.get('ajusteKg')?.value || 0);
 
-    const cantidadItems = this.pesadas.length;
-    const totalPesoBruto = this.pesadas.reduce((acc, p) => acc + (p.pesoBrutoKg || 0), 0);
-    const totalTara = this.pesadas.reduce((acc, p) => acc + (p.taraTotalKg || 0), 0);
-    const subtotalPesoNeto = this.pesadas.reduce((acc, p) => acc + (p.pesoNetoKg || 0), 0);
+    const cantidadItems = this.pesadas?.length || 0;
+    const totalPesoBruto = (this.pesadas || []).reduce((acc, p) => acc + Number(p.pesoBrutoKg || 0), 0);
+    const totalTara = (this.pesadas || []).reduce((acc, p) => acc + Number(p.taraTotalKg || 0), 0);
+    const subtotalPesoNeto = (this.pesadas || []).reduce((acc, p) => acc + Number(p.pesoNetoKg || 0), 0);
 
     const totalPesoNeto = subtotalPesoNeto + ajusteKg;
     const diferenciaAjuste = totalPesoNeto - subtotalPesoNeto;
@@ -1109,37 +625,48 @@ export class PesadaForm implements OnInit {
     };
   }
 
-  onChangeAjusteKg(): void {
-    this.recalcularTotalesPesadas();
-    this.saveDraftToStorage();
+  /* =========================================================
+     GUARDAR CABECERA (al final del paso 4)
+     ========================================================= */
+
+  private isValidInt(val: any): boolean {
+    return Number.isInteger(Number(val)) && Number(val) > 0;
   }
 
-  /* =========================================================
-     PAYLOAD CABECERA
-     ========================================================= */
+  private getSerialNumberFromDoc(d: DocumentoRelacionado): { serial: string; number: string } {
+    const serial = String(d.serie || '').trim();
+    const number = String(d.numeroCorrelativo || '').trim();
+    if (serial && number) return { serial, number };
+
+    const nd = String(d.numeroDocumento || '').trim();
+    if (nd.includes('-')) {
+      const [ser, cor] = nd.split('-', 2);
+      return { serial: (ser || '').trim(), number: (cor || '').trim() };
+    }
+
+    return { serial: 'SN', number: '0' };
+  }
+
   private buildHeaderPayload() {
-    const formValue: any = this.ticketForm.value;
-    const datosOp = formValue.datosOperacion;
-    const origenDest = formValue.origenDestino;
-    const transporte = formValue.transporte;
+    const v: any = this.ticketForm.value;
 
     const ticket = {
-      idBuyingStations: datosOp.sedeOperacion,
-      idBuyingStationsOrigin: origenDest.sedeOrigen,
-      idBuyingStationsDestination: origenDest.sedeDestino,
+      idBuyingStations: v.datosOperacion.sedeOperacion,
+      idBuyingStationsOrigin: v.origenDestino.sedeOrigen,
+      idBuyingStationsDestination: v.origenDestino.sedeDestino,
       idEmployees: null,
-      idOperations: datosOp.operacion,
-      idBusinessPartnersCarriers: transporte.transportista.transportistaId,
-      idBusinessPartnersDrivers: transporte.conductor.conductorId,
-      idTrucks: transporte.vehiculo.vehiculoId,
-      idTrailers: transporte.vehiculo.trailerId,
+      idOperations: v.datosOperacion.operacion,
+
+      idBusinessPartnersCarriers: v.transporte.transportista.transportistaId,
+      idBusinessPartnersDrivers: v.transporte.conductor.conductorId,
+      idTrucks: v.transporte.vehiculo.vehiculoId,
+      idTrailers: v.transporte.vehiculo.trailerId,
+
       idScaleTicketStatus: 1,
-      creationDate: datosOp.fechaEmision,
+      creationDate: v.datosOperacion.fechaEmision,
     };
 
-    const docsFixed = this.documentos.map(d => this.normalizeDocumentoRelacionado(d));
-
-    const documents = docsFixed.map((d) => {
+    const documents = (this.documentos || []).map((d) => {
       const { serial, number } = this.getSerialNumberFromDoc(d);
       return {
         idDocumentTypes: Number(d.idDocumentTypes),
@@ -1147,13 +674,10 @@ export class PesadaForm implements OnInit {
         documentSerial: serial,
         documentNumber: number,
         documentDate: d.fechaDocumento,
-        documentGrossWeight: d.pesoBrutoKg,
-        documentNetWeight: d.pesoNetoKg,
+        documentGrossWeight: Number(d.pesoBrutoKg || 0),
+        documentNetWeight: Number(d.pesoNetoKg || 0),
       };
     });
-
-    this.documentos = docsFixed;
-    this.saveDraftToStorage();
 
     return { ticket, documents };
   }
@@ -1168,7 +692,6 @@ export class PesadaForm implements OnInit {
       title: 'Ticket de balanza - Nuevo',
       type: 'success',
     });
-
     if (!ok) return false;
 
     try {
@@ -1230,65 +753,61 @@ export class PesadaForm implements OnInit {
     } catch {}
   }
 
-  private buildPayloadCompleto() {
-    const formValue: any = this.ticketForm.value;
-    const datosOp = formValue.datosOperacion;
-    const origenDest = formValue.origenDestino;
-    const transporte = formValue.transporte;
-
-    const ticket = {
-      idBuyingStations: datosOp.sedeOperacion,
-      idBuyingStationsOrigin: origenDest.sedeOrigen,
-      idBuyingStationsDestination: origenDest.sedeDestino,
-      idEmployees: null,
-      idOperations: datosOp.operacion,
-      idBusinessPartnersCarriers: transporte.transportista.transportistaId,
-      idBusinessPartnersDrivers: transporte.conductor.conductorId,
-      idTrucks: transporte.vehiculo.vehiculoId,
-      idTrailers: transporte.vehiculo.trailerId,
-      idScaleTicketStatus: 1,
-      creationDate: datosOp.fechaEmision,
-      totalGrossWeight: this.totalesPesadas.totalPesoBruto || 0,
-      totalTareWeight: this.totalesPesadas.totalTara || 0,
-      totalTareAdjustment: this.totalesPesadas.ajusteKg || 0,
-    };
-
-    const docsFixed = this.documentos.map(d => this.normalizeDocumentoRelacionado(d));
-    const documents = docsFixed.map((d) => {
-      const { serial, number } = this.getSerialNumberFromDoc(d);
-      return {
-        idDocumentTypes: Number(d.idDocumentTypes),
-        idBusinessPartners: Number(d.idBusinessPartners),
-        documentSerial: serial,
-        documentNumber: number,
-        documentDate: d.fechaDocumento,
-        documentGrossWeight: d.pesoBrutoKg,
-        documentNetWeight: d.pesoNetoKg,
-      };
-    });
-
-    this.documentos = docsFixed;
-    this.saveDraftToStorage();
-
-    return { ticket, documents };
-  }
-
-  guardarTicketCompleto(): void {
+  /* =========================================================
+     GUARDAR COMPLETO (solo ejemplo - tu endpoint final lo conectamos después)
+     ========================================================= */
+  async guardarTicketCompleto(): Promise<void> {
     const isValid = this.validateUpToStep(this.maxStep);
-    if (!isValid) {
-      this.currentStep = 1;
+    if (!isValid) return;
+
+    if (!this.headerSaved || !this.headerTicketId) {
+      this.showStepWarning('Primero debes guardar el encabezado (Paso 4).');
       return;
     }
 
     this.recalcularTotalesPesadas();
-    this.isSavingFull = true;
 
-    const payload = this.buildPayloadCompleto();
-    console.log('Payload COMPLETO ticket balanza:', payload);
+    try {
+      this.isSavingFull = true;
 
-    setTimeout(() => {
-      this.isSavingFull = false;
+      // Aquí armas tu payload final (según tu backend)
+      const payload = {
+        ticketId: this.headerTicketId,
+        ajusteKg: this.totalesPesadas.ajusteKg,
+        totalGrossWeight: this.totalesPesadas.totalPesoBruto,
+        totalTareWeight: this.totalesPesadas.totalTara,
+        totalNetWeight: this.totalesPesadas.totalPesoNeto,
+        details: this.pesadas,
+      };
+
+      console.log('Payload FINAL ticket balanza:', payload);
+
+      // TODO: conectar endpoint real:
+      // await firstValueFrom(this.weighingService.saveScaleTicketDetail(payload));
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Ticket guardado (demo). Conecta el endpoint final.',
+        showConfirmButton: false,
+        timer: 2500,
+      });
+
+      // limpiar draft al finalizar
       this.clearDraftFromStorage();
-    }, 700);
+    } catch (e) {
+      console.error('Error guardando ticket completo', e);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: 'No se pudo guardar el ticket completo.',
+        showConfirmButton: false,
+        timer: 3000,
+      });
+    } finally {
+      this.isSavingFull = false;
+    }
   }
 }

@@ -5,9 +5,25 @@
       Agrega las guías de remisión y otros documentos que respaldan el
       movimiento de producto.
     </p>
+
+    <small class="text-muted" *ngIf="loadingCatalogs">
+      Cargando catálogos de documentos…
+    </small>
   </div>
 
-  <button type="button" class="ux-btn ux-btn--green" (click)="onAdd()">
+  <button
+    type="button"
+    class="ux-btn ux-btn--green"
+    (click)="onAdd()"
+    [disabled]="locked || loadingCatalogs || !operationId"
+    [title]="
+      locked
+        ? 'Encabezado guardado: no editable'
+        : !operationId
+        ? 'Selecciona una operación en el Paso 1'
+        : ''
+    "
+  >
     <span class="material-symbols-rounded">add</span>
     <span>Agregar documento</span>
   </button>
@@ -30,37 +46,31 @@
     </thead>
 
     <tbody>
-      <tr *ngFor="let doc of documentos; let i = index">
+      <tr *ngFor="let doc of docs; let i = index">
         <td class="ux-col-idx" [attr.data-label]="'Item'">
           {{ i + 1 | number: '2.0-0' }}
         </td>
-        <td [attr.data-label]="'Socio de negocio'">
-          {{ doc.socioNegocio }}
-        </td>
-        <td [attr.data-label]="'Tipo doc.'">
-          {{ doc.tipoDocumento }}
-        </td>
-        <td [attr.data-label]="'Documento'">
-          {{ doc.documento }}
-        </td>
+        <td [attr.data-label]="'Socio de negocio'">{{ doc.socioNegocio }}</td>
+        <td [attr.data-label]="'Tipo doc.'">{{ doc.tipoDocumento }}</td>
+        <td [attr.data-label]="'Documento'">{{ doc.documento }}</td>
         <td [attr.data-label]="'Fecha doc.'">
           {{ doc.fechaDocumento | date: 'dd/MM/yyyy' }}
         </td>
-        <td [attr.data-label]="'Número documento'">
-          {{ doc.numeroDocumento }}
-        </td>
+        <td [attr.data-label]="'Número documento'">{{ doc.numeroDocumento }}</td>
         <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
           {{ doc.pesoBrutoKg | number: '1.2-2' }}
         </td>
         <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
           {{ doc.pesoNetoKg | number: '1.2-2' }}
         </td>
+
         <td class="ux-col-actions" [attr.data-label]="'Acciones'">
           <button
             type="button"
             class="ux-icon-btn ux-icon-btn--medium"
             (click)="onEdit(i)"
             title="Editar"
+            [disabled]="locked"
           >
             <span class="material-symbols-rounded">edit</span>
           </button>
@@ -69,13 +79,14 @@
             class="ux-icon-btn ux-icon-btn--medium"
             (click)="onDelete(i)"
             title="Eliminar"
+            [disabled]="locked"
           >
             <span class="material-symbols-rounded">delete</span>
           </button>
         </td>
       </tr>
 
-      <tr *ngIf="documentos.length === 0">
+      <tr *ngIf="docs.length === 0">
         <td colspan="9" class="text-center py-3">
           No hay documentos relacionados registrados.
         </td>

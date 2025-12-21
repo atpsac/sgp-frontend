@@ -1,13 +1,6 @@
 <div class="uxf-modal">
   <!-- Cerrar -->
-  <button
-    type="button"
-    class="uxf-close"
-    aria-label="Cerrar"
-    (click)="close()"
-  >
-    ×
-  </button>
+  <button type="button" class="uxf-close" aria-label="Cerrar" (click)="close()">×</button>
 
   <!-- Header -->
   <div class="uxf-header">
@@ -18,13 +11,11 @@
   <!-- Form -->
   <form [formGroup]="form" (ngSubmit)="save()">
     <div class="uxf-grid">
-      <!-- Columna izquierda: formulario -->
+      <!-- Columna izquierda -->
       <div class="uxf-col-main">
         <!-- Producto -->
         <div class="uxf-field">
-          <label class="uxf-label" for="producto">
-            Producto <span class="req">*</span>
-          </label>
+          <label class="uxf-label" for="producto">Producto <span class="req">*</span></label>
 
           <div class="uxf-select">
             <select
@@ -33,39 +24,27 @@
               formControlName="ProductoId"
               [class.is-invalid]="f['ProductoId'].touched && f['ProductoId'].invalid"
             >
-              <option
-                *ngFor="let p of productoOptions"
-                [ngValue]="p.id"
-              >
+              <option *ngFor="let p of productoOptions" [ngValue]="p.id">
                 {{ p.nombre }}
               </option>
             </select>
-            <span
-              class="material-symbols-rounded uxf-select__icon"
-              aria-hidden="true"
-            >
-              expand_more
-            </span>
+
+            <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">expand_more</span>
           </div>
 
           <div class="uxf-hint-row">
-            <div
-              class="uxf-error"
-              *ngIf="f['ProductoId'].touched && f['ProductoId'].hasError('required')"
-            >
+            <div class="uxf-error" *ngIf="f['ProductoId'].touched && f['ProductoId'].hasError('required')">
               El producto es obligatorio.
             </div>
           </div>
         </div>
 
-        <!-- Balanza / Peso bruto (6 / 6) -->
+        <!-- Balanza / Peso bruto -->
         <div class="uxf-row-2">
           <!-- Balanza -->
           <div class="uxf-col-6">
             <div class="uxf-field">
-              <label class="uxf-label" for="balanza">
-                Balanza <span class="req">*</span>
-              </label>
+              <label class="uxf-label" for="balanza">Balanza <span class="req">*</span></label>
 
               <div class="uxf-select">
                 <select
@@ -74,60 +53,46 @@
                   formControlName="BalanzaId"
                   [class.is-invalid]="f['BalanzaId'].touched && f['BalanzaId'].invalid"
                 >
-                  <option
-                    *ngFor="let b of balanzaOptions"
-                    [ngValue]="b.id"
-                  >
+                  <option *ngFor="let b of balanzaOptions" [ngValue]="b.id">
                     {{ b.nombre }}
                   </option>
                 </select>
-                <span
-                  class="material-symbols-rounded uxf-select__icon"
-                  aria-hidden="true"
-                >
-                  expand_more
-                </span>
+                <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">expand_more</span>
               </div>
 
               <div class="uxf-hint-row">
-                <div
-                  class="uxf-error"
-                  *ngIf="f['BalanzaId'].touched && f['BalanzaId'].hasError('required')"
-                >
+                <div class="uxf-error" *ngIf="f['BalanzaId'].touched && f['BalanzaId'].hasError('required')">
                   La balanza es obligatoria.
                 </div>
               </div>
+
+              <!-- <div class="uxf-device" *ngIf="deviceLine">
+                {{ deviceLine }}
+              </div> -->
             </div>
           </div>
 
-          <!-- Peso bruto -->
+          <!-- Peso bruto (readonly) -->
           <div class="uxf-col-6">
             <div class="uxf-field">
-              <label class="uxf-label" for="pesoBruto">
-                Peso bruto (kg) <span class="req">*</span>
-              </label>
+              <label class="uxf-label" for="pesoBruto">Peso bruto (kg) <span class="req">*</span></label>
               <input
                 id="pesoBruto"
                 type="number"
-                min="0"
-                step="0.01"
                 class="uxf-control"
                 formControlName="PesoBruto"
-                [class.is-invalid]="f['PesoBruto'].touched && f['PesoBruto'].invalid"
+                readonly
               />
 
               <div class="uxf-hint-row">
-                <div
-                  class="uxf-error"
-                  *ngIf="f['PesoBruto'].touched && f['PesoBruto'].hasError('required')"
-                >
-                  El peso bruto es obligatorio.
+                <div class="uxf-error" *ngIf="statusUI === 'CONECTADO' && !isStable">
+                  Espera a que el peso sea estable para poder guardar.
                 </div>
-                <div
-                  class="uxf-error"
-                  *ngIf="f['PesoBruto'].touched && f['PesoBruto'].hasError('min')"
-                >
-                  El peso bruto no puede ser negativo.
+                <div class="uxf-error" *ngIf="statusUI === 'DESCONECTADO'">
+                  Balanza desconectada.
+                </div>
+                <div class="uxf-error" *ngIf="statusUI === 'ERROR'">
+                  Error al leer la balanza. Revisa la configuración del dispositivo.
                 </div>
               </div>
             </div>
@@ -136,9 +101,7 @@
 
         <!-- Observaciones -->
         <div class="uxf-field">
-          <label class="uxf-label" for="observaciones">
-            Observaciones
-          </label>
+          <label class="uxf-label" for="observaciones">Observaciones</label>
           <textarea
             id="observaciones"
             class="uxf-control uxf-control--area"
@@ -149,13 +112,36 @@
         </div>
       </div>
 
-      <!-- Columna derecha: visor de peso -->
+      <!-- Columna derecha: visor -->
       <div class="uxf-col-visor">
-        <div class="uxf-visor">
+        <div class="uxf-visor" [class.uxf-visor--stable]="isStable" [class.uxf-visor--unstable]="!isStable">
+          <!-- badge estado (arriba derecha) -->
+          <div class="uxf-visor__status">
+            <span class="badge" [ngClass]="statusClass">{{ statusLabel }}</span>
+          </div>
+
           <span class="uxf-visor-label">PESO ACTUAL</span>
-          <div class="uxf-visor-value">
+
+          <!-- Procesando... -->
+          <div class="uxf-processing" *ngIf="processing">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span>Procesando…</span>
+          </div>
+
+          <!-- valor -->
+          <div class="uxf-visor-value" *ngIf="!processing">
             {{ pesoActual | number : '1.2-2' }}
             <span class="uxf-visor-unit">kg</span>
+          </div>
+
+          <div class="uxf-stable" *ngIf="!processing && statusUI === 'CONECTADO'">
+            Estable:
+            <b [class.ok]="isStable" [class.bad]="!isStable">{{ isStable ? 'Sí' : 'No' }}</b>
+          </div>
+
+          <!-- balanza (abajo izquierda) -->
+          <div class="uxf-visor__device">
+            {{ currentScaleName }}
           </div>
         </div>
       </div>
@@ -174,17 +160,11 @@
         <button
           type="submit"
           class="uxf-btn uxf-btn--primary"
-          [disabled]="loading || loadingData || form.invalid"
+          [disabled]="loading || loadingData || form.invalid || !canSave()"
         >
-          <ng-container *ngIf="!loading">
-            Guardar
-          </ng-container>
+          <ng-container *ngIf="!loading">Guardar</ng-container>
           <ng-container *ngIf="loading">
-            <span
-              class="spinner-border spinner-border-sm me-2"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             Guardando…
           </ng-container>
         </button>

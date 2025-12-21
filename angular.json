@@ -31,6 +31,9 @@
             ],
             "styles": [
               "src/styles/main.scss"
+            ],
+            "scripts": [
+              "public/assets/printnode/ws-http-client.js"
             ]
           },
           "configurations": {
