@@ -1,6 +1,15 @@
 <div class="uxf-modal">
   <!-- Cerrar -->
-  <button type="button" class="uxf-close" aria-label="Cerrar" (click)="close()">×</button>
+  <button
+    type="button"
+    class="uxf-close"
+    aria-label="Cerrar"
+    (click)="close()"
+    [disabled]="loading || processing"
+    title="Cerrar"
+  >
+    ×
+  </button>
 
   <!-- Header -->
   <div class="uxf-header">
@@ -15,7 +24,9 @@
       <div class="uxf-col-main">
         <!-- Producto -->
         <div class="uxf-field">
-          <label class="uxf-label" for="producto">Producto <span class="req">*</span></label>
+          <label class="uxf-label" for="producto">
+            Producto <span class="req">*</span>
+          </label>
 
           <div class="uxf-select">
             <select
@@ -24,6 +35,7 @@
               formControlName="ProductoId"
               [class.is-invalid]="f['ProductoId'].touched && f['ProductoId'].invalid"
             >
+              <option [ngValue]="null" disabled>Selecciona un producto…</option>
               <option *ngFor="let p of productoOptions" [ngValue]="p.id">
                 {{ p.nombre }}
               </option>
@@ -44,19 +56,24 @@
           <!-- Balanza -->
           <div class="uxf-col-6">
             <div class="uxf-field">
-              <label class="uxf-label" for="balanza">Balanza <span class="req">*</span></label>
+              <label class="uxf-label" for="balanza">
+                Balanza <span class="req">*</span>
+              </label>
 
               <div class="uxf-select">
                 <select
                   id="balanza"
                   class="uxf-control"
                   formControlName="BalanzaId"
+                  [disabled]="lockScaleSelect"
                   [class.is-invalid]="f['BalanzaId'].touched && f['BalanzaId'].invalid"
                 >
+                  <option [ngValue]="null" disabled>Selecciona una balanza…</option>
                   <option *ngFor="let b of balanzaOptions" [ngValue]="b.id">
                     {{ b.nombre }}
                   </option>
                 </select>
+
                 <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">expand_more</span>
               </div>
 
@@ -64,18 +81,20 @@
                 <div class="uxf-error" *ngIf="f['BalanzaId'].touched && f['BalanzaId'].hasError('required')">
                   La balanza es obligatoria.
                 </div>
+                <div class="uxf-hint" *ngIf="!f['BalanzaId'].value">
+                  Selecciona una balanza y luego presiona <b>Iniciar pesada</b>.
+                </div>
               </div>
-
-              <!-- <div class="uxf-device" *ngIf="deviceLine">
-                {{ deviceLine }}
-              </div> -->
             </div>
           </div>
 
           <!-- Peso bruto (readonly) -->
           <div class="uxf-col-6">
             <div class="uxf-field">
-              <label class="uxf-label" for="pesoBruto">Peso bruto (kg) <span class="req">*</span></label>
+              <label class="uxf-label" for="pesoBruto">
+                Peso bruto (kg) <span class="req">*</span>
+              </label>
+
               <input
                 id="pesoBruto"
                 type="number"
@@ -88,9 +107,11 @@
                 <div class="uxf-error" *ngIf="statusUI === 'CONECTADO' && !isStable">
                   Espera a que el peso sea estable para poder guardar.
                 </div>
-                <div class="uxf-error" *ngIf="statusUI === 'DESCONECTADO'">
-                  Balanza desconectada.
+
+                <div class="uxf-error" *ngIf="statusUI === 'DESCONECTADO' && f['BalanzaId'].value">
+                  Balanza desconectada. Presiona <b>Iniciar pesada</b>.
                 </div>
+
                 <div class="uxf-error" *ngIf="statusUI === 'ERROR'">
                   Error al leer la balanza. Revisa la configuración del dispositivo.
                 </div>
@@ -114,15 +135,26 @@
 
       <!-- Columna derecha: visor -->
       <div class="uxf-col-visor">
-        <div class="uxf-visor" [class.uxf-visor--stable]="isStable" [class.uxf-visor--unstable]="!isStable">
-          <!-- badge estado (arriba derecha) -->
-          <div class="uxf-visor__status">
-            <span class="badge" [ngClass]="statusClass">{{ statusLabel }}</span>
+        <div
+          class="uxf-visor"
+          [class.uxf-visor--stable]="isStable"
+          [class.uxf-visor--unstable]="!isStable"
+          [class.uxf-visor--busy]="processing"
+        >
+          <!-- TOP: nombre balanza (izq) + estado (der) -->
+          <div class="uxf-visor__top">
+            <div class="uxf-visor__scale">
+              {{ currentScaleName || 'Sin balanza seleccionada' }}
+            </div>
+
+            <div class="uxf-visor__status">
+              <span class="badge" [ngClass]="statusClass">{{ statusLabel }}</span>
+            </div>
           </div>
 
           <span class="uxf-visor-label">PESO ACTUAL</span>
 
-          <!-- Procesando... -->
+          <!-- Procesando -->
           <div class="uxf-processing" *ngIf="processing">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span>Procesando…</span>
@@ -134,14 +166,22 @@
             <span class="uxf-visor-unit">kg</span>
           </div>
 
+          <!-- Botón iniciar/detener -->
+          <button
+            type="button"
+            class="uxf-btn uxf-btn--start"
+            (click)="toggleWeighing()"
+            [disabled]="startBtnDisabled"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">
+              {{ statusUI === 'CONECTADO' ? 'stop_circle' : 'play_circle' }}
+            </span>
+            {{ startBtnText }}
+          </button>
+
           <div class="uxf-stable" *ngIf="!processing && statusUI === 'CONECTADO'">
             Estable:
             <b [class.ok]="isStable" [class.bad]="!isStable">{{ isStable ? 'Sí' : 'No' }}</b>
-          </div>
-
-          <!-- balanza (abajo izquierda) -->
-          <div class="uxf-visor__device">
-            {{ currentScaleName }}
           </div>
         </div>
       </div>
@@ -152,7 +192,7 @@
           type="button"
           class="uxf-btn uxf-btn--ghost"
           (click)="close()"
-          [disabled]="loading || loadingData"
+          [disabled]="loading || loadingData || processing"
         >
           Cancelar
         </button>
@@ -160,7 +200,7 @@
         <button
           type="submit"
           class="uxf-btn uxf-btn--primary"
-          [disabled]="loading || loadingData || form.invalid || !canSave()"
+          [disabled]="loading || loadingData || processing || form.invalid || !canSave()"
         >
           <ng-container *ngIf="!loading">Guardar</ng-container>
           <ng-container *ngIf="loading">

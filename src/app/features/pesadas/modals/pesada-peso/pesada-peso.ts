@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import Swal from 'sweetalert2';
+import { Subject, takeUntil } from 'rxjs';
 
 import { ProductByOperation } from '../../../../core/services/weighing.service';
 import { PrintNodeAdapterService } from '../../../../core/printcode/services/printnode-adapter.service';
@@ -44,7 +45,6 @@ type ScaleConfig = {
   id: string | number;
   nombre: string;
 
-  // datos PrintNode
   apiKey: string;
   computerId: number;
   deviceName: string;
@@ -72,6 +72,8 @@ export class PesadaPeso implements OnInit, OnDestroy {
   public activeModal = inject(NgbActiveModal);
   private svc = inject(PrintNodeAdapterService);
 
+  private destroy$ = new Subject<void>();
+
   // ========= opciones =========
   productoOptions: PesadaPesoOption[] = [];
   balanzaOptions: PesadaPesoOption[] = [];
@@ -82,7 +84,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
   // ========= form =========
   form!: FormGroup;
-  loading = false; // guardando
+  loading = false;
   loadingData = false;
 
   // ========= visor =========
@@ -92,24 +94,42 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
   statusUI: PrintNodeStatusUI = 'DESCONECTADO';
   statusRaw = '';
-  processing = false; // spinner en visor (validando/conectando/esperando lectura)
-  deviceLine = ''; // "Device: ..."
+  processing = false;
+
+  // ✅ Solo aceptamos status/lecturas cuando el usuario inicia pesada
+  private weighingStarted = false;
 
   private lastErrorShownAt = 0;
 
-  // ====== API KEY principal (tu key) ======
   private readonly API_KEY = 'LWv4BzHIRmydcxcp5n-KK8lNV-bT4AuKBbkMt8yxOGE';
 
   ngOnInit(): void {
     this.existingPesada = this.data?.pesada ?? null;
 
+    // ✅ 1) PRIMERO construir el FormGroup (evita NG01052 y el TypeError)
+    this.buildForm();
+
+    // PesoBruto siempre disabled
+    this.form.get('PesoBruto')?.disable({ emitEvent: false });
+
+    // ✅ 2) Cortar cualquier sesión previa del servicio + estado inicial
+    this.safeDisconnect();
+    this.weighingStarted = false;
+    this.statusUI = 'DESCONECTADO';
+    this.statusRaw = 'init';
+    this.processing = false;
+
+    // ✅ 3) Reset ahora ya es seguro porque form ya existe
+    this.resetWeighingState();
+
     // ============ productos ============
     const productosRaw: Array<ProductByOperation | string> = this.data?.productos ?? [];
     this.productoOptions = this.mapProductosToOptions(productosRaw);
 
-    // ============ balanzas (configs) ============
-    // Si mañana traes esto desde API, pásalo por data.balanzasConfig
-    const fromData: ScaleConfig[] = Array.isArray(this.data?.balanzasConfig) ? this.data.balanzasConfig : [];
+    // ============ balanzas ============
+    const fromData: ScaleConfig[] = Array.isArray(this.data?.balanzasConfig)
+      ? this.data.balanzasConfig
+      : [];
 
     const fallback: ScaleConfig[] = [
       {
@@ -139,23 +159,17 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
     this.scalesById.clear();
     this.scales.forEach((s) => this.scalesById.set(s.id, s));
-
     this.balanzaOptions = this.scales.map((s) => ({ id: s.id, nombre: s.nombre }));
 
-    // ============ form ============
-    this.buildForm();
-
-    // valores iniciales
+    // ✅ NO autoseleccionar el primero. Solo precargar si es edición.
     const productoInit =
       this.existingPesada?.productoId ??
       this.matchOptionIdByName(this.productoOptions, this.existingPesada?.producto) ??
-      this.productoOptions[0]?.id ??
       null;
 
     const balanzaInit =
       this.existingPesada?.balanzaId ??
       this.matchOptionIdByName(this.balanzaOptions, this.existingPesada?.balanza) ??
-      this.balanzaOptions[0]?.id ??
       null;
 
     this.form.patchValue(
@@ -168,25 +182,25 @@ export class PesadaPeso implements OnInit, OnDestroy {
       { emitEvent: false }
     );
 
-    // Bloquear input de PesoBruto (SIEMPRE)
-    this.form.get('PesoBruto')?.disable({ emitEvent: false });
+    // ✅ cambios de balanza: NO iniciar pesada
+    this.form
+      .get('BalanzaId')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((id) => this.onBalanzaChange(id));
 
-    // escuchar cambios de balanza: reset + reconectar
-    this.form.get('BalanzaId')?.valueChanges.subscribe((id) => {
-      this.onBalanzaChange(id);
-    });
+    // ✅ escuchar servicio (pero ignorar si no se inició pesada)
+    this.svc.status$.pipe(takeUntil(this.destroy$)).subscribe((st) => this.applyStatus(st));
+    this.svc.reading$.pipe(takeUntil(this.destroy$)).subscribe((r) => this.applyReading(r));
+    this.svc.error$.pipe(takeUntil(this.destroy$)).subscribe((err) => this.applyError(err));
 
-    // escuchar servicio (status/reading/error)
-    this.svc.status$.subscribe((st) => this.applyStatus(st));
-    this.svc.reading$.subscribe((r) => this.applyReading(r));
-    this.svc.error$.subscribe((err) => this.applyError(err));
-
-    // iniciar con la balanza seleccionada
-    // (auto validar + conectar)
-    this.kickoffForSelectedScale(false);
+    // Si viene con balanza precargada (edición), igual queda DESCONECTADO hasta “Iniciar”
+    this.statusUI = 'DESCONECTADO';
+    this.processing = false;
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.safeDisconnect();
   }
 
@@ -194,9 +208,49 @@ export class PesadaPeso implements OnInit, OnDestroy {
   // UI Actions
   // =========================
   close(): void {
-    if (this.loading) return;
+    if (this.loading || this.processing) return;
     this.safeDisconnect();
     this.activeModal.dismiss();
+  }
+
+  async toggleWeighing(): Promise<void> {
+    if (this.processing || this.loading || this.loadingData) return;
+
+    if (this.statusUI === 'CONECTADO') {
+      this.stopWeighing();
+      return;
+    }
+
+    await this.startWeighing();
+  }
+
+  async startWeighing(): Promise<void> {
+    const balanzaId = this.form.get('BalanzaId')?.value;
+
+    if (!balanzaId) {
+      this.form.get('BalanzaId')?.markAsTouched();
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Selecciona una balanza',
+        text: 'Debes seleccionar una balanza antes de iniciar la pesada.',
+        confirmButtonText: 'OK',
+      });
+      return;
+    }
+
+    this.weighingStarted = true;
+    await this.kickoffForSelectedScale(true);
+  }
+
+  stopWeighing(): void {
+    if (this.processing) return;
+
+    this.safeDisconnect();
+    this.weighingStarted = false;
+
+    this.resetWeighingState();
+    this.statusUI = 'DESCONECTADO';
+    this.statusRaw = 'stopped';
   }
 
   async save(): Promise<void> {
@@ -204,8 +258,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
       this.form.markAllAsTouched();
       return;
     }
-
-    // no permitir guardar si no está estable / conectado
     if (!this.canSave()) return;
 
     this.loading = true;
@@ -243,6 +295,8 @@ export class PesadaPeso implements OnInit, OnDestroy {
     };
 
     this.safeDisconnect();
+    this.weighingStarted = false;
+
     this.activeModal.close(result);
     this.loading = false;
   }
@@ -259,10 +313,13 @@ export class PesadaPeso implements OnInit, OnDestroy {
     });
   }
 
-  private async onBalanzaChange(id: any): Promise<void> {
-    // reset necesarios y reconectar
+  private onBalanzaChange(_: any): void {
+    this.safeDisconnect();
+    this.weighingStarted = false;
+
     this.resetWeighingState();
-    await this.kickoffForSelectedScale(true);
+    this.statusUI = 'DESCONECTADO';
+    this.statusRaw = 'selected';
   }
 
   private async kickoffForSelectedScale(showInvalidAlert: boolean): Promise<void> {
@@ -270,19 +327,18 @@ export class PesadaPeso implements OnInit, OnDestroy {
     const cfg = this.scalesById.get(id);
 
     this.safeDisconnect();
+
     this.processing = true;
     this.statusUI = 'VALIDANDO';
     this.statusRaw = 'validando';
-    this.deviceLine = '';
 
     if (!cfg) {
       this.processing = false;
       this.statusUI = 'ERROR';
+      this.statusRaw = 'no-config';
+      this.weighingStarted = false;
       return;
     }
-
-    // Línea de dispositivo (siempre visible)
-    this.deviceLine = `Device: ${cfg.deviceName} · #${cfg.deviceNum} · Computer: ${cfg.computerId}`;
 
     if (!cfg.enabled) {
       this.processing = false;
@@ -290,8 +346,8 @@ export class PesadaPeso implements OnInit, OnDestroy {
       this.statusRaw = 'disabled';
       this.isStable = false;
       this.lastStableKg = 0;
+      this.weighingStarted = false;
 
-      // Si quieren alert al cambiar, se muestra
       if (showInvalidAlert) {
         await Swal.fire({
           icon: 'error',
@@ -304,7 +360,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
     }
 
     try {
-      // set config + validar + conectar (automático)
       this.svc.setConfig({
         apiKey: cfg.apiKey,
         computerId: Number(cfg.computerId),
@@ -312,25 +367,27 @@ export class PesadaPeso implements OnInit, OnDestroy {
         deviceNum: Number(cfg.deviceNum),
       });
 
-      this.statusUI = 'VALIDANDO';
       await this.svc.validateDevice();
-
-      // conectar
       this.svc.connect();
-      // la lectura llegará por reading$
     } catch (e: any) {
       this.processing = false;
       this.statusUI = 'ERROR';
       this.statusRaw = 'validate/connect error';
+      this.weighingStarted = false;
       this.showErrorOnce(e?.message || 'No se pudo validar/conectar la balanza.');
     }
   }
 
   private applyStatus(st: any): void {
+    if (!this.weighingStarted) {
+      this.statusUI = 'DESCONECTADO';
+      this.processing = false;
+      this.statusRaw = 'idle';
+      return;
+    }
+
     const raw = String(st ?? '');
     this.statusRaw = raw;
-
-    // Ajusta aquí si tu servicio usa otros textos
     const up = raw.toUpperCase();
 
     if (up.includes('VALID')) {
@@ -341,7 +398,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
     if (up.includes('CONNECT')) {
       this.statusUI = 'CONECTADO';
-      // seguimos en processing hasta recibir lectura
       return;
     }
 
@@ -351,15 +407,12 @@ export class PesadaPeso implements OnInit, OnDestroy {
       this.isStable = false;
       return;
     }
-
-    // fallback
-    if (!raw) return;
   }
 
   private applyReading(r: any): void {
+    if (!this.weighingStarted) return;
     if (!r) return;
 
-    // ya hay lectura: apagar “Procesando...”
     this.processing = false;
 
     const kg = Number(r.weightKg ?? 0);
@@ -368,15 +421,15 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.pesoActual = isFinite(kg) ? kg : 0;
     this.isStable = stable;
 
-    // si estable, guardamos el último estable (para guardar)
     if (stable) this.lastStableKg = this.pesoActual;
 
-    // siempre reflejar en input (pero está disabled)
     this.form.get('PesoBruto')?.setValue(this.pesoActual, { emitEvent: false });
   }
 
   private applyError(err: any): void {
+    if (!this.weighingStarted) return;
     if (!err) return;
+
     this.processing = false;
     this.statusUI = 'ERROR';
     this.showErrorOnce(err?.message || 'Ocurrió un error con la balanza.');
@@ -384,7 +437,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
   private showErrorOnce(message: string): void {
     const now = Date.now();
-    // evita spam si el socket manda muchos errores seguidos
     if (now - this.lastErrorShownAt < 1200) return;
     this.lastErrorShownAt = now;
 
@@ -401,6 +453,9 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.isStable = false;
     this.lastStableKg = 0;
     this.processing = false;
+
+    // ✅ Guard extra (por si algo llama al reset antes de buildForm)
+    if (!this.form) return;
 
     this.form.get('PesoBruto')?.setValue(0, { emitEvent: false });
     this.form.get('PesoBruto')?.markAsPristine();
@@ -452,13 +507,24 @@ export class PesadaPeso implements OnInit, OnDestroy {
     return this.balanzaOptions.find((x) => x.id === id)?.nombre || '';
   }
 
+  get lockScaleSelect(): boolean {
+    return this.processing || this.statusUI === 'CONECTADO' || this.loading || this.loadingData;
+  }
+
+  get startBtnDisabled(): boolean {
+    const hasScale = !!this.form.get('BalanzaId')?.value;
+    if (!hasScale) return true;
+    return this.processing || this.loading || this.loadingData;
+  }
+
+  get startBtnText(): string {
+    return this.statusUI === 'CONECTADO' ? 'Detener pesada' : 'Iniciar pesada';
+  }
+
   get f() {
     return this.form.controls;
   }
 
-  // =========================
-  // Helpers productos/balanzas
-  // =========================
   private mapProductosToOptions(raw: Array<ProductByOperation | string>): PesadaPesoOption[] {
     if (!Array.isArray(raw) || raw.length === 0) {
       return [

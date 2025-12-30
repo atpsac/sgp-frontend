@@ -32,20 +32,21 @@ import { TicketDraftService } from './services/ticket-draft.service';
 export interface DocumentoRelacionado {
   id?: number;
 
-  // IMPORTANTES para guardar cabecera
-  idDocumentTypes?: number;
-  idBusinessPartners?: number;
 
-  // Para armar serie/numero si viene junto
-  serie?: string;
-  numeroCorrelativo?: string;
-  numeroDocumento?: string;
+    socioNegocio?: string | null;
+  tipoDocumento?: string | null;
+  documento?: string | null;
+  fechaDocumento?: string | Date | null;
+  numeroDocumento?: string | null;
+  pesoBrutoKg?: number | null;
+  pesoNetoKg?: number | null;
 
-  fechaDocumento: string;
-
-  pesoBrutoKg: number;
-  pesoNetoKg: number;
+  idBusinessPartners?: number | null;
+  idDocumentTypes?: number | null;
+  serie?: string | null;
+  numeroCorrelativo?: string | null;
 }
+
 
 export interface TaraItem {
   id?: number;
@@ -697,7 +698,7 @@ export class PesadaForm implements OnInit {
     try {
       this.isSavingHeader = true;
 
-      const payload = this.buildHeaderPayload();
+      const payload: any = this.buildHeaderPayload();
       const res: any = await firstValueFrom(
         this.weighingService.createScaleTicketHeader(payload)
       );
