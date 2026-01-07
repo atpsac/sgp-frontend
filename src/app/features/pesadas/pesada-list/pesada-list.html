@@ -49,7 +49,6 @@
             type="button"
             class="ux-top-btn ux-top-btn--green"
             (click)="crear()"
-            [disabled]="data.length === 0"
           >
             <span class="material-symbols-rounded">add</span>
             <span>Crear</span>
@@ -125,7 +124,7 @@
           </div>
         </div>
 
-        <!-- Botones aplicar / limpiar (ocupa todo el ancho de la columna) -->
+        <!-- Botones aplicar / limpiar -->
         <div class="col-lg-2 col-md-6 col-12">
           <div class="ux-filter-actions">
             <button
@@ -208,17 +207,14 @@
               {{ row.PesoNeto | number: '1.2-2' }}
             </td>
 
-            <!-- Estado (badge por tipo) -->
+            <!-- Estado -->
             <td [attr.data-label]="'Estado'">
-              <span
-                class="ux-status-badge"
-                [ngClass]="getEstadoClass(row.Estado)"
-              >
+              <span class="ux-status-badge" [ngClass]="getEstadoClass(row.Estado)">
                 {{ row.Estado }}
               </span>
             </td>
 
-            <!-- Activo (badge verde/rojo) -->
+            <!-- Activo -->
             <td class="ux-col-activo" [attr.data-label]="'Activo'">
               <span
                 class="ux-active-pill"
@@ -229,14 +225,15 @@
               </span>
             </td>
 
-            <!-- Acciones -->
+            <!-- ✅ Acciones (FIX) -->
             <td class="ux-col-actions" [attr.data-label]="'Acciones'">
-              <div class="ux-actions-wrapper">
+              <!-- IMPORTANTE: parar propagación aquí también -->
+              <div class="ux-actions-wrapper" (click)="$event.stopPropagation()">
                 <button
                   type="button"
                   class="ux-more-btn"
-                  (click)="toggleActions(row)"
                   title="Ver acciones"
+                  (click)="toggleActions(row, $event)"
                 >
                   <span class="material-symbols-rounded">more_horiz</span>
                 </button>
@@ -245,41 +242,38 @@
                 <div
                   class="ux-actions-menu"
                   *ngIf="actionsOpenTicket === row.NumeroTicket"
+                  (click)="$event.stopPropagation()"
                 >
-                  <button
-                    type="button"
-                    (click)="onAction('continuar', row)"
-                  >
+                  <button type="button" (click)="onAction('continuar', row, $event)">
                     <span class="material-symbols-rounded ux-action-icon--primary">
                       play_arrow
                     </span>
                     <span>Continuar</span>
                   </button>
 
-                  <button
-                    type="button"
-                    (click)="onAction('generar', row)"
-                  >
+                  <button type="button" (click)="onAction('generar', row, $event)">
                     <span class="material-symbols-rounded ux-action-icon--blue">
                       receipt_long
                     </span>
                     <span>Generar ticket</span>
                   </button>
 
-                  <button
-                    type="button"
-                    (click)="onAction('duplicar', row)"
-                  >
+
+                  <button type="button" (click)="onAction('generar_corto', row, $event)">
+                  <span class="material-symbols-rounded ux-action-icon--blue">receipt</span>
+                  <span>Ticket corto</span>
+                </button>
+
+
+
+                  <button type="button" (click)="onAction('duplicar', row, $event)">
                     <span class="material-symbols-rounded ux-action-icon--purple">
                       content_copy
                     </span>
                     <span>Duplicar</span>
                   </button>
 
-                  <button
-                    type="button"
-                    (click)="onAction('cancelar', row)"
-                  >
+                  <button type="button" (click)="onAction('cancelar', row, $event)">
                     <span class="material-symbols-rounded ux-action-icon--danger">
                       close
                     </span>
@@ -316,9 +310,7 @@
       </table>
 
       <!-- FOOTER / PAGINACIÓN -->
-      <div
-        class="ux-table__footer d-flex justify-content-between align-items-center w-100 flex-wrap"
-      >
+      <div class="ux-table__footer d-flex justify-content-between align-items-center w-100 flex-wrap">
         <div class="d-flex align-items-center gap-2">
           <span class="ux-foot-info">
             {{ startRecord }} - {{ endRecord }} de {{ totalRecords }} registros.
@@ -333,9 +325,7 @@
                 {{ size }}
               </option>
             </select>
-            <span class="ux-select__icon material-symbols-rounded">
-              expand_more
-            </span>
+            <span class="ux-select__icon material-symbols-rounded">expand_more</span>
           </div>
         </div>
 
@@ -347,21 +337,11 @@
               </button>
             </li>
 
-            <li
-              class="page-item"
-              *ngFor="let page of getPageRange()"
-              [class.active]="page === currentPage"
-            >
-              <button
-                *ngIf="page > 0"
-                class="page-link"
-                (click)="changePage(page)"
-              >
+            <li class="page-item" *ngFor="let page of getPageRange()" [class.active]="page === currentPage">
+              <button *ngIf="page > 0" class="page-link" (click)="changePage(page)">
                 {{ page }}
               </button>
-              <span *ngIf="page === -1 || page === -2" class="page-link">
-                …
-              </span>
+              <span *ngIf="page === -1 || page === -2" class="page-link">…</span>
             </li>
 
             <li class="page-item" [class.disabled]="currentPage === totalPages">

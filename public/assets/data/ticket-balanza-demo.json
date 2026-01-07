@@ -1,0 +1,77 @@
+{
+  "empresa": {
+    "razonSocial": "AMAZONAS TRADING PERU S.A.C.",
+    "ruc": "20521137682",
+    "direccion": "—"
+  },
+  "ticket": {
+    "numeroTicket": "TKTP-0000001",
+    "fechaEmision": "2026-01-06",
+    "sedeOperacion": "ATP - LIMA",
+    "operacion": "RECEPCION DE PRODUCTO - PLANTA PRINCIPAL",
+    "calidad": "CACAO EN GRANO HÚMEDO",
+    "estado": "EN REGISTRO"
+  },
+  "origenDestino": {
+    "sedeOrigen": "ATP - BAGUA GRANDE",
+    "sedeDestino": "ATP - LIMA"
+  },
+  "documentos": [
+    {
+      "item": "01",
+      "socioNegocio": "AMAZONAS TRADING PERU S.A.C.",
+      "tipoDoc": "EF",
+      "documento": "FACTURA ELECTRONICA",
+      "fechaDoc": "2026-01-06",
+      "numeroDocumento": "TR5-0473247",
+      "pesoBrutoKg": 12434,
+      "pesoNetoKg": 4344
+    }
+  ],
+  "transporte": {
+    "transportista": {
+      "razonSocial": "TRANSPORTES & NEGOCIACIONES SERLUZ S.R.L.",
+      "ruc": "20555619821"
+    },
+    "conductor": {
+      "nombreCompleto": "JOSELITO ROJAS SALDAÑA",
+      "tipoDocumento": "DNI",
+      "numeroDocumento": "21570832",
+      "licencia": "Q21570832"
+    },
+    "vehiculo": {
+      "placa": "Z2I974",
+      "trailer": "AUR778"
+    }
+  },
+  "resumen": {
+    "cantidadItems": 1,
+    "totalPesoBrutoKg": 30142.08,
+    "totalTaraKg": 42,
+    "subtotalPesoNetoKg": 30100.08,
+    "ajusteKg": 0,
+    "diferenciaAjusteKg": 0,
+    "totalPesoNetoKg": 30100.08
+  },
+  "pesadas": [
+    {
+      "item": "01",
+      "producto": "CACAO EN GRANO HÚMEDO",
+      "balanza": "COM3 Precix Weight 8513",
+      "pesoBrutoKg": 30142.08,
+      "taraKg": 42,
+      "pesoNetoKg": 30100.08,
+      "observaciones": "—",
+      "estado": "EN REGISTRO",
+      "taras": [
+        {
+          "empaque": "SACO PLÁSTICO CREMA 150 GR",
+          "codigo": "SPC",
+          "taraEmpaqueKg": 0.15,
+          "cantidad": 1,
+          "taraTotalKg": 0.15
+        }
+      ]
+    }
+  ]
+}

@@ -166,15 +166,15 @@
             <span class="uxf-visor-unit">kg</span>
           </div>
 
-          <!-- Botón iniciar/detener -->
+          <!-- ✅ Botón SOLO INICIAR (bloqueado cuando está conectado) -->
           <button
             type="button"
             class="uxf-btn uxf-btn--start"
-            (click)="toggleWeighing()"
+            (click)="startWeighing()"
             [disabled]="startBtnDisabled"
           >
             <span class="material-symbols-rounded" aria-hidden="true">
-              {{ statusUI === 'CONECTADO' ? 'stop_circle' : 'play_circle' }}
+              {{ startBtnIcon }}
             </span>
             {{ startBtnText }}
           </button>
@@ -182,6 +182,11 @@
           <div class="uxf-stable" *ngIf="!processing && statusUI === 'CONECTADO'">
             Estable:
             <b [class.ok]="isStable" [class.bad]="!isStable">{{ isStable ? 'Sí' : 'No' }}</b>
+          </div>
+
+          <!-- ✅ Mensaje aclaratorio cuando ya está conectado -->
+          <div class="uxf-hint" *ngIf="statusUI === 'CONECTADO'">
+            La pesada queda bloqueada hasta <b>Guardar</b> o <b>Cancelar</b>.
           </div>
         </div>
       </div>

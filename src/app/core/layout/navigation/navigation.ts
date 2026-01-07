@@ -39,7 +39,7 @@ export class NavigationComponent {
       children: [
         { type: 'item', title: 'Registrar ticket',  icon: 'add',  url: '/pesadas/nuevo' },
         { type: 'item', title: 'Ticket de balanza',  icon: 'inventory_2',  url: '/pesadas/listar' },
-        { type: 'item', title: 'Balanza prueba',  icon: 'inventory_2',  url: '/pesadas/prueba' },
+        // { type: 'item', title: 'Balanza prueba',  icon: 'inventory_2',  url: '/pesadas/prueba' },
         // { type: 'item', title: 'Ticket emitidos',  icon: 'folder',  url: '/reportes' },
       ]
     },

@@ -106,20 +106,18 @@ export class PesadaPeso implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.existingPesada = this.data?.pesada ?? null;
 
-    // ✅ 1) PRIMERO construir el FormGroup (evita NG01052 y el TypeError)
+    // ✅ 1) construir form primero
     this.buildForm();
-
-    // PesoBruto siempre disabled
     this.form.get('PesoBruto')?.disable({ emitEvent: false });
 
-    // ✅ 2) Cortar cualquier sesión previa del servicio + estado inicial
+    // ✅ 2) cortar sesión previa
     this.safeDisconnect();
     this.weighingStarted = false;
     this.statusUI = 'DESCONECTADO';
     this.statusRaw = 'init';
     this.processing = false;
 
-    // ✅ 3) Reset ahora ya es seguro porque form ya existe
+    // ✅ 3) reset visor
     this.resetWeighingState();
 
     // ============ productos ============
@@ -161,7 +159,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.scales.forEach((s) => this.scalesById.set(s.id, s));
     this.balanzaOptions = this.scales.map((s) => ({ id: s.id, nombre: s.nombre }));
 
-    // ✅ NO autoseleccionar el primero. Solo precargar si es edición.
+    // ✅ precargar si edición
     const productoInit =
       this.existingPesada?.productoId ??
       this.matchOptionIdByName(this.productoOptions, this.existingPesada?.producto) ??
@@ -193,7 +191,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.svc.reading$.pipe(takeUntil(this.destroy$)).subscribe((r) => this.applyReading(r));
     this.svc.error$.pipe(takeUntil(this.destroy$)).subscribe((err) => this.applyError(err));
 
-    // Si viene con balanza precargada (edición), igual queda DESCONECTADO hasta “Iniciar”
+    // queda desconectado hasta “Iniciar”
     this.statusUI = 'DESCONECTADO';
     this.processing = false;
   }
@@ -210,21 +208,20 @@ export class PesadaPeso implements OnInit, OnDestroy {
   close(): void {
     if (this.loading || this.processing) return;
     this.safeDisconnect();
+    this.weighingStarted = false;
     this.activeModal.dismiss();
   }
 
-  async toggleWeighing(): Promise<void> {
+  /**
+   * ✅ SOLO INICIA.
+   * ❌ Ya NO se permite detener desde el botón (queda bloqueado al conectar).
+   */
+  async startWeighing(): Promise<void> {
     if (this.processing || this.loading || this.loadingData) return;
 
-    if (this.statusUI === 'CONECTADO') {
-      this.stopWeighing();
-      return;
-    }
+    // si ya conectó, no hacemos nada (botón quedará disabled)
+    if (this.statusUI === 'CONECTADO') return;
 
-    await this.startWeighing();
-  }
-
-  async startWeighing(): Promise<void> {
     const balanzaId = this.form.get('BalanzaId')?.value;
 
     if (!balanzaId) {
@@ -240,17 +237,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
     this.weighingStarted = true;
     await this.kickoffForSelectedScale(true);
-  }
-
-  stopWeighing(): void {
-    if (this.processing) return;
-
-    this.safeDisconnect();
-    this.weighingStarted = false;
-
-    this.resetWeighingState();
-    this.statusUI = 'DESCONECTADO';
-    this.statusRaw = 'stopped';
   }
 
   async save(): Promise<void> {
@@ -294,6 +280,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
       taras,
     };
 
+    // ✅ al guardar recién desconectamos
     this.safeDisconnect();
     this.weighingStarted = false;
 
@@ -314,6 +301,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
   }
 
   private onBalanzaChange(_: any): void {
+    // si cambia balanza, reseteamos sesión (igual el select estará bloqueado cuando conecte)
     this.safeDisconnect();
     this.weighingStarted = false;
 
@@ -398,6 +386,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
     if (up.includes('CONNECT')) {
       this.statusUI = 'CONECTADO';
+      this.processing = false;
       return;
     }
 
@@ -454,7 +443,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.lastStableKg = 0;
     this.processing = false;
 
-    // ✅ Guard extra (por si algo llama al reset antes de buildForm)
     if (!this.form) return;
 
     this.form.get('PesoBruto')?.setValue(0, { emitEvent: false });
@@ -468,6 +456,9 @@ export class PesadaPeso implements OnInit, OnDestroy {
     } catch {}
   }
 
+  // =========================
+  // UI Helpers
+  // =========================
   canSave(): boolean {
     return this.statusUI === 'CONECTADO' && this.isStable && this.lastStableKg > 0;
   }
@@ -508,17 +499,29 @@ export class PesadaPeso implements OnInit, OnDestroy {
   }
 
   get lockScaleSelect(): boolean {
+    // ✅ cuando conecte (o validando/procesando) ya no se puede cambiar balanza
     return this.processing || this.statusUI === 'CONECTADO' || this.loading || this.loadingData;
   }
 
+  /**
+   * ✅ Botón “Iniciar pesada”
+   * - Requiere balanza
+   * - Se deshabilita mientras procesa
+   * - ✅ Y se deshabilita cuando ya está CONECTADO (NO se permite “detener”)
+   */
   get startBtnDisabled(): boolean {
     const hasScale = !!this.form.get('BalanzaId')?.value;
     if (!hasScale) return true;
+    if (this.statusUI === 'CONECTADO') return true; // 🔒 clave del requerimiento
     return this.processing || this.loading || this.loadingData;
   }
 
   get startBtnText(): string {
-    return this.statusUI === 'CONECTADO' ? 'Detener pesada' : 'Iniciar pesada';
+    return this.statusUI === 'CONECTADO' ? 'Pesada en curso' : 'Iniciar pesada';
+  }
+
+  get startBtnIcon(): string {
+    return this.statusUI === 'CONECTADO' ? 'lock' : 'play_circle';
   }
 
   get f() {
