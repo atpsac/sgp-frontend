@@ -109,7 +109,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
 
       taraPorEmpaqueKg: [0, [Validators.required, Validators.min(0)]],
 
-      cantidad: [1, [Validators.required, Validators.min(1)]],
+      cantidad: [0, [Validators.required, Validators.min(1)]],
 
       taraKg: [{ value: 0, disabled: true }],
     });
@@ -127,7 +127,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
           codigo: '',
           descripcion: '',
           taraPorEmpaqueKg: 0,
-          cantidad: 1,
+          cantidad: 0,
           taraKg: 0,
         },
         { emitEvent: false }
@@ -168,7 +168,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
               codigo: '',
               descripcion: '',
               taraPorEmpaqueKg: 0,
-              cantidad: 1,
+              cantidad: 0,
               taraKg: 0,
             },
             { emitEvent: false }
@@ -204,7 +204,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
         codigo: d.codigo ?? '',
         descripcion: d.descripcion ?? '',
         taraPorEmpaqueKg: Number(d.taraPorEmpaqueKg ?? 0),
-        cantidad: Number(d.cantidad ?? 1),
+        cantidad: Number(d.cantidad ?? 0),
       },
       { emitEvent: false }
     );
@@ -284,7 +284,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
       return;
     }
 
-    const qty = Math.max(1, Number(raw.cantidad) || 1);
+    const qty = Math.max(1, Number(raw.cantidad) || 0);
 
     const payload: CreateTarePayload = {
       idScaleTicketDetails: this.scaleTicketDetailsId,
