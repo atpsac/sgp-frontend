@@ -5,13 +5,12 @@ import { RouterOutlet } from '@angular/router';
 import { NavigationComponent } from '../navigation/navigation';
 import { NavbarComponent } from '../navbar/navbar';
 import { Footer } from "../footer/footer";
-import { ThemeSwitcher } from '../../theme/theme-switcher/theme-switcher';
 
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavigationComponent, NavbarComponent, Footer, ThemeSwitcher],
+  imports: [CommonModule, RouterOutlet, NavigationComponent, NavbarComponent, Footer],
   templateUrl: './shell.html',
   styleUrls: ['./shell.scss'],
 })

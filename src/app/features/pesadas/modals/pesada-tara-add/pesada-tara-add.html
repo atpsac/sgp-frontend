@@ -1,6 +1,11 @@
 <div class="tara-add-modal">
   <!-- Botón cerrar -->
-  <button type="button" class="tara-add-close" (click)="close()" [disabled]="loading">
+  <button
+    type="button"
+    class="tara-add-close"
+    (click)="close()"
+    [disabled]="loading"
+  >
     &times;
   </button>
 
@@ -18,7 +23,6 @@
 
   <!-- Formulario -->
   <form [formGroup]="form" (ngSubmit)="save()">
-  <!-- <form [formGroup]="form" (ngSubmit)="save()"> -->
     <div class="tara-add-grid">
       <!-- Empaque -->
       <div class="col-12">
@@ -45,7 +49,10 @@
           </span>
         </div>
 
-        <div class="tara-add-error" *ngIf="f['packagingTypesId'].touched && f['packagingTypesId'].hasError('required')">
+        <div
+          class="tara-add-error"
+          *ngIf="f['packagingTypesId'].touched && f['packagingTypesId'].hasError('required')"
+        >
           Debes seleccionar un empaque.
         </div>
       </div>

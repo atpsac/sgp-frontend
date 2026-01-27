@@ -207,8 +207,9 @@ export interface PackagingType {
   id: number;
   code: string;
   name: string;
-  unitTareWeight: string | number; // viene como string en tu API
-  description: string;
+  unitTareWeight: number;     // viene como string, lo convertimos a number
+  description?: string;
+  unitOrigin?: string;        // ej: "UNIT"
 }
 
 /* =========================================================
@@ -494,12 +495,23 @@ export class WeighingService {
      GET /packaging-types
      ========================================================= */
 
-  getPackagingTypes(): Observable<PackagingType[]> {
-    return this.http
-      .get<ApiResponse<PackagingType>>(`packaging-types`, this.withAuthHeader())
-      .pipe(map((res) => res?.data ?? []));
-  }
-
+getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
+  return this.http
+    .get<ApiResponse<any>>(
+      `scale-tickets-details/${scaleTicketDetailId}/packaging-types`,
+      this.withAuthHeader()
+    )
+    .pipe(
+      map((res) => (res?.data ?? []).map((x: any) => ({
+        id: Number(x?.id ?? 0),
+        code: String(x?.code ?? ''),
+        name: String(x?.name ?? ''),
+        unitTareWeight: Number(x?.unitTareWeight ?? 0),
+        description: x?.description ?? null,
+        unitOrigin: x?.unitOrigin ?? null,
+      } as PackagingType)))
+    );
+}
   /* =========================================================
      NUEVO: CREAR TARA (ASOCIAR EMPAQUE A DETALLE)
      POST /scale-ticket-details/packaging-types

@@ -1,5 +1,4 @@
 <div class="uxf-modal">
-  <!-- Cerrar -->
   <button
     type="button"
     class="uxf-close"
@@ -11,18 +10,14 @@
     ×
   </button>
 
-  <!-- Header -->
   <div class="uxf-header">
     <h3 class="uxf-title">{{ title }}</h3>
     <p class="uxf-sub">{{ subtitle }}</p>
   </div>
 
-  <!-- Form -->
   <form [formGroup]="form" (ngSubmit)="save()">
     <div class="uxf-grid">
-      <!-- Columna izquierda -->
       <div class="uxf-col-main">
-
         <!-- Balanza / Estado -->
         <div class="uxf-row-2">
           <!-- Balanza -->
@@ -65,10 +60,6 @@
                 <div class="uxf-hint" *ngIf="!f['BalanzaId'].value && !loadingData">
                   Selecciona una balanza y luego presiona <b>Iniciar pesada</b>.
                 </div>
-
-                <div class="uxf-hint" *ngIf="loadingData">
-                  Obteniendo balanzas operativas del ticket…
-                </div>
               </div>
             </div>
           </div>
@@ -76,28 +67,29 @@
           <!-- Estado de balanza -->
           <div class="uxf-col-6">
             <div class="uxf-field">
-              <label class="uxf-label" for="BalanzaEstado">
+              <label class="uxf-label">
                 Estado de balanza <span class="req">*</span>
               </label>
 
-              <input
-                id="BalanzaEstado"
-                type="text"
-                class="uxf-control"
-                formControlName="BalanzaEstado"
-                readonly
-              />
+              <!-- Chip con color (verde/amarillo) -->
+              <div class="uxf-status-chip" [ngClass]="scaleStatusClass">
+                <span class="uxf-status-dot" aria-hidden="true"></span>
+                <span class="uxf-status-text">{{ scaleStatusLabel }}</span>
+              </div>
+
+              <!-- mantenemos el formControl -->
+              <input type="hidden" formControlName="BalanzaEstado" />
             </div>
           </div>
         </div>
 
-        <!-- Tipo pesada REAL / Peso bruto -->
+        <!-- Tipo pesada / Peso bruto -->
         <div class="uxf-row-2">
-          <!-- Tipo pesada (backend) -->
+          <!-- Tipo pesada -->
           <div class="uxf-col-6">
             <div class="uxf-field">
               <label class="uxf-label" for="weighingType">
-                Tipo_pesada <span class="req">*</span>
+                Tipo de pesada <span class="req">*</span>
               </label>
 
               <div class="uxf-select">
@@ -117,7 +109,7 @@
                   </option>
 
                   <option *ngFor="let t of weighingTypeOptions" [ngValue]="t.weighingTypeId">
-                    {{ t.name }} ({{ t.code }})
+                    {{ t.name }} ({{ t.code }}) 
                   </option>
                 </select>
 
@@ -145,7 +137,7 @@
             </div>
           </div>
 
-          <!-- Peso bruto (readonly) -->
+          <!-- Peso bruto -->
           <div class="uxf-col-6">
             <div class="uxf-field">
               <label class="uxf-label" for="pesoBruto">
@@ -165,10 +157,7 @@
                   Espera a que el peso sea estable para poder guardar.
                 </div>
 
-                <div
-                  class="uxf-error"
-                  *ngIf="statusUI === 'DESCONECTADO' && f['BalanzaId'].value"
-                >
+                <div class="uxf-error" *ngIf="statusUI === 'DESCONECTADO' && f['BalanzaId'].value">
                   Balanza desconectada. Presiona <b>Iniciar pesada</b>.
                 </div>
 
@@ -183,8 +172,7 @@
         <!-- Producto -->
         <div class="uxf-field">
           <label class="uxf-label" for="producto">
-            Producto
-            <span class="req" *ngIf="!isSoloPallet">*</span>
+            Producto <span class="req" *ngIf="!isSoloPallet">*</span>
           </label>
 
           <div class="uxf-select">
@@ -193,11 +181,7 @@
               class="uxf-control"
               formControlName="ProductoId"
               [disabled]="isSoloPallet"
-              [class.is-invalid]="
-                !isSoloPallet &&
-                f['ProductoId'].touched &&
-                f['ProductoId'].invalid
-              "
+              [class.is-invalid]="!isSoloPallet && f['ProductoId'].touched && f['ProductoId'].invalid"
             >
               <option [ngValue]="null">Selecciona un producto…</option>
               <option *ngFor="let p of productoOptions" [ngValue]="p.id">
@@ -213,11 +197,7 @@
           <div class="uxf-hint-row">
             <div
               class="uxf-error"
-              *ngIf="
-                !isSoloPallet &&
-                f['ProductoId'].touched &&
-                f['ProductoId'].hasError('required')
-              "
+              *ngIf="!isSoloPallet && f['ProductoId'].touched && f['ProductoId'].hasError('required')"
             >
               El producto es obligatorio.
             </div>
@@ -237,11 +217,12 @@
             formControlName="Observaciones"
             rows="3"
             placeholder="Comentarios adicionales sobre la pesada"
+            style="resize: none;"
           ></textarea>
         </div>
       </div>
 
-      <!-- Columna derecha: visor -->
+      <!-- Visor -->
       <div class="uxf-col-visor">
         <div
           class="uxf-visor"
@@ -249,7 +230,6 @@
           [class.uxf-visor--unstable]="!isStable"
           [class.uxf-visor--busy]="processing"
         >
-          <!-- TOP -->
           <div class="uxf-visor__top">
             <div class="uxf-visor__scale">
               {{ currentScaleName || 'Sin balanza seleccionada' }}
@@ -262,19 +242,16 @@
 
           <span class="uxf-visor-label">PESO ACTUAL</span>
 
-          <!-- Procesando -->
           <div class="uxf-processing" *ngIf="processing">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span>Procesando…</span>
           </div>
 
-          <!-- valor -->
           <div class="uxf-visor-value" *ngIf="!processing">
             {{ pesoActual | number : '1.2-2' }}
             <span class="uxf-visor-unit">kg</span>
           </div>
 
-          <!-- Botón iniciar -->
           <button
             type="button"
             class="uxf-btn uxf-btn--start"

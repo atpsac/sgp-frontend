@@ -69,7 +69,7 @@
 .uxf-col-visor {
   grid-column: 8 / span 5;
   display: flex;
-  align-items: center;
+  align-items: stretch; /* ✅ antes center */
 }
 
 /* ===== FILA 6/6 ===== */
@@ -135,7 +135,7 @@
 .uxf-control--area {
   height: auto;
   min-height: 60px;
-  resize: vertical;
+  resize: none; /* ✅ no se puede extender */
 }
 
 .uxf-select {
@@ -185,10 +185,87 @@
   color: #475569;
 }
 
+/* ===== ESTADO BALANZA (CHIP) ===== */
+.uxf-status-chip {
+  height: 42px;
+  width: 100%;
+  border-radius: 10px;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  background: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  font-weight: 800;
+  font-size: 13px;
+  color: #334155;
+}
+
+.uxf-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14);
+}
+
+.uxf-status-text {
+  line-height: 1;
+}
+
+/* ✅ Verde (OPERATIVO) */
+.uxf-status--ok {
+  background: #ecfdf5;
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+
+  .uxf-status-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.14);
+  }
+}
+
+/* ✅ Amarillo (CALIBRACION / MANTENIMIENTO) */
+.uxf-status--warn {
+  background: #fffbeb;
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #92400e;
+
+  .uxf-status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14);
+  }
+}
+
+/* Rojo */
+.uxf-status--bad {
+  background: #fef2f2;
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+
+  .uxf-status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+  }
+}
+
+/* Neutro */
+.uxf-status--muted {
+  background: #f1f5f9;
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #475569;
+
+  .uxf-status-dot {
+    background: #94a3b8;
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14);
+  }
+}
+
 /* ===== VISOR ===== */
 .uxf-visor {
   width: 100%;
-  min-height: 370px;
+  height: 100%;          /* ✅ igualar altura con la izquierda */
+  min-height: 370px;     /* mantiene una base bonita */
   border-radius: 18px;
   background: #eef2f7;
   display: flex;
@@ -212,7 +289,6 @@
 }
 
 .uxf-visor--busy {
-  /* mientras procesa: sensación de bloqueo */
   filter: saturate(0.98);
 }
 
@@ -243,7 +319,7 @@
   font-size: 12px;
   color: #6b7280;
   margin-bottom: 10px;
-  margin-top: 26px; /* deja espacio para top */
+  margin-top: 26px;
 }
 
 .uxf-visor-value {
@@ -312,18 +388,6 @@
   .bad {
     color: #ef4444;
   }
-}
-
-.uxf-deviceLine {
-  margin-top: 10px;
-  padding: 8px 10px;
-  max-width: 92%;
-  text-align: center;
-  font-size: 11px;
-  color: #475569;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 12px;
 }
 
 /* ===== BADGES ===== */
@@ -431,6 +495,10 @@
   .uxf-col-visor {
     grid-column: 1 / -1;
     margin-top: 8px;
+  }
+
+  .uxf-visor {
+    height: auto; /* en móvil que fluya */
   }
 }
 

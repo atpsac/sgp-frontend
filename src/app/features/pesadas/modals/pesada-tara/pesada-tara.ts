@@ -47,7 +47,7 @@ type SortDirection = 'asc' | 'desc';
 export class PesadaTara implements OnInit, OnDestroy {
   @Input() data: PesadaTaraData | null = null;
 
-  @Input() title = 'Agregar tara';
+  @Input() title = 'Listado de taras';
   @Input() subtitle = 'Administra los empaques y su tara para esta pesada.';
 
   private modalService = inject(NgbModal);

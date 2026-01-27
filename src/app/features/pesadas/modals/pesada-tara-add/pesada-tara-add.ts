@@ -29,7 +29,8 @@ export interface PackagingType {
   code: string;
   name: string;
   unitTareWeight: string | number;
-  description: string;
+  description?: string;
+  unitOrigin?: string; // ✅ nuevo (ej: "UNIT")
 }
 
 export interface CreateTarePayload {
@@ -49,7 +50,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
   @Input() title = 'Agregar tara';
   @Input() subtitle = 'Completa los datos del empaque y su tara para esta pesada.';
 
-  /** ✅ lo manda el padre (obligatorio para crear en backend) */
+  /** ✅ lo manda el padre (OBLIGATORIO para listar empaques y crear tara) */
   @Input() scaleTicketDetailsId: number | null = null;
 
   /** opcional: edición (si luego implementas update) */
@@ -74,6 +75,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
     this.buildForm();
     this.isEdit = !!this.initialData;
 
+    // ✅ cargar catálogo con el NUEVO endpoint (requiere scaleTicketDetailsId)
     this.loadPackagingTypes();
 
     // listeners
@@ -114,14 +116,50 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
   }
 
   private loadPackagingTypes(): void {
+    const detailId = Number(this.scaleTicketDetailsId ?? 0);
+
+    if (!detailId || detailId <= 0) {
+      // No podemos listar sin el id del detalle
+      this.packagingTypes = [];
+      this.form.patchValue(
+        {
+          packagingTypesId: null,
+          codigo: '',
+          descripcion: '',
+          taraPorEmpaqueKg: 0,
+          cantidad: 1,
+          taraKg: 0,
+        },
+        { emitEvent: false }
+      );
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Falta id del detalle',
+        text: 'No se recibió scaleTicketDetailsId para listar tipos de empaque.',
+        confirmButtonText: 'OK',
+      });
+
+      return;
+    }
+
     this.loadingCatalog = true;
 
+    // ✅ NUEVO: getPackagingTypes(scaleTicketDetailId)
     this.weighingSvc
-      .getPackagingTypes()
+      .getPackagingTypes(detailId)
       .pipe(finalize(() => (this.loadingCatalog = false)))
       .subscribe({
         next: (rows) => {
-          this.packagingTypes = Array.isArray(rows) ? rows : [];
+          // Seguridad: normalizar campos por si el servicio no los mapeó
+          this.packagingTypes = (Array.isArray(rows) ? rows : []).map((x: any) => ({
+            id: Number(x?.id ?? 0),
+            code: String(x?.code ?? ''),
+            name: String(x?.name ?? ''),
+            unitTareWeight: x?.unitTareWeight ?? 0,
+            description: x?.description ?? '',
+            unitOrigin: x?.unitOrigin ?? null,
+          }));
 
           // ✅ iniciar SIN selección
           this.form.patchValue(
@@ -131,6 +169,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
               descripcion: '',
               taraPorEmpaqueKg: 0,
               cantidad: 1,
+              taraKg: 0,
             },
             { emitEvent: false }
           );
@@ -175,8 +214,8 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
 
   private applyPackagingType(id: any): void {
     const item = this.packagingTypes.find((p) => String(p.id) === String(id));
+
     if (!item) {
-      // limpiar si vuelve a null
       this.form.patchValue(
         {
           codigo: '',
@@ -194,7 +233,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
     this.form.patchValue(
       {
         codigo: item.code,
-        descripcion: item.description || item.name,
+        descripcion: (item.description || item.name || '').toString(),
         taraPorEmpaqueKg: unit,
       },
       { emitEvent: false }
@@ -211,10 +250,7 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
 
     const total = unit * qty;
 
-    this.form.patchValue(
-      { taraKg: total },
-      { emitEvent: false }
-    );
+    this.form.patchValue({ taraKg: total }, { emitEvent: false });
   }
 
   close(): void {
@@ -266,8 +302,12 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
           const pt = this.packagingTypes.find((p) => p.id === packagingTypesId);
 
           const createdId =
-            Number(apiRow?.id ?? apiRow?.idScaleTicketDetailsPackagingTypes ?? apiRow?.idTicketDetailPackaging ?? 0) ||
-            undefined;
+            Number(
+              apiRow?.id ??
+                apiRow?.idScaleTicketDetailsPackagingTypes ??
+                apiRow?.idTicketDetailPackaging ??
+                0
+            ) || undefined;
 
           const taraUnit = Number(raw.taraPorEmpaqueKg) || 0;
           const taraKg = taraUnit * qty;
@@ -284,15 +324,13 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
             taraKg,
           };
 
-          // ✅ devuelve al padre (para refrescar lista / totales)
           this.activeModal.close(result);
         },
-        error: async (err) => {
+        error: async (_err) => {
           await Swal.fire({
             icon: 'warning',
             title: 'No se pudo registrar',
             text: 'Registro duplicado',
-            // text: err?.message || 'Ocurrió un error registrando la tara.',
             confirmButtonText: 'OK',
           });
         },
@@ -300,6 +338,6 @@ export class PesadaTaraAdd implements OnInit, OnDestroy {
   }
 
   get f() {
-    return this.form.controls;
+    return this.form.controls as any;
   }
 }
