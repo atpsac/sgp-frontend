@@ -1,0 +1,19 @@
+/* =========================
+   SI/NO como texto (sin badge)
+========================= */
+.ux-yesno {
+  display: inline-block;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.ux-yesno--yes {
+  color: #16a34a; /* verde fuerte */
+}
+
+.ux-yesno--no {
+  color: #dc2626; /* rojo fuerte */
+}

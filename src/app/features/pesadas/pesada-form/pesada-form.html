@@ -9,7 +9,6 @@
           datos de transporte y pesadas asociadas.
         </p>
 
-        <!-- Estado cabecera -->
         <div class="mt-2">
           <span class="badge" [ngClass]="headerSaved ? 'text-bg-success' : 'text-bg-secondary'">
             {{ headerSaved ? 'Encabezado guardado' : 'Encabezado pendiente' }}
@@ -22,7 +21,6 @@
       </div>
 
       <div class="d-flex flex-wrap gap-2 align-items-start">
-        <!-- ✅ BOTÓN X -->
         <button
           type="button"
           class="ux-icon-btn ux-icon-btn--danger"
@@ -31,25 +29,6 @@
           [disabled]="!hasDraft || isSavingHeader || isSavingFull"
         >
           <span class="material-symbols-rounded">close</span>
-        </button>
-
-        <!-- Guardar ticket final (solo en paso 5) -->
-        <button
-          type="button"
-          class="ux-btn ux-btn--primary"
-          *ngIf="currentStep === maxStep"
-          (click)="guardarTicketCompleto()"
-          [disabled]="isSavingFull"
-        >
-          <ng-container *ngIf="!isSavingFull">
-            <span class="material-symbols-rounded">done_all</span>
-            <span>Guardar ticket</span>
-          </ng-container>
-
-          <ng-container *ngIf="isSavingFull">
-            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-            <span>Guardando…</span>
-          </ng-container>
         </button>
       </div>
     </div>
@@ -63,7 +42,13 @@
     ></app-stepper-nav>
 
     <!-- FORM -->
-    <form [formGroup]="ticketForm" novalidate autocomplete="off" class="step-form">
+    <form
+      [formGroup]="ticketForm"
+      novalidate
+      autocomplete="off"
+      class="step-form"
+      [class.ux-validate]="showValidation"
+    >
       <div class="step-content" [ngSwitch]="currentStep">
 
         <!-- PASO 1 -->
@@ -117,31 +102,26 @@
 
         <!-- PASO 5 -->
         <div *ngSwitchCase="5" class="step-panel">
-          <!-- <app-paso-detalle-ticket
-            [formGroup]="detalleTicket"
-            [pesadas]="pesadas"
-            [totales]="totalesPesadas"
-            [productos]="productosMock"
-            [balanzas]="balanzasMock"
-            [locked]="isSavingFull || isSavingHeader"
-            (pesadasChange)="onPesadasChange($event)"
-            (ajusteChange)="onChangeAjusteKg()"
-          ></app-paso-detalle-ticket> -->
+          <!-- opcional: si no hay id, no renderiza el hijo -->
+          <ng-container *ngIf="headerTicketId; else noTicketId">
+            <app-paso-detalle-ticket
+              [formGroup]="detalleTicket"
+              [operationId]="operationIdSelected"
+              [ticketId]="headerTicketId"
+              [pesadas]="pesadas"
+              [totales]="totalesPesadas"
+              [balanzas]="balanzasMock"
+              [locked]="isSavingFull || isSavingHeader"
+              (pesadasChange)="onPesadasChange($event)"
+              (ajusteChange)="onChangeAjusteKg()"
+            ></app-paso-detalle-ticket>
+          </ng-container>
 
-          <app-paso-detalle-ticket
-          [formGroup]="detalleTicket"
-          [operationId]="operationIdSelected"
-
-          [pesadas]="pesadas"
-          [totales]="totalesPesadas"
-          [balanzas]="balanzasMock"
-          [locked]="isSavingFull || isSavingHeader"
-          (pesadasChange)="onPesadasChange($event)"
-          (ajusteChange)="onChangeAjusteKg()"
-        ></app-paso-detalle-ticket>
-
-
-
+          <ng-template #noTicketId>
+            <div class="alert alert-warning mb-0">
+              Aún no hay ticketId. Vuelve al paso 4 y guarda el encabezado.
+            </div>
+          </ng-template>
         </div>
 
         <div *ngSwitchDefault class="step-panel">
@@ -183,6 +163,24 @@
               <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
               <span>Guardando…</span>
             </ng-container>
+          </ng-container>
+        </button>
+
+        <button
+          type="button"
+          class="ux-btn ux-btn--primary mr-4"
+          *ngIf="currentStep === maxStep"
+          (click)="guardarTicketCompleto()"
+          [disabled]="isSavingFull"
+        >
+          <ng-container *ngIf="!isSavingFull">
+            <span class="material-symbols-rounded">done_all</span>
+            <span>Guardar ticket</span>
+          </ng-container>
+
+          <ng-container *ngIf="isSavingFull">
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <span>Guardando…</span>
           </ng-container>
         </button>
       </div>

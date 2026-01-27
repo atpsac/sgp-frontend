@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -7,6 +7,10 @@ import {
   Validators,
 } from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { Subject, finalize, takeUntil } from 'rxjs';
+import Swal from 'sweetalert2';
+
+import { WeighingService } from '../../../../core/services/weighing.service';
 
 export interface TaraItem {
   id?: number;
@@ -16,14 +20,22 @@ export interface TaraItem {
   taraPorEmpaqueKg: number;
   cantidad: number;
   taraKg: number;
+
+  packagingTypesId?: number;
 }
 
-export interface TaraCatalogItem {
-  id: number | string;
-  nombre: string;             // Empaque
-  codigo: string;
-  descripcion: string;
-  taraPorEmpaqueKg: number;
+export interface PackagingType {
+  id: number;
+  code: string;
+  name: string;
+  unitTareWeight: string | number;
+  description: string;
+}
+
+export interface CreateTarePayload {
+  idScaleTicketDetails: number;
+  packagingTypesId: number;
+  packageQuantity: number;
 }
 
 @Component({
@@ -33,154 +45,157 @@ export interface TaraCatalogItem {
   templateUrl: './pesada-tara-add.html',
   styleUrl: './pesada-tara-add.scss',
 })
-export class PesadaTaraAdd implements OnInit {
+export class PesadaTaraAdd implements OnInit, OnDestroy {
   @Input() title = 'Agregar tara';
-  @Input() subtitle =
-    'Completa los datos del empaque y su tara para esta pesada.';
+  @Input() subtitle = 'Completa los datos del empaque y su tara para esta pesada.';
 
-  // Para modo edición (opcional)
+  /** ✅ lo manda el padre (obligatorio para crear en backend) */
+  @Input() scaleTicketDetailsId: number | null = null;
+
+  /** opcional: edición (si luego implementas update) */
   @Input() initialData: TaraItem | null = null;
 
-  // Catálogo de empaques (opcional, si no se envía uso mock)
-  @Input() catalog: TaraCatalogItem[] = [];
+  private fb = inject(FormBuilder);
+  public activeModal = inject(NgbActiveModal);
+  private weighingSvc = inject(WeighingService);
+
+  private destroy$ = new Subject<void>();
 
   form!: FormGroup;
-  isEdit = false;
-  loading = false;
 
-  constructor(
-    private fb: FormBuilder,
-    public activeModal: NgbActiveModal
-  ) {}
+  isEdit = false;
+
+  loading = false;
+  loadingCatalog = false;
+
+  packagingTypes: PackagingType[] = [];
 
   ngOnInit(): void {
     this.buildForm();
-    this.seedCatalogIfEmpty();
+    this.isEdit = !!this.initialData;
 
-    if (this.initialData) {
-      this.isEdit = true;
-      this.patchInitialData();
-    } else {
-      // Seleccionar primer empaque por defecto
-      const first = this.catalog[0];
-      if (first) {
-        this.form.patchValue({
-          empaqueId: first.id,
-          codigo: first.codigo,
-          descripcion: first.descripcion,
-          taraPorEmpaqueKg: first.taraPorEmpaqueKg,
-          cantidad: 1,
-        });
-      }
-    }
+    this.loadPackagingTypes();
 
-    this.recalcularTara();
-    this.setupValueListeners();
+    // listeners
+    this.form
+      .get('packagingTypesId')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((id) => this.applyPackagingType(id));
+
+    this.form
+      .get('cantidad')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.recalcularTara());
+
+    this.form
+      .get('taraPorEmpaqueKg')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.recalcularTara());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private buildForm(): void {
     this.form = this.fb.group({
-      empaqueId: [null, Validators.required],
+      packagingTypesId: [null, Validators.required],
+
       codigo: ['', Validators.required],
       descripcion: ['', Validators.required],
-      taraPorEmpaqueKg: [
-        0,
-        [Validators.required, Validators.min(0)],
-      ],
-      cantidad: [
-        1,
-        [Validators.required, Validators.min(1)],
-      ],
-      taraKg: [{ value: 0, disabled: true }, [Validators.min(0)]],
+
+      taraPorEmpaqueKg: [0, [Validators.required, Validators.min(0)]],
+
+      cantidad: [1, [Validators.required, Validators.min(1)]],
+
+      taraKg: [{ value: 0, disabled: true }],
     });
   }
 
-  private seedCatalogIfEmpty(): void {
-    // Si no te pasan catálogo desde el padre, uso el mock de la captura
-    if (this.catalog.length > 0) return;
+  private loadPackagingTypes(): void {
+    this.loadingCatalog = true;
 
-    this.catalog = [
-      {
-        id: 1,
-        nombre: 'SACO PLÁSTICO CREMA 150 GR',
-        codigo: 'SPC',
-        descripcion: 'SACO PLÁSTICO CREMA 150 GR',
-        taraPorEmpaqueKg: 0.15,
-      },
-      {
-        id: 2,
-        nombre: 'SACO PLÁSTICO NEGRO 200 GR',
-        codigo: 'SPN',
-        descripcion: 'SACO PLÁSTICO NEGRO 200 GR',
-        taraPorEmpaqueKg: 0.2,
-      },
-      {
-        id: 3,
-        nombre: 'SACO PLÁSTICO BLANCO 150 GR',
-        codigo: 'SPB',
-        descripcion: 'SACO PLÁSTICO BLANCO 150 GR',
-        taraPorEmpaqueKg: 0.15,
-      },
-      {
-        id: 4,
-        nombre: 'SACO YUTE 300 GR',
-        codigo: 'SYT',
-        descripcion: 'SACO YUTE 300 GR',
-        taraPorEmpaqueKg: 0.3,
-      },
-      {
-        id: 5,
-        nombre: 'PALLET MADERA',
-        codigo: 'PLM',
-        descripcion: 'PALLET MADERA',
-        taraPorEmpaqueKg: 100.2,
-      },
-    ];
+    this.weighingSvc
+      .getPackagingTypes()
+      .pipe(finalize(() => (this.loadingCatalog = false)))
+      .subscribe({
+        next: (rows) => {
+          this.packagingTypes = Array.isArray(rows) ? rows : [];
+
+          // ✅ iniciar SIN selección
+          this.form.patchValue(
+            {
+              packagingTypesId: null,
+              codigo: '',
+              descripcion: '',
+              taraPorEmpaqueKg: 0,
+              cantidad: 1,
+            },
+            { emitEvent: false }
+          );
+
+          // si viene edición
+          if (this.initialData) {
+            this.patchInitialData();
+          }
+
+          this.recalcularTara();
+        },
+        error: async (err) => {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err?.message || 'No se pudo obtener la lista de empaques.',
+            confirmButtonText: 'OK',
+          });
+        },
+      });
   }
 
   private patchInitialData(): void {
-    if (!this.initialData) return;
-
-    // Buscar empaque en catálogo por código o nombre (lo que tengas)
-    const found = this.catalog.find(
-      (c) =>
-        c.codigo === this.initialData!.codigo ||
-        c.nombre === this.initialData!.empaque
+    const d = this.initialData!;
+    const found = this.packagingTypes.find(
+      (x) => x.id === d.packagingTypesId || x.code === d.codigo || x.name === d.empaque
     );
 
-    this.form.patchValue({
-      empaqueId: found ? found.id : null,
-      codigo: this.initialData.codigo,
-      descripcion: this.initialData.descripcion,
-      taraPorEmpaqueKg: this.initialData.taraPorEmpaqueKg,
-      cantidad: this.initialData.cantidad,
-    });
+    this.form.patchValue(
+      {
+        packagingTypesId: found ? found.id : null,
+        codigo: d.codigo ?? '',
+        descripcion: d.descripcion ?? '',
+        taraPorEmpaqueKg: Number(d.taraPorEmpaqueKg ?? 0),
+        cantidad: Number(d.cantidad ?? 1),
+      },
+      { emitEvent: false }
+    );
 
     this.recalcularTara();
   }
 
-  private setupValueListeners(): void {
-    this.form.get('empaqueId')?.valueChanges.subscribe((id) => {
-      this.aplicarEmpaque(id);
-    });
+  private applyPackagingType(id: any): void {
+    const item = this.packagingTypes.find((p) => String(p.id) === String(id));
+    if (!item) {
+      // limpiar si vuelve a null
+      this.form.patchValue(
+        {
+          codigo: '',
+          descripcion: '',
+          taraPorEmpaqueKg: 0,
+        },
+        { emitEvent: false }
+      );
+      this.recalcularTara();
+      return;
+    }
 
-    this.form
-      .get('taraPorEmpaqueKg')
-      ?.valueChanges.subscribe(() => this.recalcularTara());
-    this.form
-      .get('cantidad')
-      ?.valueChanges.subscribe(() => this.recalcularTara());
-  }
-
-  private aplicarEmpaque(id: any): void {
-    const item = this.catalog.find((c) => c.id == id);
-    if (!item) return;
+    const unit = Number(item.unitTareWeight) || 0;
 
     this.form.patchValue(
       {
-        codigo: item.codigo,
-        descripcion: item.descripcion,
-        taraPorEmpaqueKg: item.taraPorEmpaqueKg,
+        codigo: item.code,
+        descripcion: item.description || item.name,
+        taraPorEmpaqueKg: unit,
       },
       { emitEvent: false }
     );
@@ -190,19 +205,17 @@ export class PesadaTaraAdd implements OnInit {
 
   private recalcularTara(): void {
     const raw = this.form.getRawValue();
-    const taraUnit = Number(raw.taraPorEmpaqueKg) || 0;
-    const cant = Number(raw.cantidad) || 0;
-    const total = taraUnit * cant;
+
+    const unit = Number(raw.taraPorEmpaqueKg) || 0;
+    const qty = Number(raw.cantidad) || 0;
+
+    const total = unit * qty;
 
     this.form.patchValue(
-      {
-        taraKg: total,
-      },
+      { taraKg: total },
       { emitEvent: false }
     );
   }
-
-  // ---- acciones de UI ----
 
   close(): void {
     if (this.loading) return;
@@ -210,32 +223,82 @@ export class PesadaTaraAdd implements OnInit {
   }
 
   save(): void {
+    if (this.loading) return;
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    this.loading = true;
+    if (!this.scaleTicketDetailsId || this.scaleTicketDetailsId <= 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Falta id del detalle',
+        text: 'No se recibió scaleTicketDetailsId para registrar la tara.',
+        confirmButtonText: 'OK',
+      });
+      return;
+    }
+
     const raw = this.form.getRawValue();
+    const packagingTypesId = Number(raw.packagingTypesId);
 
-    const selected = this.catalog.find((c) => c.id == raw.empaqueId);
+    if (!packagingTypesId) {
+      this.form.get('packagingTypesId')?.markAsTouched();
+      return;
+    }
 
-    const payload: TaraItem = {
-      empaque: selected ? selected.nombre : raw.descripcion,
-      codigo: raw.codigo,
-      descripcion: raw.descripcion,
-      taraPorEmpaqueKg: Number(raw.taraPorEmpaqueKg) || 0,
-      cantidad: Number(raw.cantidad) || 0,
-      taraKg: Number(raw.taraKg) || 0,
-      id: this.initialData?.id,
+    const qty = Math.max(1, Number(raw.cantidad) || 1);
+
+    const payload: CreateTarePayload = {
+      idScaleTicketDetails: this.scaleTicketDetailsId,
+      packagingTypesId,
+      packageQuantity: qty,
     };
 
-    // Devuelves la tara al modal padre (PesadaTara)
-    this.activeModal.close(payload);
-    this.loading = false;
+    this.loading = true;
+
+    this.weighingSvc
+      .createTare(payload)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (apiRow: any) => {
+          const pt = this.packagingTypes.find((p) => p.id === packagingTypesId);
+
+          const createdId =
+            Number(apiRow?.id ?? apiRow?.idScaleTicketDetailsPackagingTypes ?? apiRow?.idTicketDetailPackaging ?? 0) ||
+            undefined;
+
+          const taraUnit = Number(raw.taraPorEmpaqueKg) || 0;
+          const taraKg = taraUnit * qty;
+
+          const result: TaraItem = {
+            id: createdId,
+            packagingTypesId,
+
+            empaque: pt?.name ?? '',
+            codigo: raw.codigo,
+            descripcion: raw.descripcion,
+            taraPorEmpaqueKg: taraUnit,
+            cantidad: qty,
+            taraKg,
+          };
+
+          // ✅ devuelve al padre (para refrescar lista / totales)
+          this.activeModal.close(result);
+        },
+        error: async (err) => {
+          await Swal.fire({
+            icon: 'warning',
+            title: 'No se pudo registrar',
+            text: 'Registro duplicado',
+            // text: err?.message || 'Ocurrió un error registrando la tara.',
+            confirmButtonText: 'OK',
+          });
+        },
+      });
   }
 
-  // helper para template
   get f() {
     return this.form.controls;
   }

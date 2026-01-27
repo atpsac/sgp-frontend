@@ -1,6 +1,6 @@
 <div class="tara-modal">
   <!-- Cerrar -->
-  <button type="button" class="tara-close" (click)="close()">
+  <button type="button" class="tara-close" (click)="close()" [disabled]="loading">
     &times;
   </button>
 
@@ -10,7 +10,7 @@
     <p class="tara-subtitle">{{ subtitle }}</p>
   </div>
 
-  <!-- RESUMEN (Totales + botón Agregar) -->
+  <!-- RESUMEN -->
   <div class="tara-summary">
     <div class="tara-summary__group">
       <div class="tara-summary__item">
@@ -20,21 +20,36 @@
       <div class="tara-summary__item">
         <div class="tara-summary__label">Cantidad ítems</div>
         <div class="tara-summary__value">
-          {{ resumen.cantidadItems || 0 }}
+          <ng-container *ngIf="!loadingTotals; else totSpin1">
+            {{ resumen.cantidadItems || 0 }}
+          </ng-container>
+          <ng-template #totSpin1>
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          </ng-template>
         </div>
       </div>
 
       <div class="tara-summary__item">
         <div class="tara-summary__label">Cantidad empaques</div>
         <div class="tara-summary__value">
-          {{ resumen.cantidadEmpaques || 0 }}
+          <ng-container *ngIf="!loadingTotals; else totSpin2">
+            {{ resumen.cantidadEmpaques || 0 }}
+          </ng-container>
+          <ng-template #totSpin2>
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          </ng-template>
         </div>
       </div>
 
       <div class="tara-summary__item">
         <div class="tara-summary__label">Tara (kg)</div>
         <div class="tara-summary__value">
-          {{ resumen.taraTotalKg || 0 | number : '1.2-2' }}
+          <ng-container *ngIf="!loadingTotals; else totSpin3">
+            {{ (resumen.taraTotalKg || 0) | number : '1.2-2' }}
+          </ng-container>
+          <ng-template #totSpin3>
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          </ng-template>
         </div>
       </div>
     </div>
@@ -44,6 +59,7 @@
         type="button"
         class="tara-add-btn"
         (click)="onClickAgregarTara()"
+        [disabled]="loading"
       >
         <span class="material-symbols-rounded">add</span>
         <span>Agregar tara</span>
@@ -53,6 +69,11 @@
 
   <!-- TABLA -->
   <div class="tara-table-wrapper">
+    <div class="tara-loading" *ngIf="loading">
+      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+      Cargando…
+    </div>
+
     <table class="tara-table table table-hover m-0">
       <thead>
         <tr>
@@ -68,8 +89,7 @@
       </thead>
 
       <tbody *ngIf="taras.length > 0; else taraEmpty">
-        <tr *ngFor="let row of pagedTaras; let i = index">
-          <!-- índice global -->
+        <tr *ngFor="let row of taras; let i = index">
           <td class="tara-col-idx" [attr.data-label]="'Item'">
             {{ (currentPage - 1) * pageSize + i + 1 | number : '2.0-0' }}
           </td>
@@ -86,10 +106,7 @@
             {{ row.descripcion }}
           </td>
 
-          <td
-            class="text-end"
-            [attr.data-label]="'Tara x empaque (kg)'"
-          >
+          <td class="text-end" [attr.data-label]="'Tara x empaque (kg)'">
             {{ row.taraPorEmpaqueKg | number : '1.2-2' }}
           </td>
 
@@ -101,26 +118,23 @@
             {{ row.taraKg | number : '1.2-2' }}
           </td>
 
-          <td
-            class="tara-col-actions text-center"
-            [attr.data-label]="'Acciones'"
-          >
-            <!-- Editar (opcional) -->
-            <button
+          <td class="tara-col-actions text-center" [attr.data-label]="'Acciones'">
+            <!-- <button
               type="button"
               class="tara-icon-btn me-1"
               title="Editar tara"
-              (click)="onEditTara(row, (currentPage - 1) * pageSize + i)"
+              (click)="onEditTara(row)"
+              [disabled]="loading"
             >
               <span class="material-symbols-rounded">more_horiz</span>
-            </button>
+            </button> -->
 
-            <!-- Eliminar -->
             <button
               type="button"
               class="tara-icon-btn"
               title="Eliminar tara"
-              (click)="onDeleteTara((currentPage - 1) * pageSize + i)"
+              (click)="onDeleteTara(row)"
+              [disabled]="loading"
             >
               <span class="material-symbols-rounded">delete</span>
             </button>
@@ -149,81 +163,54 @@
       </span>
 
       <div class="tara-page-size">
-        <select
-          [(ngModel)]="pageSize"
-          (change)="changePageSize(pageSize)"
-        >
+        <select [(ngModel)]="pageSize" (change)="changePageSize(pageSize)" [disabled]="loading">
           <option *ngFor="let size of pageSizes" [value]="size">
             {{ size }}
           </option>
         </select>
-        <span
-          class="tara-page-size__icon material-symbols-rounded"
-          aria-hidden="true"
-        >
+        <span class="tara-page-size__icon material-symbols-rounded" aria-hidden="true">
           expand_more
         </span>
+      </div>
+
+      <span class="tara-foot-text">
+        Orden
+      </span>
+
+      <!-- ORDEN -->
+      <div class="tara-summary__item tara-sort">
+        <select
+          class="tara-sort__select"
+          [(ngModel)]="sortDirection"
+          (change)="onChangeSortDirection(sortDirection)"
+          [disabled]="loading"
+        >
+          <option value="desc">Más recientes</option>
+          <option value="asc">Más antiguos</option>
+        </select>
       </div>
     </div>
 
     <nav aria-label="Paginación" class="tara-pagination">
       <ul class="pagination mb-0">
         <li class="page-item" [class.disabled]="currentPage === 1">
-          <button
-            type="button"
-            class="page-link"
-            (click)="changePage(currentPage - 1)"
-          >
+          <button type="button" class="page-link" (click)="changePage(currentPage - 1)" [disabled]="loading">
             Anterior
           </button>
         </li>
 
-        <!-- Páginas (1..totalPages) -->
-        <li
-          class="page-item"
-          *ngFor="let page of [].constructor(totalPages); let idx = index"
-          [class.active]="currentPage === idx + 1"
-        >
-          <button
-            type="button"
-            class="page-link"
-            (click)="changePage(idx + 1)"
-          >
-            {{ idx + 1 }}
+        <li class="page-item" *ngFor="let p of pages" [class.active]="currentPage === p">
+          <button type="button" class="page-link" (click)="changePage(p)" [disabled]="loading">
+            {{ p }}
           </button>
         </li>
 
-        <li
-          class="page-item"
-          [class.disabled]="currentPage === totalPages"
-        >
-          <button
-            type="button"
-            class="page-link"
-            (click)="changePage(currentPage + 1)"
-          >
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button type="button" class="page-link" (click)="changePage(currentPage + 1)" [disabled]="loading">
             Siguiente
           </button>
         </li>
       </ul>
     </nav>
-  </div>
-
-  <!-- BOTONES FINALES -->
-  <div class="tara-actions">
-    <button
-      type="button"
-      class="tara-btn tara-btn--ghost"
-      (click)="close()"
-    >
-      Cancelar
-    </button>
-    <button
-      type="button"
-      class="tara-btn tara-btn--primary"
-      (click)="save()"
-    >
-      Guardar
-    </button>
   </div>
 </div>

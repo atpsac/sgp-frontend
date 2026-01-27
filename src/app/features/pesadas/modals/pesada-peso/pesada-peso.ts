@@ -1,11 +1,20 @@
 import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import Swal from 'sweetalert2';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, firstValueFrom } from 'rxjs';
 
-import { ProductByOperation } from '../../../../core/services/weighing.service';
+import {
+  ProductByOperation,
+  OperationalScale,
+  WeighingService,
+} from '../../../../core/services/weighing.service';
 import { PrintNodeAdapterService } from '../../../../core/printcode/services/printnode-adapter.service';
 
 export interface PesadaPesoOption {
@@ -23,22 +32,6 @@ interface TaraItemLight {
   taraKg?: number;
 }
 
-interface PesadaDetalleResult {
-  id?: number;
-  producto: string;
-  balanza: string;
-  pesoBrutoKg: number;
-  taraTotalKg: number;
-  pesoNetoKg: number;
-  observaciones: string;
-  tieneTara: boolean;
-  estado: string;
-  taras: TaraItemLight[];
-
-  productoId?: number | string;
-  balanzaId?: number | string;
-}
-
 type PrintNodeStatusUI = 'VALIDANDO' | 'CONECTADO' | 'DESCONECTADO' | 'ERROR';
 
 type ScaleConfig = {
@@ -51,6 +44,20 @@ type ScaleConfig = {
   deviceNum: number;
 
   enabled: boolean;
+};
+
+type WeighingType = {
+  weighingTypeId: number;
+  name: string;
+  code: string;
+  description?: string;
+  isTest?: boolean;
+};
+
+type InitializeDevice = {
+  idComputer: number;
+  deviceName: string;
+  deviceNumber: number;
 };
 
 @Component({
@@ -70,13 +77,23 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
   private fb = inject(FormBuilder);
   public activeModal = inject(NgbActiveModal);
+
   private svc = inject(PrintNodeAdapterService);
+  private weighingSvc = inject(WeighingService);
 
   private destroy$ = new Subject<void>();
+
+  // ========= ticket / stable uuid =========
+  headerTicketId: number | null = null;
+  stableWeightId = '';
 
   // ========= opciones =========
   productoOptions: PesadaPesoOption[] = [];
   balanzaOptions: PesadaPesoOption[] = [];
+
+  weighingTypeOptions: WeighingType[] = [];
+  loadingWeighingTypes = false;
+
   private scales: ScaleConfig[] = [];
   private scalesById = new Map<string | number, ScaleConfig>();
 
@@ -96,110 +113,129 @@ export class PesadaPeso implements OnInit, OnDestroy {
   statusRaw = '';
   processing = false;
 
-  // ✅ Solo aceptamos status/lecturas cuando el usuario inicia pesada
   private weighingStarted = false;
-
   private lastErrorShownAt = 0;
 
   private readonly API_KEY = 'LWv4BzHIRmydcxcp5n-KK8lNV-bT4AuKBbkMt8yxOGE';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.existingPesada = this.data?.pesada ?? null;
 
-    // ✅ 1) construir form primero
+    // 1) headerTicketId
+    this.headerTicketId = this.resolveHeaderTicketId();
+    // 2) UUID estable al abrir modal
+    this.stableWeightId = this.createUUID();
+
+    // 3) construir form
     this.buildForm();
     this.form.get('PesoBruto')?.disable({ emitEvent: false });
 
-    // ✅ 2) cortar sesión previa
+    // 4) cortar sesión previa
     this.safeDisconnect();
     this.weighingStarted = false;
     this.statusUI = 'DESCONECTADO';
     this.statusRaw = 'init';
     this.processing = false;
 
-    // ✅ 3) reset visor
+    // 5) reset visor
     this.resetWeighingState();
 
     // ============ productos ============
     const productosRaw: Array<ProductByOperation | string> = this.data?.productos ?? [];
     this.productoOptions = this.mapProductosToOptions(productosRaw);
 
-    // ============ balanzas ============
-    const fromData: ScaleConfig[] = Array.isArray(this.data?.balanzasConfig)
-      ? this.data.balanzasConfig
-      : [];
-
-    const fallback: ScaleConfig[] = [
-      {
-        id: 'REAL_COM3',
-        nombre: 'COM3 Precix Weight 8513',
-        apiKey: this.API_KEY,
-        computerId: 709782,
-        deviceName: 'COM3 Precix Weight 8513',
-        deviceNum: 0,
-        enabled: true,
-      },
-      {
-        id: 'TEST_999',
-        nombre: '999 - BALANZA DE PRUEBA (NO VÁLIDA)',
-        apiKey: this.API_KEY,
-        computerId: 999999,
-        deviceName: 'TEST-SCALE',
-        deviceNum: 99,
-        enabled: false,
-      },
-    ];
-
-    this.scales = (fromData.length ? fromData : fallback).map((s) => ({
-      ...s,
-      apiKey: s.apiKey || this.API_KEY,
-    }));
-
-    this.scalesById.clear();
-    this.scales.forEach((s) => this.scalesById.set(s.id, s));
-    this.balanzaOptions = this.scales.map((s) => ({ id: s.id, nombre: s.nombre }));
-
-    // ✅ precargar si edición
+    // precargas (edición)
     const productoInit =
       this.existingPesada?.productoId ??
       this.matchOptionIdByName(this.productoOptions, this.existingPesada?.producto) ??
       null;
 
-    const balanzaInit =
-      this.existingPesada?.balanzaId ??
-      this.matchOptionIdByName(this.balanzaOptions, this.existingPesada?.balanza) ??
-      null;
-
     this.form.patchValue(
       {
         ProductoId: productoInit,
-        BalanzaId: balanzaInit,
+        BalanzaId: null,
+        WeighingTypeId: null,
         PesoBruto: 0,
+        BalanzaEstado: 'OPERATIVO',
         Observaciones: this.existingPesada?.observaciones ?? '',
       },
       { emitEvent: false }
     );
 
-    // ✅ cambios de balanza: NO iniciar pesada
+    // escuchar cambios de balanza
     this.form
       .get('BalanzaId')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe((id) => this.onBalanzaChange(id));
+      .subscribe((id) => {
+        void this.onBalanzaChange(id);
+      });
 
-    // ✅ escuchar servicio (pero ignorar si no se inició pesada)
+    // escuchar cambios de tipo de pesada (weighing type)
+    this.form
+      .get('WeighingTypeId')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.applyWeighingTypeRules(true));
+
+    // escuchar PrintNode (pero ignorar si no se inició pesada)
     this.svc.status$.pipe(takeUntil(this.destroy$)).subscribe((st) => this.applyStatus(st));
     this.svc.reading$.pipe(takeUntil(this.destroy$)).subscribe((r) => this.applyReading(r));
     this.svc.error$.pipe(takeUntil(this.destroy$)).subscribe((err) => this.applyError(err));
 
-    // queda desconectado hasta “Iniciar”
-    this.statusUI = 'DESCONECTADO';
-    this.processing = false;
+    // ============ cargar balanzas desde API ============
+    await this.loadOperationalScales();
+
+    // si edición: setear balanza
+    const balanzaInit =
+      this.existingPesada?.balanzaId ??
+      this.matchOptionIdByName(this.balanzaOptions, this.existingPesada?.balanza) ??
+      null;
+
+    if (balanzaInit != null) {
+      this.form.patchValue({ BalanzaId: balanzaInit }, { emitEvent: false });
+      // cargar tipos para esa balanza
+      await this.loadWeighingTypesForScale(Number(balanzaInit), true);
+    }
+
+    // si no hay ticketId, avisar
+    if (!this.headerTicketId) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Ticket no encontrado',
+        text: 'No se encontró headerTicketId (cabecera). Cierra y vuelve a abrir el flujo de Ticket.',
+        confirmButtonText: 'OK',
+      });
+    }
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
     this.safeDisconnect();
+  }
+
+  // =========================
+  // Getters UI
+  // =========================
+  get selectedWeighingType(): WeighingType | null {
+    const id = Number(this.form?.get('WeighingTypeId')?.value ?? 0);
+    return this.weighingTypeOptions.find((x) => Number(x.weighingTypeId) === id) ?? null;
+  }
+
+  get isSoloPallet(): boolean {
+    const wt = this.selectedWeighingType;
+    if (!wt) return false;
+
+    const name = String(wt.name || '').toUpperCase();
+    const code = String(wt.code || '').toUpperCase();
+
+    // Heurística segura: si explícitamente dice SOLO o PALLET sin PRODUCT
+    if (name.includes('SOLO')) return true;
+    if (name.includes('PALLET') && !name.includes('PRODUCT')) return true;
+
+    // Códigos comunes (ajústalo si tu backend usa otros)
+    if (code === 'PAL' || code === 'PLT' || code === 'P') return true;
+
+    return false;
   }
 
   // =========================
@@ -212,17 +248,12 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.activeModal.dismiss();
   }
 
-  /**
-   * ✅ SOLO INICIA.
-   * ❌ Ya NO se permite detener desde el botón (queda bloqueado al conectar).
-   */
   async startWeighing(): Promise<void> {
-    if (this.processing || this.loading || this.loadingData) return;
-
-    // si ya conectó, no hacemos nada (botón quedará disabled)
+    if (this.processing || this.loading || this.loadingData || this.loadingWeighingTypes) return;
     if (this.statusUI === 'CONECTADO') return;
 
-    const balanzaId = this.form.get('BalanzaId')?.value;
+    const balanzaId = Number(this.form.get('BalanzaId')?.value || 0);
+    const weighingTypeId = Number(this.form.get('WeighingTypeId')?.value || 0);
 
     if (!balanzaId) {
       this.form.get('BalanzaId')?.markAsTouched();
@@ -230,6 +261,27 @@ export class PesadaPeso implements OnInit, OnDestroy {
         icon: 'warning',
         title: 'Selecciona una balanza',
         text: 'Debes seleccionar una balanza antes de iniciar la pesada.',
+        confirmButtonText: 'OK',
+      });
+      return;
+    }
+
+    if (!weighingTypeId) {
+      this.form.get('WeighingTypeId')?.markAsTouched();
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Selecciona un tipo de pesada',
+        text: 'Debes seleccionar un tipo de pesada antes de iniciar.',
+        confirmButtonText: 'OK',
+      });
+      return;
+    }
+
+    if (!this.headerTicketId) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Ticket inválido',
+        text: 'No se encontró el headerTicketId para esta pesada.',
         confirmButtonText: 'OK',
       });
       return;
@@ -245,47 +297,101 @@ export class PesadaPeso implements OnInit, OnDestroy {
       return;
     }
     if (!this.canSave()) return;
+    if (!this.headerTicketId) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'No hay ticket',
+        text: 'No se encontró el headerTicketId para registrar la pesada.',
+        confirmButtonText: 'OK',
+      });
+      return;
+    }
 
     this.loading = true;
 
-    const value = this.form.getRawValue();
+    try {
+      const value = this.form.getRawValue();
 
-    const productoOpt = this.productoOptions.find((p) => p.id === value.ProductoId);
-    const balanzaOpt = this.balanzaOptions.find((b) => b.id === value.BalanzaId);
+      const balanzaOpt = this.balanzaOptions.find((b) => b.id === value.BalanzaId);
+      const productoOpt = this.productoOptions.find((p) => p.id === value.ProductoId);
 
-    const pesoBruto = Number(this.lastStableKg || 0);
+      const pesoBruto = Number(this.lastStableKg || 0);
 
-    const prev = this.existingPesada || {};
-    const taras: TaraItemLight[] = Array.isArray(prev.taras) ? prev.taras : [];
+      const idScale = Number(value.BalanzaId);
+      const idWeighingType = Number(value.WeighingTypeId);
 
-    const taraTotalKg =
-      typeof prev.taraTotalKg === 'number'
-        ? prev.taraTotalKg
-        : taras.reduce((acc, t) => acc + (t.taraKg || 0), 0) || 0;
+      // ✅ idProduct según si es SOLO_PALLET
+      const idProduct = this.isSoloPallet ? null : Number(value.ProductoId);
 
-    const pesoNetoKg = pesoBruto - taraTotalKg;
+      // ✅ 1) Registrar detalle en backend (MODIFICADO: agrega idWeighingType y measurementWeight)
+      const created = await firstValueFrom(
+        this.weighingSvc.createMeasurement(this.headerTicketId, {
+          idProduct,
+          idScale,
+          idWeighingType,
+          idStableWeight: this.stableWeightId,
+          measurementWeight: pesoBruto,
+          observations: (value.Observaciones || '').toString().trim() || null,
+        } as any)
+      );
 
-    const result: PesadaDetalleResult = {
-      id: prev.id,
-      producto: productoOpt?.nombre || prev.producto || '',
-      balanza: balanzaOpt?.nombre || prev.balanza || '',
-      productoId: value.ProductoId,
-      balanzaId: value.BalanzaId,
-      pesoBrutoKg: pesoBruto,
-      taraTotalKg,
-      pesoNetoKg,
-      observaciones: (value.Observaciones || '').toString().trim() || '-',
-      tieneTara: taraTotalKg > 0 || !!prev.tieneTara,
-      estado: prev.estado || 'EN REGISTRO',
-      taras,
-    };
+      // ✅ 2) Armar result local (manteniendo compatibilidad)
+      const prev = this.existingPesada || {};
+      const taras: TaraItemLight[] = Array.isArray(prev.taras) ? prev.taras : [];
 
-    // ✅ al guardar recién desconectamos
-    this.safeDisconnect();
-    this.weighingStarted = false;
+      const taraTotalKg =
+        typeof prev.taraTotalKg === 'number'
+          ? prev.taraTotalKg
+          : taras.reduce((acc, t) => acc + (t.taraKg || 0), 0) || 0;
 
-    this.activeModal.close(result);
-    this.loading = false;
+      const pesoNetoKg = pesoBruto - taraTotalKg;
+
+      const detailId =
+        Number((created as any)?.idTicketDetail ?? (created as any)?.idScaleTicketDetails ?? 0) ||
+        undefined;
+
+      const tipoText = this.selectedWeighingType?.name || '—';
+      const productoTexto = this.isSoloPallet ? 'SOLO PALLET' : (productoOpt?.nombre || prev.producto || '');
+
+      const result: any = {
+        id: detailId,
+        scaleTicketDetailsId: detailId,
+
+        // compat: campo previo
+        tipoPesada: this.isSoloPallet ? 'SOLO_PALLET' : (tipoText.includes('PALLET') ? 'PALLET_CON_PRODUCTO' : 'OTRO'),
+        tipoPesadaLabel: tipoText, // útil si quieres mostrar el nombre real del backend
+
+        producto: productoTexto,
+        balanza: balanzaOpt?.nombre || prev.balanza || '',
+        productoId: this.isSoloPallet ? null : value.ProductoId,
+        balanzaId: value.BalanzaId,
+
+        idWeighingType,
+        BalanzaEstado: 'OPERATIVO',
+        pesoBrutoKg: pesoBruto,
+        taraTotalKg,
+        pesoNetoKg,
+
+        observaciones: (value.Observaciones || '').toString().trim() || '-',
+        tieneTara: taraTotalKg > 0 || !!prev.tieneTara,
+        estado: prev.estado || 'EN REGISTRO',
+        taras,
+      };
+
+      // ✅ 3) desconectar y cerrar
+      this.safeDisconnect();
+      this.weighingStarted = false;
+      this.activeModal.close(result);
+    } catch (e: any) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo guardar',
+        text: e?.message || 'Ocurrió un error registrando la pesada.',
+        confirmButtonText: 'OK',
+      });
+    } finally {
+      this.loading = false;
+    }
   }
 
   // =========================
@@ -293,32 +399,100 @@ export class PesadaPeso implements OnInit, OnDestroy {
   // =========================
   private buildForm(): void {
     this.form = this.fb.group({
-      ProductoId: [null, Validators.required],
       BalanzaId: [null, Validators.required],
+      WeighingTypeId: [null, Validators.required], // ✅ nuevo select real
+      ProductoId: [null, Validators.required],
+      BalanzaEstado: ['OPERATIVO', Validators.required],
       PesoBruto: [0, [Validators.required, Validators.min(0)]],
       Observaciones: [''],
     });
   }
 
-  private onBalanzaChange(_: any): void {
-    // si cambia balanza, reseteamos sesión (igual el select estará bloqueado cuando conecte)
+  private applyWeighingTypeRules(emit: boolean): void {
+    const productoCtrl = this.form.get('ProductoId');
+    if (!productoCtrl) return;
+
+    if (this.isSoloPallet) {
+      productoCtrl.disable({ emitEvent: emit });
+      productoCtrl.setValue(null, { emitEvent: emit });
+      productoCtrl.clearValidators();
+      productoCtrl.updateValueAndValidity({ emitEvent: emit });
+      return;
+    }
+
+    productoCtrl.enable({ emitEvent: emit });
+    productoCtrl.setValidators([Validators.required]);
+    productoCtrl.updateValueAndValidity({ emitEvent: emit });
+  }
+
+  private async onBalanzaChange(id: any): Promise<void> {
     this.safeDisconnect();
     this.weighingStarted = false;
 
     this.resetWeighingState();
     this.statusUI = 'DESCONECTADO';
     this.statusRaw = 'selected';
+
+    const scalesId = Number(id || 0);
+    if (!scalesId) {
+      this.weighingTypeOptions = [];
+      this.form.patchValue({ WeighingTypeId: null }, { emitEvent: false });
+      this.applyWeighingTypeRules(false);
+      return;
+    }
+
+    await this.loadWeighingTypesForScale(scalesId, true);
+  }
+
+  private async loadWeighingTypesForScale(scalesId: number, resetSelection: boolean): Promise<void> {
+    this.loadingWeighingTypes = true;
+    try {
+      const list = await firstValueFrom(this.weighingSvc.getWeighingTypes(scalesId));
+      this.weighingTypeOptions = Array.isArray(list) ? list : [];
+
+      if (resetSelection) {
+        const firstId = this.weighingTypeOptions[0]?.weighingTypeId ?? null;
+        this.form.patchValue({ WeighingTypeId: firstId }, { emitEvent: false });
+      }
+
+      this.applyWeighingTypeRules(false);
+
+      if (!this.weighingTypeOptions.length) {
+        await Swal.fire({
+          icon: 'info',
+          title: 'Sin tipos de pesada',
+          text: 'No se encontraron tipos de pesada para esta balanza.',
+          confirmButtonText: 'OK',
+        });
+      }
+    } catch (e: any) {
+      this.weighingTypeOptions = [];
+      this.form.patchValue({ WeighingTypeId: null }, { emitEvent: false });
+      this.applyWeighingTypeRules(false);
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error cargando tipos de pesada',
+        text: e?.message || 'No se pudo obtener la lista de tipos de pesada.',
+        confirmButtonText: 'OK',
+      });
+    } finally {
+      this.loadingWeighingTypes = false;
+    }
   }
 
   private async kickoffForSelectedScale(showInvalidAlert: boolean): Promise<void> {
     const id = this.form.get('BalanzaId')?.value;
     const cfg = this.scalesById.get(id);
 
+    const scalesId = Number(this.form.get('BalanzaId')?.value || 0);
+    const weighingTypeId = Number(this.form.get('WeighingTypeId')?.value || 0);
+
     this.safeDisconnect();
 
     this.processing = true;
     this.statusUI = 'VALIDANDO';
-    this.statusRaw = 'validando';
+    this.statusRaw = 'initialize';
 
     if (!cfg) {
       this.processing = false;
@@ -339,8 +513,8 @@ export class PesadaPeso implements OnInit, OnDestroy {
       if (showInvalidAlert) {
         await Swal.fire({
           icon: 'error',
-          title: 'Balanza no válida',
-          text: 'Esta balanza es de prueba y no está habilitada.',
+          title: 'Balanza no operativa',
+          text: 'Esta balanza no está en estado OPERATIVO.',
           confirmButtonText: 'OK',
         });
       }
@@ -348,21 +522,29 @@ export class PesadaPeso implements OnInit, OnDestroy {
     }
 
     try {
+      // ✅ 1) Inicializar balanza por tipo de pesada (NUEVO PASO OBLIGATORIO)
+      const device: any = await firstValueFrom(
+        this.weighingSvc.initializeScale(scalesId, weighingTypeId)
+      );
+
+      // ✅ 2) Usar el device devuelto para conectar (evita mismatch COM / computerId)
       this.svc.setConfig({
         apiKey: cfg.apiKey,
-        computerId: Number(cfg.computerId),
-        deviceName: cfg.deviceName,
-        deviceNum: Number(cfg.deviceNum),
+        computerId: Number(device?.idComputer ?? cfg.computerId),
+        deviceName: String(device?.deviceName ?? cfg.deviceName),
+        deviceNum: Number(device?.deviceNumber ?? cfg.deviceNum),
       });
 
+      // ✅ 3) Validar y conectar PrintNode
       await this.svc.validateDevice();
       this.svc.connect();
+      this.statusRaw = 'connecting';
     } catch (e: any) {
       this.processing = false;
       this.statusUI = 'ERROR';
-      this.statusRaw = 'validate/connect error';
+      this.statusRaw = 'initialize/validate/connect error';
       this.weighingStarted = false;
-      this.showErrorOnce(e?.message || 'No se pudo validar/conectar la balanza.');
+      this.showErrorOnce(e?.message || 'No se pudo inicializar/validar/conectar la balanza.');
     }
   }
 
@@ -444,7 +626,6 @@ export class PesadaPeso implements OnInit, OnDestroy {
     this.processing = false;
 
     if (!this.form) return;
-
     this.form.get('PesoBruto')?.setValue(0, { emitEvent: false });
     this.form.get('PesoBruto')?.markAsPristine();
     this.form.get('PesoBruto')?.markAsUntouched();
@@ -499,21 +680,19 @@ export class PesadaPeso implements OnInit, OnDestroy {
   }
 
   get lockScaleSelect(): boolean {
-    // ✅ cuando conecte (o validando/procesando) ya no se puede cambiar balanza
     return this.processing || this.statusUI === 'CONECTADO' || this.loading || this.loadingData;
   }
 
-  /**
-   * ✅ Botón “Iniciar pesada”
-   * - Requiere balanza
-   * - Se deshabilita mientras procesa
-   * - ✅ Y se deshabilita cuando ya está CONECTADO (NO se permite “detener”)
-   */
   get startBtnDisabled(): boolean {
     const hasScale = !!this.form.get('BalanzaId')?.value;
+    const hasType = !!this.form.get('WeighingTypeId')?.value;
+
     if (!hasScale) return true;
-    if (this.statusUI === 'CONECTADO') return true; // 🔒 clave del requerimiento
-    return this.processing || this.loading || this.loadingData;
+    if (!hasType) return true;
+    if (!this.headerTicketId) return true;
+    if (this.statusUI === 'CONECTADO') return true;
+
+    return this.processing || this.loading || this.loadingData || this.loadingWeighingTypes;
   }
 
   get startBtnText(): string {
@@ -525,7 +704,7 @@ export class PesadaPeso implements OnInit, OnDestroy {
   }
 
   get f() {
-    return this.form.controls;
+    return this.form.controls as any;
   }
 
   private mapProductosToOptions(raw: Array<ProductByOperation | string>): PesadaPesoOption[] {
@@ -539,7 +718,10 @@ export class PesadaPeso implements OnInit, OnDestroy {
     const first = raw[0] as any;
 
     if (typeof first === 'object' && first && 'productId' in first) {
-      return (raw as ProductByOperation[]).map((p) => ({ id: p.productId, nombre: p.productName }));
+      return (raw as ProductByOperation[]).map((p) => ({
+        id: p.productId,
+        nombre: p.productName,
+      }));
     }
 
     return (raw as string[]).map((nombre) => ({ id: nombre, nombre }));
@@ -547,7 +729,111 @@ export class PesadaPeso implements OnInit, OnDestroy {
 
   private matchOptionIdByName(options: PesadaPesoOption[], name: any): any {
     const n = String(name || '').trim().toLowerCase();
-    const found = options.find((o) => String(o.nombre || '').trim().toLowerCase() === n);
+    const found = options.find(
+      (o) => String(o.nombre || '').trim().toLowerCase() === n
+    );
     return found?.id ?? null;
+  }
+
+  // =========================
+  // Carga balanzas API
+  // =========================
+  private async loadOperationalScales(): Promise<void> {
+    this.loadingData = true;
+    try {
+      if (!this.headerTicketId) {
+        this.scales = [];
+        this.scalesById.clear();
+        this.balanzaOptions = [];
+        return;
+      }
+
+      const list = await firstValueFrom(
+        this.weighingSvc.getOperationalScales(this.headerTicketId)
+      );
+
+      const mapped: ScaleConfig[] = (list || []).map((s: OperationalScale) => {
+        const enabled = String(s?.status?.name || '').toUpperCase() === 'OPERATIVO';
+        return {
+          id: s.id,
+          nombre: s.deviceName,
+          apiKey: this.API_KEY,
+          computerId: Number((s as any).idComputer ?? 0),
+          deviceName: s.deviceName,
+          deviceNum: Number((s as any).deviceNumber ?? 0),
+          enabled,
+        };
+      });
+
+      this.scales = mapped;
+      this.scalesById.clear();
+      this.scales.forEach((s) => this.scalesById.set(s.id, s));
+      this.balanzaOptions = this.scales.map((s) => ({ id: s.id, nombre: s.nombre }));
+
+      if (!this.balanzaOptions.length) {
+        await Swal.fire({
+          icon: 'info',
+          title: 'Sin balanzas operativas',
+          text: 'No se encontraron balanzas para este ticket.',
+          confirmButtonText: 'OK',
+        });
+      }
+    } catch (e: any) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error cargando balanzas',
+        text: e?.message || 'No se pudo obtener la lista de balanzas.',
+        confirmButtonText: 'OK',
+      });
+      this.scales = [];
+      this.scalesById.clear();
+      this.balanzaOptions = [];
+    } finally {
+      this.loadingData = false;
+    }
+  }
+
+  // =========================
+  // ticketId + uuid helpers
+  // =========================
+  private resolveHeaderTicketId(): number | null {
+    const fromInput = Number(
+      this.data?.headerTicketId ??
+        this.data?.ticketId ??
+        this.data?.scaleTicketId ??
+        this.data?.idScaleTicket ??
+        null
+    );
+
+    if (Number.isFinite(fromInput) && fromInput > 0) return fromInput;
+
+    try {
+      const raw = localStorage.getItem('sgp_ticket_balanza_draft');
+      if (!raw) return null;
+
+      const obj = JSON.parse(raw);
+      const id = Number(
+        obj?.headerTicketId ??
+          obj?.headerTicketIdSaved ??
+          obj?.headerTicket?.id ??
+          null
+      );
+      if (Number.isFinite(id) && id > 0) return id;
+    } catch {}
+
+    return null;
+  }
+
+  private createUUID(): string {
+    const g: any = globalThis as any;
+    const uuid = g?.crypto?.randomUUID?.();
+    if (uuid) return String(uuid);
+
+    const s4 = () =>
+      Math.floor((1 + Math.random()) * 0x10000)
+        .toString(16)
+        .substring(1);
+
+    return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
   }
 }

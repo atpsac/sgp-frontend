@@ -11,7 +11,12 @@
   </div>
 
   <div class="modal-body pt-3">
-    <form [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <form
+      [formGroup]="form"
+      (ngSubmit)="guardar()"
+      novalidate
+      [class.ux-validate]="showValidation"
+    >
       <div class="row g-3 mb-3">
         <!-- Socio de negocio -->
         <div class="col-lg-6 col-md-6 col-12">
@@ -29,7 +34,7 @@
             <span class="ux-select__icon material-symbols-rounded">expand_more</span>
           </div>
 
-          <small class="text-danger" *ngIf="f.idBusinessPartners.touched && f.idBusinessPartners.invalid">
+          <small class="text-danger" *ngIf="isInvalid('idBusinessPartners')">
             Selecciona un socio de negocio.
           </small>
         </div>
@@ -50,7 +55,7 @@
             <span class="ux-select__icon material-symbols-rounded">expand_more</span>
           </div>
 
-          <small class="text-danger" *ngIf="f.idDocumentTypes.touched && f.idDocumentTypes.invalid">
+          <small class="text-danger" *ngIf="isInvalid('idDocumentTypes')">
             Selecciona un tipo de documento.
           </small>
         </div>
@@ -60,9 +65,12 @@
         <div class="col-lg-4 col-md-4 col-12">
           <label class="form-label mb-1 small text-muted">Fecha del documento *</label>
           <input type="date" class="form-control ux-input" formControlName="fechaDocumento" />
+          <small class="text-danger" *ngIf="isInvalid('fechaDocumento')">
+            Selecciona la fecha del documento.
+          </small>
         </div>
 
-        <!-- ✅ Serie máx 4 -->
+        <!-- Serie máx 4 -->
         <div class="col-lg-4 col-md-4 col-6">
           <label class="form-label mb-1 small text-muted">Serie *</label>
           <input
@@ -74,33 +82,76 @@
             (input)="onSerieInput()"
           />
 
-          <small class="text-danger" *ngIf="f.serie.touched && f.serie.errors?.['required']">
+          <small class="text-danger" *ngIf="hasError('serie', 'required')">
             La serie es obligatoria.
           </small>
-          <small class="text-danger" *ngIf="f.serie.touched && f.serie.errors?.['maxlength']">
+          <small class="text-danger" *ngIf="hasError('serie', 'maxlength')">
             La serie debe tener máximo 4 caracteres.
           </small>
         </div>
 
         <div class="col-lg-4 col-md-4 col-6">
           <label class="form-label mb-1 small text-muted">Número *</label>
-          <input type="text" class="form-control ux-input" formControlName="numeroCorrelativo" placeholder="0000001" />
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="numeroCorrelativo"
+            placeholder="0000001"
+          />
+          <small class="text-danger" *ngIf="isInvalid('numeroCorrelativo')">
+            El número es obligatorio.
+          </small>
         </div>
       </div>
 
       <div class="row g-3">
         <div class="col-lg-4 col-md-4 col-12">
           <label class="form-label mb-1 small text-muted">Peso bruto (Kg) *</label>
-          <input type="number" class="form-control ux-input" formControlName="pesoBrutoKg" min="0" step="0.01" placeholder="0.00" />
+          <input
+            type="number"
+            class="form-control ux-input"
+            formControlName="pesoBrutoKg"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+          />
+
+          <small class="text-danger" *ngIf="hasError('pesoBrutoKg', 'required')">
+            El peso bruto es obligatorio.
+          </small>
+          <small class="text-danger" *ngIf="hasError('pesoBrutoKg', 'min')">
+            El peso bruto no puede ser negativo.
+          </small>
         </div>
 
         <div class="col-lg-4 col-md-4 col-12">
           <label class="form-label mb-1 small text-muted">Peso neto (Kg) *</label>
-          <input type="number" class="form-control ux-input" formControlName="pesoNetoKg" min="0" step="0.01" placeholder="0.00" />
+          <input
+            type="number"
+            class="form-control ux-input"
+            formControlName="pesoNetoKg"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+          />
+
+          <small class="text-danger" *ngIf="hasError('pesoNetoKg', 'required')">
+            El peso neto es obligatorio.
+          </small>
+          <small class="text-danger" *ngIf="hasError('pesoNetoKg', 'min')">
+            El peso neto no puede ser negativo.
+          </small>
+
+          <!-- ✅ Regla Bruto >= Neto -->
+          <small class="text-danger" *ngIf="hasError('pesoNetoKg', 'netGreaterThanGross')">
+            El peso neto no puede ser mayor que el peso bruto.
+          </small>
         </div>
 
         <div class="col-lg-4 col-md-4 d-none d-md-block"></div>
       </div>
+
+      <button type="submit" class="d-none"></button>
     </form>
   </div>
 

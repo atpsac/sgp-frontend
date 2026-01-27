@@ -1,14 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
-import { FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Subject, distinctUntilChanged, filter, takeUntil } from 'rxjs';
-import {
-  Carrier,
-  CarrierDriver,
-  CarrierTruck,
-  CarrierTrailer,
-  WeighingService,
-} from '../../../../../core/services/weighing.service';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
+
+import { WeighingService } from '../../../../../core/services/weighing.service';
 
 @Component({
   selector: 'app-paso-transporte',
@@ -22,19 +17,37 @@ export class PasoTransporte implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   @Input() formGroup!: FormGroup;
-
-  /** Bloquea edición cuando headerSaved = true */
   @Input() locked = false;
 
-  carriers: Carrier[] = [];
-  carrierDrivers: CarrierDriver[] = [];
-  carrierTrucks: CarrierTruck[] = [];
-  carrierTrailers: CarrierTrailer[] = [];
+  // ✅ Tipado simple para evitar errores por campos que no existan en interfaces
+  carriers: any[] = [];
+  carrierDrivers: any[] = [];
+  carrierTrucks: any[] = [];
+  carrierTrailers: any[] = [];
 
   loadingCarriers = false;
-  loadingRelations = false;
+  loadingDrivers = false;
+  loadingTrucks = false;
+  loadingTrailers = false;
 
-  // Helpers de acceso a subgrupos
+  driversMsg = '';
+  trucksMsg = '';
+  trailersMsg = '';
+
+  // ✅ FIX: ahora existe lo que tu HTML usa
+  get loadingRelations(): boolean {
+    return this.loadingDrivers || this.loadingTrucks || this.loadingTrailers;
+  }
+
+  // ✅ seguridad para template
+  get ready(): boolean {
+    return !!this.formGroup
+      && !!this.formGroup.get('transportista')
+      && !!this.formGroup.get('conductor')
+      && !!this.formGroup.get('vehiculo');
+  }
+
+  // ====== grupos ======
   get transportistaGroup(): FormGroup {
     return this.formGroup.get('transportista') as FormGroup;
   }
@@ -45,36 +58,44 @@ export class PasoTransporte implements OnInit, OnDestroy {
     return this.formGroup.get('vehiculo') as FormGroup;
   }
 
-  ngOnInit(): void {
-    if (!this.formGroup) return;
+  // ====== controles ======
+  private get cTransportistaId(): FormControl | null {
+    return this.transportistaGroup.get('transportistaId') as FormControl;
+  }
+  private get cConductorId(): FormControl | null {
+    return this.conductorGroup.get('conductorId') as FormControl;
+  }
+  private get cVehiculoId(): FormControl | null {
+    return this.vehiculoGroup.get('vehiculoId') as FormControl;
+  }
+  private get cTrailerId(): FormControl | null {
+    return this.vehiculoGroup.get('trailerId') as FormControl;
+  }
 
+  ngOnInit(): void {
+    if (!this.ready) return;
+
+    // dejar campos autollenados en solo lectura (opcional, pero recomendado)
+    this.disableReadOnlyFields();
+
+    // trailer opcional
+    this.makeTrailerOptional();
+
+    // cargar transportistas
     this.loadCarriers();
 
-    // cambios de transportistaId
-    this.transportistaGroup
-      .get('transportistaId')
-      ?.valueChanges.pipe(
-        takeUntil(this.destroy$),
-        distinctUntilChanged()
-      )
-      .subscribe((val) => {
-        if (this.locked) return;
-        const carrierId = Number(val || 0);
-        this.onCarrierSelected(carrierId, false);
-      });
+    // si ya venía un transportista cargado (editar)
+    const carrierId = Number(this.cTransportistaId?.value || 0);
+    if (carrierId) {
+      this.loadCarrierRelations(carrierId, true);
+      this.fillCarrierInfoFromList(carrierId, true);
+    }
 
-    // cambios de conductorId
-    this.conductorGroup
-      .get('conductorId')
-      ?.valueChanges.pipe(
-        takeUntil(this.destroy$),
-        distinctUntilChanged()
-      )
-      .subscribe((val) => {
-        if (this.locked) return;
-        const driverId = Number(val || 0);
-        this.onDriverSelected(driverId);
-      });
+    // autollenado conductor cuando ya existe (editar)
+    const driverId = Number(this.cConductorId?.value || 0);
+    if (driverId) {
+      this.fillDriverInfo(driverId);
+    }
   }
 
   ngOnDestroy(): void {
@@ -82,152 +103,188 @@ export class PasoTransporte implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  /** ========= CARGA PRINCIPAL ========= */
-  private loadCarriers(): void {
-    this.loadingCarriers = true;
-
-    this.api.getCarriers().pipe(takeUntil(this.destroy$)).subscribe({
-      next: (rows) => {
-        this.carriers = rows || [];
-
-        // Si venía del draft (ya seleccionado), cargar relaciones sin borrar valores
-        const carrierId = Number(this.transportistaGroup.get('transportistaId')?.value || 0);
-        if (carrierId) {
-          this.onCarrierSelected(carrierId, true);
-        }
-      },
-      error: (err) => console.error('Error loading carriers', err),
-      complete: () => (this.loadingCarriers = false),
-    });
-  }
-
-  /** ========= EVENTOS ========= */
+  // =========================================================
+  // ✅ HANDLERS QUE TU HTML LLAMA (YA NO HAY ERROR)
+  // =========================================================
   onTransportistaChange(): void {
-    if (this.locked) return;
-    const carrierId = Number(this.transportistaGroup.get('transportistaId')?.value || 0);
-    this.onCarrierSelected(carrierId, false);
-  }
+    if (!this.ready || this.locked) return;
 
-  onConductorChange(): void {
-    if (this.locked) return;
-    const driverId = Number(this.conductorGroup.get('conductorId')?.value || 0);
-    this.onDriverSelected(driverId);
-  }
+    const carrierId = Number(this.cTransportistaId?.value || 0);
 
-  /** ========= LÓGICA DE SELECCIÓN ========= */
-  private onCarrierSelected(carrierId: number, keepValues: boolean): void {
+    // limpiar selecciones dependientes
+    this.conductorGroup.patchValue(
+      { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+      { emitEvent: false }
+    );
+    this.vehiculoGroup.patchValue({ vehiculoId: null, trailerId: null }, { emitEvent: false });
+
+    // limpiar listas
+    this.carrierDrivers = [];
+    this.carrierTrucks = [];
+    this.carrierTrailers = [];
+    this.driversMsg = '';
+    this.trucksMsg = '';
+    this.trailersMsg = '';
+
     if (!carrierId) {
-      // reset transportista + relaciones
-      if (!keepValues) {
-        this.transportistaGroup.patchValue(
-          { nombre: '', tipoDocumento: '', numeroDocumento: '' },
-          { emitEvent: false }
-        );
-      }
-
-      this.carrierDrivers = [];
-      this.carrierTrucks = [];
-      this.carrierTrailers = [];
-
-      if (!keepValues) {
-        this.conductorGroup.patchValue(
-          { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
-          { emitEvent: false }
-        );
-        this.vehiculoGroup.patchValue({ vehiculoId: null, trailerId: null }, { emitEvent: false });
-      }
+      this.transportistaGroup.patchValue(
+        { nombre: '', tipoDocumento: '', numeroDocumento: '' },
+        { emitEvent: false }
+      );
       return;
     }
 
-    // Autollenado transportista
-    const carrier = this.carriers.find((c) => c.id === carrierId);
-    if (carrier && !keepValues) {
-      this.transportistaGroup.patchValue(
-        {
-          nombre: carrier.companyName,
-          tipoDocumento: (carrier as any).documentTypeCode || 'RUC',
-          numeroDocumento: (carrier as any).documentNumber || '',
+    // autollenar transportista
+    this.fillCarrierInfoFromList(carrierId, false);
+
+    // cargar relaciones
+    this.loadCarrierRelations(carrierId, false);
+  }
+
+  onConductorChange(): void {
+    if (!this.ready || this.locked) return;
+    const driverId = Number(this.cConductorId?.value || 0);
+    this.fillDriverInfo(driverId);
+  }
+
+  // =========================================================
+  // CARGAS
+  // =========================================================
+  private loadCarriers(): void {
+    this.loadingCarriers = true;
+
+    this.api
+      .getCarriers()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.carriers = this.unwrapArray(res);
         },
-        { emitEvent: false }
-      );
-    } else if (carrier && keepValues) {
-      // si viene de draft, al menos asegura coherencia si campos estaban vacíos
-      const nombre = this.transportistaGroup.get('nombre')?.value;
-      if (!nombre) {
-        this.transportistaGroup.patchValue(
-          {
-            nombre: carrier.companyName,
-            tipoDocumento: (carrier as any).documentTypeCode || 'RUC',
-            numeroDocumento: (carrier as any).documentNumber || '',
-          },
-          { emitEvent: false }
-        );
-      }
-    }
-
-    this.loadCarrierRelations(carrierId, keepValues);
+        error: () => {
+          this.carriers = [];
+        },
+        complete: () => (this.loadingCarriers = false),
+      });
   }
 
-  private loadCarrierRelations(carrierId: number, keepValues: boolean): void {
-    this.loadingRelations = true;
-
-    // Drivers
-    this.api.getCarrierDrivers(carrierId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (drivers) => {
-        this.carrierDrivers = drivers || [];
-
-        const currentId = Number(this.conductorGroup.get('conductorId')?.value || 0);
-        if (!keepValues) {
-          this.conductorGroup.patchValue(
-            { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
-            { emitEvent: false }
-          );
-        } else if (currentId && !this.carrierDrivers.some((d) => d.id === currentId)) {
-          this.conductorGroup.patchValue(
-            { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
-            { emitEvent: false }
-          );
-        }
-
-        // si viene de draft y conductor ya estaba seleccionado, autollenar
-        if (keepValues && currentId) this.onDriverSelected(currentId);
-      },
-      error: (err) => console.error('Error loading carrier drivers', err),
-    });
-
-    // Trucks
-    this.api.getCarrierTrucks(carrierId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (trucks) => {
-        this.carrierTrucks = trucks || [];
-
-        const currentId = Number(this.vehiculoGroup.get('vehiculoId')?.value || 0);
-        if (!keepValues) {
-          this.vehiculoGroup.patchValue({ vehiculoId: null }, { emitEvent: false });
-        } else if (currentId && !this.carrierTrucks.some((t) => t.id === currentId)) {
-          this.vehiculoGroup.patchValue({ vehiculoId: null }, { emitEvent: false });
-        }
-      },
-      error: (err) => console.error('Error loading carrier trucks', err),
-    });
-
-    // Trailers
-    this.api.getCarrierTrailers(carrierId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (trailers) => {
-        this.carrierTrailers = trailers || [];
-
-        const currentId = Number(this.vehiculoGroup.get('trailerId')?.value || 0);
-        if (!keepValues) {
-          this.vehiculoGroup.patchValue({ trailerId: null }, { emitEvent: false });
-        } else if (currentId && !this.carrierTrailers.some((t) => t.id === currentId)) {
-          this.vehiculoGroup.patchValue({ trailerId: null }, { emitEvent: false });
-        }
-      },
-      error: (err) => console.error('Error loading carrier trailers', err),
-      complete: () => (this.loadingRelations = false),
-    });
+  private loadCarrierRelations(carrierId: number, keepSelected: boolean): void {
+    this.loadDrivers(carrierId, keepSelected);
+    this.loadTrucks(carrierId, keepSelected);
+    this.loadTrailers(carrierId, keepSelected);
   }
 
-  private onDriverSelected(driverId: number): void {
+  private loadDrivers(carrierId: number, keepSelected: boolean): void {
+    this.loadingDrivers = true;
+    this.driversMsg = '';
+
+    this.api
+      .getCarrierDrivers(carrierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.carrierDrivers = this.unwrapArray(res);
+
+          const current = Number(this.cConductorId?.value || 0);
+          if (!keepSelected) {
+            this.conductorGroup.patchValue(
+              { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+              { emitEvent: false }
+            );
+          } else if (current && !this.carrierDrivers.some((d) => Number(d?.id) === current)) {
+            this.conductorGroup.patchValue(
+              { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+              { emitEvent: false }
+            );
+          }
+
+          if (!this.carrierDrivers.length) this.driversMsg = 'Este transportista no tiene conductores activos.';
+        },
+        error: () => {
+          this.carrierDrivers = [];
+          this.driversMsg = 'No se pudo cargar conductores.';
+        },
+        complete: () => (this.loadingDrivers = false),
+      });
+  }
+
+  private loadTrucks(carrierId: number, keepSelected: boolean): void {
+    this.loadingTrucks = true;
+    this.trucksMsg = '';
+
+    this.api
+      .getCarrierTrucks(carrierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.carrierTrucks = this.unwrapArray(res);
+
+          const current = Number(this.cVehiculoId?.value || 0);
+          if (!keepSelected) {
+            this.vehiculoGroup.patchValue({ vehiculoId: null }, { emitEvent: false });
+          } else if (current && !this.carrierTrucks.some((t) => Number(t?.id) === current)) {
+            this.vehiculoGroup.patchValue({ vehiculoId: null }, { emitEvent: false });
+          }
+
+          if (!this.carrierTrucks.length) this.trucksMsg = 'Este transportista no tiene camiones activos.';
+        },
+        error: () => {
+          this.carrierTrucks = [];
+          this.trucksMsg = 'No se pudo cargar vehículos.';
+        },
+        complete: () => (this.loadingTrucks = false),
+      });
+  }
+
+  private loadTrailers(carrierId: number, keepSelected: boolean): void {
+    this.loadingTrailers = true;
+    this.trailersMsg = '';
+
+    this.api
+      .getCarrierTrailers(carrierId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.carrierTrailers = this.unwrapArray(res);
+
+          const current = Number(this.cTrailerId?.value || 0);
+          if (!keepSelected) {
+            this.vehiculoGroup.patchValue({ trailerId: null }, { emitEvent: false });
+          } else if (current && !this.carrierTrailers.some((t) => Number(t?.id) === current)) {
+            this.vehiculoGroup.patchValue({ trailerId: null }, { emitEvent: false });
+          }
+
+          if (!this.carrierTrailers.length) this.trailersMsg = 'Este transportista no tiene trailers activos.';
+          this.makeTrailerOptional();
+        },
+        error: () => {
+          this.carrierTrailers = [];
+          this.trailersMsg = 'No se pudo cargar trailers.';
+          this.makeTrailerOptional();
+        },
+        complete: () => (this.loadingTrailers = false),
+      });
+  }
+
+  // =========================================================
+  // AUTOLLENADO
+  // =========================================================
+  private fillCarrierInfoFromList(carrierId: number, keepIfAlreadyHas: boolean): void {
+    const carrier = this.carriers.find((c) => Number(c?.id) === carrierId);
+    if (!carrier) return;
+
+    if (keepIfAlreadyHas) return; // cuando editas, no pisar
+
+    this.transportistaGroup.patchValue(
+      {
+        nombre: carrier?.companyName ?? '',
+        tipoDocumento: carrier?.documentTypeCode ?? 'RUC',
+        numeroDocumento: carrier?.documentNumber ?? '',
+      },
+      { emitEvent: false }
+    );
+  }
+
+  private fillDriverInfo(driverId: number): void {
     if (!driverId) {
       this.conductorGroup.patchValue(
         { nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
@@ -236,28 +293,51 @@ export class PasoTransporte implements OnInit, OnDestroy {
       return;
     }
 
-    const driver = this.carrierDrivers.find((d) => d.id === driverId);
+    const driver = this.carrierDrivers.find((d) => Number(d?.id) === driverId);
     if (!driver) return;
 
     this.conductorGroup.patchValue(
       {
-        nombre: (driver as any).fullName,
-        tipoDocumento: (driver as any).documentTypeCode || 'DNI',
-        numeroDocumento: (driver as any).documentNumber || '',
-        licenciaConducir: (driver as any).license || '',
+        nombre: driver?.fullName ?? '',
+        tipoDocumento: driver?.documentTypeCode ?? 'DNI',
+        numeroDocumento: driver?.documentNumber ?? '',
+        licenciaConducir: driver?.license ?? '',
       },
       { emitEvent: false }
     );
   }
 
-  /** ========= HELPERS ========= */
-  getTruckPlate(truck: CarrierTruck): string {
-    const t: any = truck as any;
-    return t.plateNumber || t.plate || t.licensePlate || t.placa || t.description || '';
+  // =========================================================
+  // Helpers
+  // =========================================================
+  private disableReadOnlyFields(): void {
+    // transportista
+    this.transportistaGroup.get('nombre')?.disable({ emitEvent: false });
+    this.transportistaGroup.get('tipoDocumento')?.disable({ emitEvent: false });
+    this.transportistaGroup.get('numeroDocumento')?.disable({ emitEvent: false });
+
+    // conductor
+    this.conductorGroup.get('nombre')?.disable({ emitEvent: false });
+    this.conductorGroup.get('tipoDocumento')?.disable({ emitEvent: false });
+    this.conductorGroup.get('numeroDocumento')?.disable({ emitEvent: false });
+    this.conductorGroup.get('licenciaConducir')?.disable({ emitEvent: false });
   }
 
-  getTrailerPlate(trailer: CarrierTrailer): string {
-    const t: any = trailer as any;
-    return t.plateNumber || t.plate || t.licensePlate || t.placa || t.description || '';
+  private makeTrailerOptional(): void {
+    this.cTrailerId?.clearValidators();
+    this.cTrailerId?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private unwrapArray(res: any): any[] {
+    const data = res?.data ?? res;
+    return Array.isArray(data) ? data : [];
+  }
+
+  getTruckPlate(truck: any): string {
+    return truck?.plateNumber || truck?.plate || truck?.licensePlate || truck?.placa || truck?.description || '';
+  }
+
+  getTrailerPlate(trailer: any): string {
+    return trailer?.plateNumber || trailer?.plate || trailer?.licensePlate || trailer?.placa || trailer?.description || '';
   }
 }

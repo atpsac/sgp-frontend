@@ -2,11 +2,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, of, tap, map, catchError } from 'rxjs';
+import { Observable, of, tap, map, catchError, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-
-
 
 export interface CreateScaleTicketPayload {
   ticket: {
@@ -39,14 +36,11 @@ export interface CreateScaleTicketPayload {
 }
 
 export interface ScaleTicketCreated {
-  id?: number;                 // backend puede devolver "id"
-  scaleTicketId?: number;      // o "scaleTicketId"
-  ScaleTicketId?: number;      // o PascalCase
+  id?: number;
+  scaleTicketId?: number;
+  ScaleTicketId?: number;
   [key: string]: any;
 }
-
-
-
 
 // ---- NUEVAS INTERFACES SEGÚN RESPUESTA DEL BACKEND ----
 export interface LoginData {
@@ -74,21 +68,28 @@ export class AuthService {
   private readonly REFRESH_KEY = 'sgp_refresh_token';
   private readonly USER_KEY = 'sgp_user';
 
+  // ✅ Notificador de cambios de sesión (login/refresh/logout/clear)
+  private readonly _sessionChanges$ = new BehaviorSubject<void>(void 0);
+  readonly sessionChanges$ = this._sessionChanges$.asObservable();
+
+  private emitSessionChange(): void {
+    this._sessionChanges$.next(void 0);
+  }
+
   // Helper para armar URL absoluta usando environment
   private api(path: string): string {
-    const base = environment.apiUrl.replace(/\/+$/, ''); // quita / al final
-    const clean = path.replace(/^\/+/, ''); // quita / al inicio
+    const base = environment.apiUrl.replace(/\/+$/, '');
+    const clean = path.replace(/^\/+/, '');
     return `${base}/${clean}`;
   }
 
   // ========= LOGIN =========
   login(email: string, password: string): Observable<LoginData> {
-    const url = this.api('auth/login'); // http://.../auth/login
+    const url = this.api('auth/login');
 
     return this.http
       .post<ApiResponse<LoginData>>(url, { email, password })
       .pipe(
-        // Tomamos el primer elemento del array data
         map((res) => {
           const user = res?.data?.[0];
           if (!user) {
@@ -101,13 +102,14 @@ export class AuthService {
   }
 
   private storeTokensAndUser(res: LoginData): void {
-    // AHORA TODO VA A localStorage PARA COMPARTIR ENTRE PESTAÑAS
     localStorage.setItem(this.ACCESS_KEY, res.access_token);
     localStorage.setItem(this.REFRESH_KEY, res.refresh_token);
 
-    // usuario sin tokens → localStorage
     const { access_token, refresh_token, ...user } = res;
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+
+    // ✅ avisar que cambió la sesión
+    this.emitSessionChange();
   }
 
   // ========= LOGOUT =========
@@ -115,7 +117,6 @@ export class AuthService {
     const access = this.getToken();
     const url = this.api('auth/logout');
 
-    // si no hay access, solo limpiamos local y redirigimos
     if (!access) {
       this.clearSession();
       this.router.navigateByUrl('/login');
@@ -127,7 +128,6 @@ export class AuthService {
     });
 
     return this.http.post(url, {}, { headers }).pipe(
-      // aunque falle el backend, limpiamos igual
       catchError(() => of(null)),
       tap(() => {
         this.clearSession();
@@ -145,11 +145,10 @@ export class AuthService {
     const url = this.api('auth/refresh');
 
     const headers = new HttpHeaders({
-      Authorization: `Bearer ${refresh}`, // aquí va el refresh_token
+      Authorization: `Bearer ${refresh}`,
     });
 
     return this.http.post<ApiResponse<LoginData>>(url, null, { headers }).pipe(
-      // extraemos el primer elemento de data
       map((res) => res?.data?.[0] ?? null),
       tap((user) => {
         if (!user) {
@@ -158,7 +157,6 @@ export class AuthService {
 
         const { access_token, refresh_token, ...userWithoutTokens } = user;
 
-        // ACTUALIZAMOS SI VIENEN NUEVOS TOKENS
         if (access_token) {
           localStorage.setItem(this.ACCESS_KEY, access_token);
         }
@@ -166,11 +164,10 @@ export class AuthService {
           localStorage.setItem(this.REFRESH_KEY, refresh_token);
         }
 
-        // opcional: actualizamos también los datos del usuario
-        localStorage.setItem(
-          this.USER_KEY,
-          JSON.stringify(userWithoutTokens)
-        );
+        localStorage.setItem(this.USER_KEY, JSON.stringify(userWithoutTokens));
+
+        // ✅ avisar que cambió la sesión (exp del token cambió)
+        this.emitSessionChange();
       }),
       map(() => true),
       catchError(() => {
@@ -181,14 +178,11 @@ export class AuthService {
   }
 
   // ========= MÉTODOS USADOS POR GUARDS / INTERCEPTORES =========
-  // Consideramos “logueado” si hay refresh token
   isLoggedIn(): boolean {
     return !!this.getRefreshToken();
   }
 
-  // Tu api-interceptor usa esto para el header Authorization
   getToken(): string | null {
-    // AHORA LEE DESDE localStorage
     return localStorage.getItem(this.ACCESS_KEY);
   }
 
@@ -202,18 +196,13 @@ export class AuthService {
   }
 
   clearSession(): void {
-    // Limpiamos todo lo relacionado a auth
     localStorage.removeItem(this.ACCESS_KEY);
     localStorage.removeItem(this.REFRESH_KEY);
     localStorage.removeItem(this.USER_KEY);
+
+    // ✅ avisar que cambió la sesión (se limpió)
+    this.emitSessionChange();
   }
-
-
-
-
-
-
-
 
   /**
    * Registra cabecera del ticket + documentos
@@ -234,8 +223,4 @@ export class AuthService {
         })
       );
   }
-
-
-
-
 }

@@ -21,49 +21,81 @@
   </button>
 </div>
 
+<!-- =========================
+     CABECERA (6 inputs)
+========================= -->
 <div class="totals-bar" [formGroup]="formGroup">
-  <div class="total-box">
-    <div class="total-label">Cantidad ítems</div>
-    <div class="total-value">{{ totales?.cantidadItems || 0 }}</div>
-  </div>
+  <div class="row g-3 align-items-end">
+    <!-- 1 -->
+    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+      <label class="total-label mb-1">Cantidad ítems</label>
+      <input
+        type="text"
+        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
+        [value]="(totales?.cantidadItems ?? 0) | number: '2.0-0'"
+        disabled
+        readonly
+      />
+    </div>
 
-  <div class="total-box">
-    <div class="total-label">Total peso bruto (Kg)</div>
-    <div class="total-value">{{ totales?.totalPesoBruto | number: '1.2-2' }}</div>
-  </div>
+    <!-- 2 -->
+    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+      <label class="total-label mb-1">Cantidad pallets</label>
+      <input
+        type="text"
+        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
+        [value]="(totales?.cantidadPallets ?? totales?.cantidadPallet ?? 0) | number: '2.0-0'"
+        disabled
+        readonly
+      />
+    </div>
 
-  <div class="total-box">
-    <div class="total-label">Total tara (Kg)</div>
-    <div class="total-value">{{ totales?.totalTara | number: '1.2-2' }}</div>
-  </div>
+    <!-- 3 -->
+    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+      <label class="total-label mb-1">Peso pallets (Kg)</label>
+      <input
+        type="text"
+        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
+        [value]="(totales?.pesoPalletsKg ?? 0) | number: '1.2-2'"
+        disabled
+        readonly
+      />
+    </div>
 
-  <div class="total-box">
-    <div class="total-label">Subtotal peso neto (Kg)</div>
-    <div class="total-value">{{ totales?.subtotalPesoNeto | number: '1.2-2' }}</div>
-  </div>
+    <!-- 4 -->
+    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+      <label class="total-label mb-1">Total peso bruto (Kg)</label>
+      <input
+        type="text"
+        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
+        [value]="(totales?.totalPesoBruto ?? 0) | number: '1.2-2'"
+        disabled
+        readonly
+      />
+    </div>
 
-  <div class="total-box total-box--input">
-    <label class="total-label mb-1">Ajuste (Kg)</label>
-    <input
-      type="number"
-      class="form-control ux-input total-input"
-      formControlName="ajusteKg"
-      [disabled]="locked"
-      inputmode="decimal"
-      step="0.01"
-      (change)="onAjusteChange()"
-    />
-  </div>
+    <!-- 5 -->
+    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+      <label class="total-label mb-1">Total tara (Kg)</label>
+      <input
+        type="text"
+        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
+        [value]="(totales?.totalTara ?? 0) | number: '1.2-2'"
+        disabled
+        readonly
+      />
+    </div>
 
-  <div class="total-box">
-    <div class="total-label">Diferencia ajuste (Kg)</div>
-    <div class="total-value">{{ totales?.diferenciaAjuste | number: '1.2-2' }}</div>
-  </div>
-
-  <div class="total-box">
-    <div class="total-label">Total peso neto (Kg)</div>
-    <div class="total-value total-value--highlight">
-      {{ totales?.totalPesoNeto | number: '1.2-2' }}
+    <!-- 6 -->
+    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+      <label class="total-label mb-1">Sub total peso neto (Kg)</label>
+      <input
+        type="text"
+        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
+        [value]="(totales?.subtotalPesoNeto ?? 0) | number: '1.2-2'"
+        disabled
+        readonly
+      />
     </div>
   </div>
 </div>
@@ -75,11 +107,13 @@
         <th class="ux-col-idx">Item</th>
         <th>Producto</th>
         <th>Balanza</th>
+        <th>Tipo-Pesada</th>
         <th class="text-end">Peso bruto (Kg)</th>
-        <th class="text-end">Tara (Kg)</th>
+        <th class="text-end">Tara</th>
         <th class="text-end">Peso neto (Kg)</th>
         <th>Observaciones</th>
-        <th>Tara</th>
+        <th>Requiere Tara</th>
+        <th>Tiene Tara</th>
         <th>Estado</th>
         <th class="ux-col-actions">Acciones</th>
       </tr>
@@ -92,6 +126,7 @@
         </td>
         <td [attr.data-label]="'Producto'">{{ p.producto }}</td>
         <td [attr.data-label]="'Balanza'">{{ p.balanza }}</td>
+        <td [attr.data-label]="'Tipo-Pesada'">PALLET CON PRODUCTO</td>
 
         <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
           {{ p.pesoBrutoKg | number: '1.2-2' }}
@@ -105,11 +140,21 @@
 
         <td [attr.data-label]="'Observaciones'">{{ p.observaciones || '-' }}</td>
 
-        <td [attr.data-label]="'Tara'">
+        <!-- ✅ Requiere Tara (TEXTO) -->
+        <td [attr.data-label]="'Requiere Tara'">
           <span
-            class="ux-badge"
-            [class.ux-badge--ok]="p.tieneTara"
-            [class.ux-badge--bad]="!p.tieneTara"
+            class="ux-yesno"
+            [ngClass]="p.tieneTara ? 'ux-yesno--yes' : 'ux-yesno--no'"
+          >
+            {{ p.tieneTara ? 'SI' : 'NO' }}
+          </span>
+        </td>
+
+        <!-- ✅ Tiene Tara (TEXTO) -->
+        <td [attr.data-label]="'Tiene Tara'">
+          <span
+            class="ux-yesno"
+            [ngClass]="p.tieneTara ? 'ux-yesno--yes' : 'ux-yesno--no'"
           >
             {{ p.tieneTara ? 'SI' : 'NO' }}
           </span>
@@ -119,12 +164,11 @@
           <span
             class="status-pill"
             [ngClass]="{
-              'status-pill--registro': p.estado === 'EN REGISTRO',
-              'status-pill--cerrada': p.estado === 'CERRADA',
-              'status-pill--anulada': p.estado === 'ANULADA'
+              'status-pill--registro': p.estado === 'Activo',
+              'status-pill--cerrada': p.estado === 'Inactivo'
             }"
           >
-            {{ p.estado || 'EN REGISTRO' }}
+            {{ p.estado || 'Activo' }}
           </span>
         </td>
 
@@ -162,7 +206,7 @@
       </tr>
 
       <tr *ngIf="(pesadas?.length || 0) === 0">
-        <td colspan="10" class="text-center py-3">
+        <td colspan="12" class="text-center py-3">
           Aún no se han registrado pesadas para este ticket.
         </td>
       </tr>

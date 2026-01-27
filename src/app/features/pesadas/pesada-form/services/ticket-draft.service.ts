@@ -1,23 +1,27 @@
 import { Injectable } from '@angular/core';
-import { DocumentoRelacionado, PesadaDetalle } from '../pesada-form';
+import type { DocumentoRelacionado, PesadaDetalle } from '../pesada-form';
+import type { BuyingStation } from '../../../../core/services/weighing.service';
 
 export interface TicketDraft {
-  form: any;                         // this.ticketForm.value
+  form: any;
   documentos: DocumentoRelacionado[];
   pesadas: PesadaDetalle[];
   currentStep: number;
+
+  headerSaved?: boolean;
+  headerTicketId?: number | null;
+
+  originStations?: BuyingStation[];
+  destinationStations?: BuyingStation[];
 }
 
-@Injectable({
-  providedIn: 'root', // si quieres que sea solo para pesadas, quítalo y proveelo en PesadaForm
-})
+@Injectable({ providedIn: 'root' })
 export class TicketDraftService {
   private readonly STORAGE_KEY = 'sgp_ticket_balanza_draft';
 
   saveDraft(draft: TicketDraft): void {
     try {
-      const json = JSON.stringify(draft);
-      localStorage.setItem(this.STORAGE_KEY, json);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(draft));
     } catch (error) {
       console.error('Error guardando borrador de ticket en localStorage', error);
     }

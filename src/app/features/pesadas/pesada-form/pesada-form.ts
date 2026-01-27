@@ -32,8 +32,7 @@ import { TicketDraftService } from './services/ticket-draft.service';
 export interface DocumentoRelacionado {
   id?: number;
 
-
-    socioNegocio?: string | null;
+  socioNegocio?: string | null;
   tipoDocumento?: string | null;
   documento?: string | null;
   fechaDocumento?: string | Date | null;
@@ -46,7 +45,6 @@ export interface DocumentoRelacionado {
   serie?: string | null;
   numeroCorrelativo?: string | null;
 }
-
 
 export interface TaraItem {
   id?: number;
@@ -109,6 +107,9 @@ export class PesadaForm implements OnInit {
 
   currentStep = 1;
   readonly maxStep = 5;
+
+  /** ✅ Activa estilos rojo/verde luego de intentar avanzar */
+  showValidation = false;
 
   steps: WizardStep[] = [
     { id: 1, label: 'Datos de operación', hint: 'Fecha, operación y sede', disabled: false, completed: false },
@@ -183,24 +184,26 @@ export class PesadaForm implements OnInit {
         sedeDestino: [null, Validators.required],
       }),
       transporte: this.fb.group({
-        transportista: this.fb.group({
-          transportistaId: [null, Validators.required],
-          nombre: ['', Validators.required],
-          tipoDocumento: ['', Validators.required],
-          numeroDocumento: ['', Validators.required],
-        }),
-        conductor: this.fb.group({
-          conductorId: [null, Validators.required],
-          nombre: ['', Validators.required],
-          tipoDocumento: ['', Validators.required],
-          numeroDocumento: ['', Validators.required],
-          licenciaConducir: ['', Validators.required],
-        }),
-        vehiculo: this.fb.group({
-          vehiculoId: [null, Validators.required],
-          trailerId: [null, Validators.required],
-        }),
+      transportista: this.fb.group({
+        transportistaId: [null, Validators.required],
+        nombre: [{ value: '', disabled: true }],
+        tipoDocumento: [{ value: '', disabled: true }],
+        numeroDocumento: [{ value: '', disabled: true }],
       }),
+
+      conductor: this.fb.group({
+        conductorId: [null, Validators.required],
+        nombre: [{ value: '', disabled: true }],
+        tipoDocumento: [{ value: '', disabled: true }],
+        numeroDocumento: [{ value: '', disabled: true }],
+        licenciaConducir: [{ value: '', disabled: true }],
+      }),
+      vehiculo: this.fb.group({
+        vehiculoId: [null, Validators.required],
+        trailerId: [null],
+      }),
+    }),
+
       detalleTicket: this.fb.group({
         ajusteKg: [0],
       }),
@@ -233,6 +236,19 @@ export class PesadaForm implements OnInit {
   private ok(ctrl: AbstractControl | null | undefined): boolean {
     if (!ctrl) return false;
     return ctrl.valid || ctrl.disabled;
+  }
+
+  /** ✅ Enfoca y hace scroll al primer campo inválido (para que se vea el borde rojo) */
+  private focusFirstInvalid(): void {
+    setTimeout(() => {
+      const el = document.querySelector(
+        '.ux-scope .ux-validate .ng-invalid.ng-touched, .ux-scope .ux-validate .ng-invalid.ng-dirty'
+      ) as HTMLElement | null;
+
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (el as any).focus?.();
+    }, 50);
   }
 
   /* =========================================================
@@ -292,14 +308,13 @@ export class PesadaForm implements OnInit {
   }
 
   onDocumentosChange(list: DocumentoRelacionado[]) {
-    if (this.headerSaved) return; // seguridad (aunque el hijo ya debería bloquear)
+    if (this.headerSaved) return;
     this.documentos = list || [];
     this.updateStepsState();
     this.saveDraftToStorage();
   }
 
   onPesadasChange(list: PesadaDetalle[]) {
-    // OJO: NO BLOQUEAR por headerSaved (la cabecera guardada NO debe bloquear pesadas)
     this.pesadas = list || [];
     this.recalcularTotalesPesadas();
     this.updateStepsState();
@@ -351,6 +366,8 @@ export class PesadaForm implements OnInit {
     this.originStations = [];
     this.destinationStations = [];
 
+    this.showValidation = false;
+
     this.totalesPesadas = {
       cantidadItems: 0,
       totalPesoBruto: 0,
@@ -393,7 +410,6 @@ export class PesadaForm implements OnInit {
      ========================================================= */
   private saveDraftToStorage(): void {
     const draft = {
-      // form: this.ticketForm.value,
       form: this.ticketForm.getRawValue(),
       documentos: this.documentos,
       pesadas: this.pesadas,
@@ -406,19 +422,12 @@ export class PesadaForm implements OnInit {
     this.ticketDraftService.saveDraft(draft as any);
   }
 
-
   get operationIdSelected(): number {
-  // raw para no depender de disabled
-  const raw: any = this.datosOperacion.getRawValue?.() ?? this.datosOperacion.value;
-  const v = raw?.operacion;
-
-  // si viniera objeto {id,...}
-  if (v && typeof v === 'object' && 'id' in v) return Number((v as any).id || 0);
-
-  return Number(v || 0);
-}
-
-
+    const raw: any = this.datosOperacion.getRawValue?.() ?? this.datosOperacion.value;
+    const v = raw?.operacion;
+    if (v && typeof v === 'object' && 'id' in v) return Number((v as any).id || 0);
+    return Number(v || 0);
+  }
 
   private loadDraftFromStorage(): void {
     const draft: any = this.ticketDraftService.loadDraft();
@@ -458,6 +467,7 @@ export class PesadaForm implements OnInit {
     if (step < 1 || step > this.maxStep) return;
 
     if (step > this.currentStep) {
+      this.showValidation = true; // ✅ activar bordes rojo/verde al intentar avanzar
       const isValid = this.validateUpToStep(step - 1);
       if (!isValid) return;
     }
@@ -471,6 +481,8 @@ export class PesadaForm implements OnInit {
 
   async nextStep(): Promise<void> {
     if (this.currentStep >= this.maxStep) return;
+
+    this.showValidation = true; // ✅ activar bordes rojo/verde al dar “Siguiente”
 
     // al salir del paso 4: guardar cabecera
     if (this.currentStep === 4) {
@@ -508,12 +520,14 @@ export class PesadaForm implements OnInit {
     if (step >= 1 && this.datosOperacion.invalid) {
       this.datosOperacion.markAllAsTouched();
       this.showStepWarning('Completa los datos de operación antes de continuar.');
+      this.focusFirstInvalid();
       return false;
     }
 
     if (step >= 2 && this.origenDestino.invalid) {
       this.origenDestino.markAllAsTouched();
       this.showStepWarning('Completa el origen y destino antes de continuar.');
+      this.focusFirstInvalid();
       return false;
     }
 
@@ -536,6 +550,7 @@ export class PesadaForm implements OnInit {
     if (step >= 4 && this.transporte.invalid) {
       this.transporte.markAllAsTouched();
       this.showStepWarning('Completa los datos del transporte antes de continuar.');
+      this.focusFirstInvalid();
       return false;
     }
 
@@ -699,30 +714,40 @@ export class PesadaForm implements OnInit {
       this.isSavingHeader = true;
 
       const payload: any = this.buildHeaderPayload();
-      const res: any = await firstValueFrom(
-        this.weighingService.createScaleTicketHeader(payload)
-      );
 
-      const row = res?.data?.[0] ?? res?.data ?? null;
+      // ✅ OJO: tu service retorna "row" directamente (por el map)
+      const res: any = await firstValueFrom(this.weighingService.createScaleTicketHeader(payload));
+
+      // ✅ Soporta ambos formatos: row directo O wrapper
+      const row = res?.data?.[0] ?? res?.data ?? res;
+
       const possibleId =
-        row?.id ||
-        row?.ticketId ||
-        row?.idScaleTicket ||
-        row?.idScaleTickets ||
+        row?.id ??
+        row?.ticketId ??
+        row?.idScaleTicket ??
+        row?.idScaleTickets ??
         null;
 
-      this.headerTicketId = typeof possibleId === 'number' ? possibleId : null;
+      const idNum = Number(possibleId);
+      this.headerTicketId = Number.isFinite(idNum) && idNum > 0 ? idNum : null;
+
+      if (!this.headerTicketId) {
+        throw new Error('No se recibió el ID del ticket creado.');
+      }
+
       this.headerSaved = true;
 
       this.lockHeaderEdition();
       this.updateStepsState();
+
+      // ✅ GUARDA EN LOCALSTORAGE con headerTicketId
       this.saveDraftToStorage();
 
       Swal.fire({
         toast: true,
         position: 'top-end',
         icon: 'success',
-        title: 'Encabezado guardado correctamente.',
+        title: `Encabezado guardado. Ticket #${this.headerTicketId}`,
         showConfirmButton: false,
         timer: 2500,
       });
@@ -746,6 +771,7 @@ export class PesadaForm implements OnInit {
     }
   }
 
+
   private lockHeaderEdition(): void {
     try {
       this.datosOperacion.disable({ emitEvent: false });
@@ -755,7 +781,7 @@ export class PesadaForm implements OnInit {
   }
 
   /* =========================================================
-     GUARDAR COMPLETO (solo ejemplo - tu endpoint final lo conectamos después)
+     GUARDAR COMPLETO (solo ejemplo)
      ========================================================= */
   async guardarTicketCompleto(): Promise<void> {
     const isValid = this.validateUpToStep(this.maxStep);
@@ -771,7 +797,6 @@ export class PesadaForm implements OnInit {
     try {
       this.isSavingFull = true;
 
-      // Aquí armas tu payload final (según tu backend)
       const payload = {
         ticketId: this.headerTicketId,
         ajusteKg: this.totalesPesadas.ajusteKg,
@@ -783,9 +808,6 @@ export class PesadaForm implements OnInit {
 
       console.log('Payload FINAL ticket balanza:', payload);
 
-      // TODO: conectar endpoint real:
-      // await firstValueFrom(this.weighingService.saveScaleTicketDetail(payload));
-
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -795,7 +817,6 @@ export class PesadaForm implements OnInit {
         timer: 2500,
       });
 
-      // limpiar draft al finalizar
       this.clearDraftFromStorage();
     } catch (e) {
       console.error('Error guardando ticket completo', e);

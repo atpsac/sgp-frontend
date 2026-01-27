@@ -1,5 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  inject,
+  OnInit,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { take } from 'rxjs';
@@ -13,6 +22,8 @@ import { PesadaTara } from '../../../modals/pesada-tara/pesada-tara';
 import {
   WeighingService,
   ProductByOperation,
+  ScaleTicketDetail,
+  Paginated,
 } from '../../../../../core/services/weighing.service';
 
 @Component({
@@ -22,17 +33,21 @@ import {
   templateUrl: './paso-detalle-ticket.html',
   styleUrl: './paso-detalle-ticket.scss',
 })
-export class PasoDetalleTicket {
+export class PasoDetalleTicket implements OnInit, OnChanges {
   private modal = inject(NgbModal);
   private api = inject(WeighingService);
 
   @Input() formGroup!: FormGroup;
 
+  /** ✅ LISTADO (tabla) */
   @Input() pesadas: PesadaDetalle[] = [];
   @Input() totales: any = {};
 
   /** ✅ Operación seleccionada (para cargar productos al abrir modal) */
   @Input() operationId: number | null = null;
+
+  /** ✅ TicketId (OBLIGATORIO para consumir el endpoint /details) */
+  @Input() ticketId: number | null = null;
 
   /** Puedes seguir pasando balanzas por input (luego lo hacemos por API también) */
   @Input() balanzas: string[] = [];
@@ -41,11 +56,102 @@ export class PasoDetalleTicket {
   @Input() locked = false;
 
   @Output() pesadasChange = new EventEmitter<PesadaDetalle[]>();
-  @Output() ajusteChange = new EventEmitter<void>();
 
   // cache local para no pegarle al API cada vez
   private productosCache: ProductByOperation[] = [];
   private loadingProductos = false;
+
+  // ====== Estado del listado desde API ======
+  loadingDetails = false;
+  detailsError: string | null = null;
+
+  page = 1;
+  pageSize = 10;
+  total = 0;
+
+  sort: string = 'grossWeight';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
+  ngOnInit(): void {
+    this.tryLoadDetailsFromApi();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['ticketId'] && !changes['ticketId'].firstChange) {
+      this.tryLoadDetailsFromApi();
+    }
+  }
+
+  reloadDetails(): void {
+    this.tryLoadDetailsFromApi(true);
+  }
+
+  private tryLoadDetailsFromApi(force = false): void {
+    const tid = Number(this.ticketId || 0);
+    if (!tid) return;
+    this.loadDetails(tid);
+  }
+
+  private loadDetails(ticketId: number): void {
+    if (this.loadingDetails) return;
+    this.loadingDetails = true;
+    this.detailsError = null;
+
+    this.api
+      .listScaleTicketDetails(ticketId, {
+        page: this.page,
+        pageSize: this.pageSize,
+        sort: this.sort,
+        sortDirection: this.sortDirection,
+      })
+      .pipe(take(1))
+      .subscribe({
+        next: (res: Paginated<ScaleTicketDetail>) => {
+          this.total = Number(res?.total ?? 0);
+
+          const mapped = (res?.items ?? []).map((d) =>
+            this.mapApiDetailToPesada(d)
+          );
+
+          this.pesadasChange.emit(mapped);
+        },
+        error: (err) => {
+          console.error('Error cargando detalles del ticket', err);
+          this.detailsError = 'No se pudieron cargar los detalles del ticket.';
+          this.toastWarn(this.detailsError);
+        },
+        complete: () => {
+          this.loadingDetails = false;
+        },
+      });
+  }
+
+  private mapApiDetailToPesada(d: ScaleTicketDetail): PesadaDetalle {
+    const bruto = Number(d?.grossWeight ?? 0);
+    const tara = Number(d?.tareWeight ?? 0);
+    const neto =
+      d?.netWeight != null ? Number(d.netWeight) : Math.max(bruto - tara, 0);
+
+    return {
+      id: d.id as any,
+      idTicketDetail: d.id as any,
+
+      producto: (d.productName ?? '') as any,
+      balanza: (d.deviceName ?? '') as any,
+
+      pesoBrutoKg: bruto as any,
+      taraTotalKg: tara as any,
+      pesoNetoKg: neto as any,
+
+      observaciones: (d.observations ?? '') as any,
+
+      tieneTara: Boolean(d.hasPackaging ?? tara > 0) as any,
+
+      taras: [] as any,
+
+      estado: (d.isActive ? 'Activo' : 'Inactivo') as any,
+    } as PesadaDetalle;
+  }
 
   // ===== UI handlers =====
   onAdd(): void {
@@ -74,18 +180,13 @@ export class PasoDetalleTicket {
     this.openTarasModal(row, index);
   }
 
-  onAjusteChange(): void {
-    this.ajusteChange.emit();
-  }
-
-  // =========================================================
-  // ✅ Cargar productos por operación y abrir modal
-  // =========================================================
   private ensureProductosThenOpen(row?: PesadaDetalle, index?: number): void {
     const opId = Number(this.operationId || 0);
 
     if (!opId) {
-      this.toastWarn('Selecciona una operación en el Paso 1 antes de agregar una pesada.');
+      this.toastWarn(
+        'Selecciona una operación en el Paso 1 antes de agregar una pesada.'
+      );
       return;
     }
 
@@ -107,7 +208,9 @@ export class PasoDetalleTicket {
         },
         error: (err) => {
           console.error('Error cargando productos por operación', err);
-          this.toastWarn('No se pudieron cargar los productos de la operación. Inténtalo nuevamente.');
+          this.toastWarn(
+            'No se pudieron cargar los productos de la operación. Inténtalo nuevamente.'
+          );
         },
         complete: () => (this.loadingProductos = false),
       });
@@ -124,12 +227,11 @@ export class PasoDetalleTicket {
       backdrop: 'static',
     });
 
-    // ✅ igual que PasoDocumentos, le pasamos operationId y data
     (modalRef.componentInstance as any).operationId = Number(this.operationId || 0);
     (modalRef.componentInstance as any).data = {
       pesada: row ?? null,
-      productos,          // <-- viene del API
-      balanzas: this.balanzas, // <-- por ahora input
+      productos,
+      balanzas: this.balanzas,
     };
 
     modalRef.result
@@ -155,9 +257,6 @@ export class PasoDetalleTicket {
       .catch(() => {});
   }
 
-  // =========================================================
-  // Taras modal (igual que antes)
-  // =========================================================
   private openTarasModal(row: PesadaDetalle, index: number): void {
     const modalRef = this.modal.open(PesadaTara, {
       size: 'xl',

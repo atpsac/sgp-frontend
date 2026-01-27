@@ -16,6 +16,7 @@
         formControlName="fechaEmision"
         [min]="minFechaEmision"
         [max]="maxFechaEmision"
+        [disabled]="locked"
       />
 
       <div
@@ -34,8 +35,15 @@
     <div class="col-md-4 col-12">
       <label class="form-label mb-1 small text-muted"> Sede de operación </label>
       <div class="ux-select">
-        <select class="form-select ux-input" formControlName="sedeOperacion">
-          <option [ngValue]="null" disabled>Selecciona una sede</option>
+        <select
+          class="form-select ux-input"
+          formControlName="sedeOperacion"
+          [disabled]="locked || loadingStations"
+        >
+          <option [ngValue]="null" disabled>
+            {{ loadingStations ? 'Cargando sedes...' : 'Selecciona una sede' }}
+          </option>
+
           <option *ngFor="let s of stations" [ngValue]="s.id">
             {{ s.name }}
           </option>
@@ -47,8 +55,23 @@
     <div class="col-md-5 col-12">
       <label class="form-label mb-1 small text-muted"> Operación </label>
       <div class="ux-select">
-        <select class="form-select ux-input" formControlName="operacion">
-          <option [ngValue]="null" disabled>Selecciona una operación</option>
+        <select
+          class="form-select ux-input"
+          formControlName="operacion"
+          [disabled]="
+            locked ||
+            loadingOperations ||
+            !formGroup.get('sedeOperacion')?.value
+          "
+        >
+          <option [ngValue]="null" disabled>
+            {{
+              loadingOperations
+                ? 'Cargando operaciones...'
+                : 'Selecciona una operación'
+            }}
+          </option>
+
           <option *ngFor="let op of operations" [ngValue]="op.id">
             {{ op.name }}
           </option>

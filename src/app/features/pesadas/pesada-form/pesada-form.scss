@@ -456,6 +456,42 @@
 
 
 
+/* =========================================================
+   ✅ VALIDACIÓN VISUAL (Bootstrap-like) - ADICIONAL
+   Pegar al FINAL de tu pesada-form.scss
+   ========================================================= */
+
+.ux-scope {
+  /* Solo cuando el usuario intenta avanzar */
+  .ux-validate {
+    /* Rojo (inválido) */
+    .ux-input.ng-invalid.ng-touched:not(:disabled),
+    .ux-input.ng-invalid.ng-dirty:not(:disabled) {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15) !important;
+      background-image: none !important;
+    }
+
+    /* Verde (válido) */
+    .ux-input.ng-valid.ng-touched:not(:disabled),
+    .ux-input.ng-valid.ng-dirty:not(:disabled) {
+      border-color: #198754 !important;
+      box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.12) !important;
+      background-image: none !important;
+    }
+
+    /* Mantener el color correcto al hacer focus */
+    .ux-input.ng-invalid:focus:not(:disabled) {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.2) !important;
+    }
+
+    .ux-input.ng-valid:focus:not(:disabled) {
+      border-color: #198754 !important;
+      box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.18) !important;
+    }
+  }
+}
 
 
 

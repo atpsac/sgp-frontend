@@ -100,56 +100,66 @@ export class PasoDatosOperacion implements OnInit {
   }
 
   // =========================
-  // Cargar sedes
+  // Cargar sedes (POR USUARIO)
   // =========================
   private loadStations(): void {
     this.loadingStations = true;
 
     this.api
-      .getPrincipalBuyingStation()
+      .getUserBuyingStations()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => (this.loadingStations = false))
       )
       .subscribe({
-        next: (principal) => {
-          this.api
-            .getNonPrincipalBuyingStations()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-              next: (nonPrincipal) => {
-                const non = nonPrincipal || [];
-                this.stations = [principal, ...non];
+        next: (stations) => {
+          this.stations = stations || [];
 
-                this.stationsReady.emit({
-                  principal,
-                  nonPrincipal: non,
-                  all: this.stations,
-                });
+          // Si no hay sedes, limpiamos selects relacionados
+          if (!this.stations.length) {
+            this.operations = [];
+            this.formGroup.patchValue(
+              { sedeOperacion: null, operacion: null },
+              { emitEvent: false }
+            );
+            return;
+          }
 
-                // si hay sede guardada en draft, valida y carga operaciones
-                const savedStationId = Number(
-                  this.formGroup.get('sedeOperacion')?.value || 0
-                );
+          // Detectar principal (según tu API: isPrincipal)
+          const principal =
+            this.stations.find((s: any) => (s as any).isPrincipal === true) ??
+            this.stations[0];
 
-                if (savedStationId && this.stations.some((s) => s.id === savedStationId)) {
-                  this.loadOperations(savedStationId, true);
-                } else {
-                  // si el draft tenía una sede inválida, la limpiamos
-                  if (savedStationId) {
-                    this.formGroup.patchValue(
-                      { sedeOperacion: null, operacion: null },
-                      { emitEvent: false }
-                    );
-                  }
-                  this.operations = [];
-                }
-              },
-              error: (err) =>
-                console.error('Error cargando sedes no principales', err),
-            });
+          const nonPrincipal = this.stations.filter((s) => s.id !== principal.id);
+
+          this.stationsReady.emit({
+            principal,
+            nonPrincipal,
+            all: this.stations,
+          });
+
+          // si hay sede guardada en draft, valida y carga operaciones
+          const savedStationId = Number(
+            this.formGroup.get('sedeOperacion')?.value || 0
+          );
+
+          if (
+            savedStationId &&
+            this.stations.some((s) => s.id === savedStationId)
+          ) {
+            this.loadOperations(savedStationId, true);
+          } else {
+            // si el draft tenía una sede inválida, la limpiamos
+            if (savedStationId) {
+              this.formGroup.patchValue(
+                { sedeOperacion: null, operacion: null },
+                { emitEvent: false }
+              );
+            }
+            this.operations = [];
+          }
         },
-        error: (err) => console.error('Error cargando sede principal', err),
+        error: (err) => console.error('Error cargando sedes del usuario', err),
       });
   }
 

@@ -1,7 +1,7 @@
 <div class="section-header">
   <h6 class="section-title mb-1">Origen / Destino</h6>
   <p class="section-subtitle mb-0">
-    Configura la sede de origen y la sede de destino del producto.
+    Origen: sedes NO principales. Destino: sede principal.
   </p>
 
   <div class="alert alert-warning mt-2 mb-0" *ngIf="locked">
@@ -11,40 +11,50 @@
 
 <div [formGroup]="formGroup">
   <div class="row g-4">
-    <!-- Sede de origen -->
+    <!-- ORIGEN -->
     <div class="col-md-6 col-12">
-      <label class="form-label mb-1 small text-muted"> Sede de origen </label>
+      <label class="form-label mb-1 small text-muted">Sede de origen (No principal)</label>
+
       <div class="ux-select">
         <select
           class="form-select ux-input"
           formControlName="sedeOrigen"
           (change)="onOrigenChange()"
-          [disabled]="locked"
+          [disabled]="locked || loadingOriginStations"
         >
-          <option [ngValue]="null" disabled>Selecciona una sede</option>
+          <option [ngValue]="null" disabled>
+            {{ loadingOriginStations ? 'Cargando sedes...' : 'Selecciona una sede' }}
+          </option>
+
           <option *ngFor="let s of originOptions" [ngValue]="s.id">
             {{ s.name }}
           </option>
         </select>
+
         <span class="ux-select__icon material-symbols-rounded">expand_more</span>
       </div>
     </div>
 
-    <!-- Sede de destino -->
+    <!-- DESTINO -->
     <div class="col-md-6 col-12">
-      <label class="form-label mb-1 small text-muted"> Sede de destino </label>
+      <label class="form-label mb-1 small text-muted">Sede de destino (Principal)</label>
+
       <div class="ux-select">
         <select
           class="form-select ux-input"
           formControlName="sedeDestino"
           (change)="onDestinoChange()"
-          [disabled]="locked"
+          [disabled]="locked || loadingDestinationStations"
         >
-          <option [ngValue]="null" disabled>Selecciona una sede</option>
+          <option [ngValue]="null" disabled>
+            {{ loadingDestinationStations ? 'Cargando sede...' : 'Sede principal' }}
+          </option>
+
           <option *ngFor="let s of destinationOptions" [ngValue]="s.id">
             {{ s.name }}
           </option>
         </select>
+
         <span class="ux-select__icon material-symbols-rounded">expand_more</span>
       </div>
     </div>

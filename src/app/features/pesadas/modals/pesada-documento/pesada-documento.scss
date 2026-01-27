@@ -39,21 +39,16 @@
     height: 42px;
     border-radius: 8px;
     transition: 0.2s;
+
     &::placeholder {
       color: #95a5a6;
     }
+
     &:focus {
       border-color: #cde7f0;
       box-shadow: 0 0 0 0.2rem rgba(10, 61, 243, 0.15);
       outline: none;
     }
-  }
-
-  /* Bordes rojos cuando hay error */
-  .ux-input.ng-invalid.ng-touched,
-  .ux-select select.ng-invalid.ng-touched {
-    border-color: #f97373;
-    background: #fff5f5;
   }
 
   .ux-select {
@@ -85,6 +80,43 @@
       font-size: 18px;
       line-height: 1;
       pointer-events: none;
+    }
+  }
+
+  /* =========================================================
+     ✅ VALIDACIÓN VISUAL (rojo/verde) SOLO cuando ux-validate
+     ========================================================= */
+  .ux-validate {
+    /* ROJO */
+    .ux-input.ng-invalid.ng-touched:not(:disabled),
+    .ux-input.ng-invalid.ng-dirty:not(:disabled),
+    .ux-select select.ng-invalid.ng-touched:not(:disabled),
+    .ux-select select.ng-invalid.ng-dirty:not(:disabled) {
+      border-color: #dc3545 !important;
+      // background: #fff5f5 !important;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.12) !important;
+    }
+
+    .ux-input.ng-invalid:focus:not(:disabled),
+    .ux-select select.ng-invalid:focus:not(:disabled) {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.18) !important;
+    }
+
+    /* VERDE */
+    .ux-input.ng-valid.ng-touched:not(:disabled),
+    .ux-input.ng-valid.ng-dirty:not(:disabled),
+    .ux-select select.ng-valid.ng-touched:not(:disabled),
+    .ux-select select.ng-valid.ng-dirty:not(:disabled) {
+      border-color: #198754 !important;
+      // background: #f2fff7 !important;
+      box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.10) !important;
+    }
+
+    .ux-input.ng-valid:focus:not(:disabled),
+    .ux-select select.ng-valid:focus:not(:disabled) {
+      border-color: #198754 !important;
+      box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.16) !important;
     }
   }
 
@@ -122,15 +154,6 @@
   .ux-btn:disabled {
     opacity: 0.7;
     cursor: default;
-  }
-
-  .numero-preview {
-    border-radius: 8px;
-    border: 1px dashed #d1d5db;
-    padding: 8px 12px;
-    font-size: 14px;
-    color: #111827;
-    background: #f9fafb;
   }
 
   /* Responsive */

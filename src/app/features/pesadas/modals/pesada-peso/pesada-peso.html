@@ -22,36 +22,8 @@
     <div class="uxf-grid">
       <!-- Columna izquierda -->
       <div class="uxf-col-main">
-        <!-- Producto -->
-        <div class="uxf-field">
-          <label class="uxf-label" for="producto">
-            Producto <span class="req">*</span>
-          </label>
 
-          <div class="uxf-select">
-            <select
-              id="producto"
-              class="uxf-control"
-              formControlName="ProductoId"
-              [class.is-invalid]="f['ProductoId'].touched && f['ProductoId'].invalid"
-            >
-              <option [ngValue]="null" disabled>Selecciona un producto…</option>
-              <option *ngFor="let p of productoOptions" [ngValue]="p.id">
-                {{ p.nombre }}
-              </option>
-            </select>
-
-            <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">expand_more</span>
-          </div>
-
-          <div class="uxf-hint-row">
-            <div class="uxf-error" *ngIf="f['ProductoId'].touched && f['ProductoId'].hasError('required')">
-              El producto es obligatorio.
-            </div>
-          </div>
-        </div>
-
-        <!-- Balanza / Peso bruto -->
+        <!-- Balanza / Estado -->
         <div class="uxf-row-2">
           <!-- Balanza -->
           <div class="uxf-col-6">
@@ -68,21 +40,106 @@
                   [disabled]="lockScaleSelect"
                   [class.is-invalid]="f['BalanzaId'].touched && f['BalanzaId'].invalid"
                 >
-                  <option [ngValue]="null" disabled>Selecciona una balanza…</option>
+                  <option [ngValue]="null">
+                    {{ loadingData ? 'Cargando balanzas…' : 'Selecciona una balanza…' }}
+                  </option>
+
                   <option *ngFor="let b of balanzaOptions" [ngValue]="b.id">
                     {{ b.nombre }}
                   </option>
                 </select>
 
-                <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">expand_more</span>
+                <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">
+                  expand_more
+                </span>
               </div>
 
               <div class="uxf-hint-row">
-                <div class="uxf-error" *ngIf="f['BalanzaId'].touched && f['BalanzaId'].hasError('required')">
+                <div
+                  class="uxf-error"
+                  *ngIf="f['BalanzaId'].touched && f['BalanzaId'].hasError('required')"
+                >
                   La balanza es obligatoria.
                 </div>
-                <div class="uxf-hint" *ngIf="!f['BalanzaId'].value">
+
+                <div class="uxf-hint" *ngIf="!f['BalanzaId'].value && !loadingData">
                   Selecciona una balanza y luego presiona <b>Iniciar pesada</b>.
+                </div>
+
+                <div class="uxf-hint" *ngIf="loadingData">
+                  Obteniendo balanzas operativas del ticket…
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estado de balanza -->
+          <div class="uxf-col-6">
+            <div class="uxf-field">
+              <label class="uxf-label" for="BalanzaEstado">
+                Estado de balanza <span class="req">*</span>
+              </label>
+
+              <input
+                id="BalanzaEstado"
+                type="text"
+                class="uxf-control"
+                formControlName="BalanzaEstado"
+                readonly
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Tipo pesada REAL / Peso bruto -->
+        <div class="uxf-row-2">
+          <!-- Tipo pesada (backend) -->
+          <div class="uxf-col-6">
+            <div class="uxf-field">
+              <label class="uxf-label" for="weighingType">
+                Tipo_pesada <span class="req">*</span>
+              </label>
+
+              <div class="uxf-select">
+                <select
+                  id="weighingType"
+                  class="uxf-control"
+                  formControlName="WeighingTypeId"
+                  [disabled]="loading || loadingData || processing || loadingWeighingTypes || !f['BalanzaId'].value"
+                  [class.is-invalid]="f['WeighingTypeId'].touched && f['WeighingTypeId'].invalid"
+                >
+                  <option [ngValue]="null">
+                    {{
+                      !f['BalanzaId'].value
+                        ? 'Selecciona una balanza primero…'
+                        : (loadingWeighingTypes ? 'Cargando tipos…' : 'Selecciona un tipo…')
+                    }}
+                  </option>
+
+                  <option *ngFor="let t of weighingTypeOptions" [ngValue]="t.weighingTypeId">
+                    {{ t.name }} ({{ t.code }})
+                  </option>
+                </select>
+
+                <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">
+                  expand_more
+                </span>
+              </div>
+
+              <div class="uxf-hint-row">
+                <div
+                  class="uxf-error"
+                  *ngIf="f['WeighingTypeId'].touched && f['WeighingTypeId'].hasError('required')"
+                >
+                  El tipo de pesada es obligatorio.
+                </div>
+
+                <div class="uxf-hint" *ngIf="selectedWeighingType?.description">
+                  {{ selectedWeighingType?.description }}
+                </div>
+
+                <div class="uxf-hint" *ngIf="isSoloPallet">
+                  En <b>SOLO PALLET</b> no aplica seleccionar producto.
                 </div>
               </div>
             </div>
@@ -108,7 +165,10 @@
                   Espera a que el peso sea estable para poder guardar.
                 </div>
 
-                <div class="uxf-error" *ngIf="statusUI === 'DESCONECTADO' && f['BalanzaId'].value">
+                <div
+                  class="uxf-error"
+                  *ngIf="statusUI === 'DESCONECTADO' && f['BalanzaId'].value"
+                >
                   Balanza desconectada. Presiona <b>Iniciar pesada</b>.
                 </div>
 
@@ -116,6 +176,54 @@
                   Error al leer la balanza. Revisa la configuración del dispositivo.
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Producto -->
+        <div class="uxf-field">
+          <label class="uxf-label" for="producto">
+            Producto
+            <span class="req" *ngIf="!isSoloPallet">*</span>
+          </label>
+
+          <div class="uxf-select">
+            <select
+              id="producto"
+              class="uxf-control"
+              formControlName="ProductoId"
+              [disabled]="isSoloPallet"
+              [class.is-invalid]="
+                !isSoloPallet &&
+                f['ProductoId'].touched &&
+                f['ProductoId'].invalid
+              "
+            >
+              <option [ngValue]="null">Selecciona un producto…</option>
+              <option *ngFor="let p of productoOptions" [ngValue]="p.id">
+                {{ p.nombre }}
+              </option>
+            </select>
+
+            <span class="material-symbols-rounded uxf-select__icon" aria-hidden="true">
+              expand_more
+            </span>
+          </div>
+
+          <div class="uxf-hint-row">
+            <div
+              class="uxf-error"
+              *ngIf="
+                !isSoloPallet &&
+                f['ProductoId'].touched &&
+                f['ProductoId'].hasError('required')
+              "
+            >
+              El producto es obligatorio.
+            </div>
+
+            <div class="uxf-hint" *ngIf="isSoloPallet">
+              Producto deshabilitado por el tipo de pesada.
             </div>
           </div>
         </div>
@@ -141,7 +249,7 @@
           [class.uxf-visor--unstable]="!isStable"
           [class.uxf-visor--busy]="processing"
         >
-          <!-- TOP: nombre balanza (izq) + estado (der) -->
+          <!-- TOP -->
           <div class="uxf-visor__top">
             <div class="uxf-visor__scale">
               {{ currentScaleName || 'Sin balanza seleccionada' }}
@@ -166,7 +274,7 @@
             <span class="uxf-visor-unit">kg</span>
           </div>
 
-          <!-- ✅ Botón SOLO INICIAR (bloqueado cuando está conectado) -->
+          <!-- Botón iniciar -->
           <button
             type="button"
             class="uxf-btn uxf-btn--start"
@@ -184,7 +292,6 @@
             <b [class.ok]="isStable" [class.bad]="!isStable">{{ isStable ? 'Sí' : 'No' }}</b>
           </div>
 
-          <!-- ✅ Mensaje aclaratorio cuando ya está conectado -->
           <div class="uxf-hint" *ngIf="statusUI === 'CONECTADO'">
             La pesada queda bloqueada hasta <b>Guardar</b> o <b>Cancelar</b>.
           </div>
@@ -197,7 +304,7 @@
           type="button"
           class="uxf-btn uxf-btn--ghost"
           (click)="close()"
-          [disabled]="loading || loadingData || processing"
+          [disabled]="loading || loadingData || processing || loadingWeighingTypes"
         >
           Cancelar
         </button>
@@ -205,7 +312,7 @@
         <button
           type="submit"
           class="uxf-btn uxf-btn--primary"
-          [disabled]="loading || loadingData || processing || form.invalid || !canSave()"
+          [disabled]="loading || loadingData || processing || loadingWeighingTypes || form.invalid || !canSave()"
         >
           <ng-container *ngIf="!loading">Guardar</ng-container>
           <ng-container *ngIf="loading">
