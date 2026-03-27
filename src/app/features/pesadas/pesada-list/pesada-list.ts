@@ -25,15 +25,12 @@ interface PesadaRow {
   ticketLabel: string;
   creationDate: string | null;
   isActive: boolean;
-
   grossWeight: number;
   tareWeight: number;
   netWeight: number;
-
   buyingStationName: string;
   operationName: string;
   scaleTicketStatusName: string;
-
   actions: TicketActionCode[];
   raw?: any;
 }
@@ -87,7 +84,6 @@ export class PesadaList implements OnInit {
 
   ngOnInit(): void {
     this.loadBuyingStations();
-    this.loadScaleTickets();
   }
 
   /* =========================================================
@@ -95,34 +91,105 @@ export class PesadaList implements OnInit {
      ========================================================= */
 
   private loadBuyingStations(): void {
+    this.isLoading = true;
+
     this.weighingService.getUserBuyingStations().subscribe({
       next: (rows) => {
         this.sedeOptions = Array.isArray(rows) ? rows : [];
+
+        if (!this.sedeOptions.length) {
+          this.filters.buyingStationId = null;
+          this.filters.operationId = null;
+          this.operacionOptions = [];
+          this.resetGrid();
+          this.isLoading = false;
+          return;
+        }
+
+        // Seleccionar automáticamente la primera sede
+        this.filters.buyingStationId = Number(this.sedeOptions[0].id);
+
+        // Cargar operaciones y luego listar
+        this.loadOperationsByStation(this.filters.buyingStationId, true);
       },
       error: (err) => {
         console.error('Error cargando sedes', err);
         this.sedeOptions = [];
+        this.operacionOptions = [];
+        this.filters.buyingStationId = null;
+        this.filters.operationId = null;
+        this.resetGrid();
+        this.isLoading = false;
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudieron cargar las sedes.',
+        });
       },
     });
   }
 
   onBuyingStationChange(): void {
+    const stationId = Number(this.filters.buyingStationId || 0);
+
     this.filters.operationId = null;
     this.operacionOptions = [];
+    this.currentPage = 1;
 
-    if (!this.filters.buyingStationId) return;
+    if (!stationId) {
+      this.resetGrid();
+      return;
+    }
 
-    this.weighingService
-      .getOperationsByStation(this.filters.buyingStationId)
-      .subscribe({
-        next: (rows) => {
-          this.operacionOptions = Array.isArray(rows) ? rows : [];
-        },
-        error: (err) => {
-          console.error('Error cargando operaciones por sede', err);
-          this.operacionOptions = [];
-        },
-      });
+    this.loadOperationsByStation(stationId, true);
+  }
+
+  private loadOperationsByStation(
+    stationId: number,
+    autoLoadTickets: boolean = true
+  ): void {
+    this.isLoading = true;
+
+    this.weighingService.getOperationsByStation(stationId).subscribe({
+      next: (rows) => {
+        this.operacionOptions = Array.isArray(rows) ? rows : [];
+
+        if (!this.operacionOptions.length) {
+          this.filters.operationId = null;
+          this.resetGrid();
+          this.isLoading = false;
+          return;
+        }
+
+        // Seleccionar automáticamente la primera operación
+        this.filters.operationId = Number(this.operacionOptions[0].id);
+
+        if (autoLoadTickets) {
+          this.loadScaleTickets();
+        } else {
+          this.isLoading = false;
+        }
+      },
+      error: (err) => {
+        console.error('Error cargando operaciones por sede', err);
+        this.operacionOptions = [];
+        this.filters.operationId = null;
+        this.resetGrid();
+        this.isLoading = false;
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudieron cargar las operaciones de la sede seleccionada.',
+        });
+      },
+    });
+  }
+
+  onOperationChange(): void {
+    this.currentPage = 1;
+    this.loadScaleTickets();
   }
 
   onTicketIdInput(value: string): void {
@@ -140,60 +207,78 @@ export class PesadaList implements OnInit {
   }
 
   private loadScaleTickets(): void {
-  if (!this.validateDateRange()) return;
+    if (!this.validateDateRange()) return;
 
-  this.isLoading = true;
-  this.actionsOpenTicket = null;
+    const buyingStationId = Number(this.filters.buyingStationId || 0);
+    const operationId = Number(this.filters.operationId || 0);
 
-  const query: any = {
-    page: this.currentPage,
-    pageSize: this.pageSize,
-    sortBy: this.sortBy,
-    sortDirection: this.sortDirection,
-  };
-
-  if (this.filters.buyingStationId != null) {
-    query.buyingStationId = this.filters.buyingStationId;
-  }
-
-  if (this.filters.operationId != null) {
-    query.operationId = this.filters.operationId;
-  }
-
-  if (this.filters.ticketId) {
-    query.ticketId = Number(this.filters.ticketId);
-  }
-
-  const creationDateFrom = this.toApiStartOfDay(this.filters.fechaDesde);
-  const creationDateTo = this.toApiEndOfDay(this.filters.fechaHasta);
-
-  if (creationDateFrom) query.creationDateFrom = creationDateFrom;
-  if (creationDateTo) query.creationDateTo = creationDateTo;
-
-  this.weighingService.listScaleTickets(query).subscribe({
-    next: (resp: any) => {
-      const items = Array.isArray(resp?.items) ? resp.items : [];
-
-      this.data = items.map((item: any) => this.mapRow(item));
-      this.totalRecords = Number(resp?.total ?? 0);
-      this.currentPage = Number(resp?.page ?? this.currentPage);
-      this.pageSize = Number(resp?.pageSize ?? this.pageSize);
-      this.totalPages =
-        this.totalRecords > 0
-          ? Math.ceil(this.totalRecords / this.pageSize)
-          : 0;
-
+    if (!buyingStationId || !operationId) {
+      this.resetGrid();
       this.isLoading = false;
-    },
-    error: (err) => {
-      console.error('Error listando tickets de pesada', err);
-      this.data = [];
-      this.totalRecords = 0;
-      this.totalPages = 0;
-      this.isLoading = false;
-    },
-  });
-}
+      return;
+    }
+
+    this.isLoading = true;
+    this.actionsOpenTicket = null;
+
+    const query: any = {
+      buyingStationId,
+      operationId,
+      page: this.currentPage,
+      pageSize: this.pageSize,
+      sortBy: this.sortBy,
+      sortDirection: this.sortDirection,
+    };
+
+    if (this.filters.ticketId) {
+      query.ticketId = Number(this.filters.ticketId);
+    }
+
+    const creationDateFrom = this.toApiStartOfDay(this.filters.fechaDesde);
+    const creationDateTo = this.toApiEndOfDay(this.filters.fechaHasta);
+
+    if (creationDateFrom) query.creationDateFrom = creationDateFrom;
+    if (creationDateTo) query.creationDateTo = creationDateTo;
+
+    this.weighingService
+      .listScaleTickets(query)
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: (resp: any) => {
+          const items = Array.isArray(resp?.items) ? resp.items : [];
+
+          this.data = items.map((item: any) => this.mapRow(item));
+          this.totalRecords = Number(resp?.total ?? 0);
+          this.currentPage = Number(resp?.page ?? this.currentPage);
+          this.pageSize = Number(resp?.pageSize ?? this.pageSize);
+          this.totalPages =
+            this.totalRecords > 0
+              ? Math.ceil(this.totalRecords / this.pageSize)
+              : 0;
+
+          if (this.totalPages > 0 && this.currentPage > this.totalPages) {
+            this.currentPage = this.totalPages;
+          }
+        },
+        error: (err) => {
+          console.error('Error listando tickets de pesada', err);
+          this.resetGrid();
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo cargar la lista de tickets de pesada.',
+          });
+        },
+      });
+  }
+
+  private resetGrid(): void {
+    this.data = [];
+    this.totalRecords = 0;
+    this.totalPages = 0;
+    this.currentPage = 1;
+  }
 
   private mapRow(item: any): PesadaRow {
     const id = Number(item?.id ?? 0);
@@ -203,11 +288,9 @@ export class PesadaList implements OnInit {
       ticketLabel: `TKP-${String(id).padStart(6, '0')}`,
       creationDate: item?.creationDate ?? null,
       isActive: Boolean(item?.isActive),
-
       grossWeight: this.toNumber(item?.grossWeight),
       tareWeight: this.toNumber(item?.tareWeight),
       netWeight: this.toNumber(item?.netWeight),
-
       buyingStationName: String(
         item?.buyingStationName ?? item?.buyingStation?.name ?? '—'
       ),
@@ -217,7 +300,6 @@ export class PesadaList implements OnInit {
       scaleTicketStatusName: String(
         item?.scaleTicketStatusName ?? item?.status?.name ?? '—'
       ),
-
       actions: this.normalizeActions(item?.actions),
       raw: item,
     };
@@ -271,15 +353,25 @@ export class PesadaList implements OnInit {
     }
 
     range.push(1);
-    if (this.currentPage > 4) range.push(-1);
+
+    if (this.currentPage > 4) {
+      range.push(-1);
+    }
 
     const start = Math.max(2, this.currentPage - 2);
     const end = Math.min(total - 1, this.currentPage + 2);
 
-    for (let i = start; i <= end; i++) range.push(i);
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
 
-    if (this.currentPage < total - 3) range.push(-2);
-    if (!range.includes(total)) range.push(total);
+    if (this.currentPage < total - 3) {
+      range.push(-2);
+    }
+
+    if (!range.includes(total)) {
+      range.push(total);
+    }
 
     return range;
   }
@@ -344,7 +436,10 @@ export class PesadaList implements OnInit {
     }
 
     const date = new Date(value);
-    if (isNaN(date.getTime())) return String(value);
+
+    if (isNaN(date.getTime())) {
+      return String(value);
+    }
 
     const dd = String(date.getDate()).padStart(2, '0');
     const mo = String(date.getMonth() + 1).padStart(2, '0');
@@ -419,13 +514,11 @@ export class PesadaList implements OnInit {
 
   private normalizeEstadoTicket(raw?: string): EstadoTicket | undefined {
     const e = (raw || '').toUpperCase().trim();
-    if (!e) return undefined;
 
+    if (!e) return undefined;
     if (e.includes('ABIER')) return 'EN REGISTRO' as EstadoTicket;
     if (e.includes('CERR')) return 'CERRADA' as EstadoTicket;
-    if (e.includes('CANCEL') || e.includes('ANUL')) {
-      return 'ANULADA' as EstadoTicket;
-    }
+    if (e.includes('CANCEL') || e.includes('ANUL')) return 'ANULADA' as EstadoTicket;
     if (e.includes('PEND')) return 'EVALUACION' as EstadoTicket;
 
     return undefined;
@@ -438,7 +531,6 @@ export class PesadaList implements OnInit {
         ruc: '20521137682',
         direccion: '—',
       },
-
       ticket: {
         numeroTicket: row.ticketLabel,
         fechaEmision: row.creationDate ?? '',
@@ -446,14 +538,11 @@ export class PesadaList implements OnInit {
         operacion: row.operationName,
         estado: this.normalizeEstadoTicket(row.scaleTicketStatusName),
       },
-
       origenDestino: {
         sedeOrigen: '—',
         sedeDestino: row.buyingStationName || '—',
       },
-
       documentos: [],
-
       transporte: {
         transportista: {
           razonSocial: '—',
@@ -470,7 +559,6 @@ export class PesadaList implements OnInit {
           trailer: '—',
         },
       },
-
       resumen: {
         cantidadItems: 1,
         totalPesoBrutoKg: Number(row.grossWeight ?? 0),
@@ -479,7 +567,6 @@ export class PesadaList implements OnInit {
         ajusteKg: 0,
         totalPesoNetoKg: Number(row.netWeight ?? 0),
       },
-
       pesadas: [
         {
           item: 1,
@@ -497,11 +584,13 @@ export class PesadaList implements OnInit {
 
   generarPdf(row: PesadaRow): void {
     if (this.downloading) return;
+
     this.downloading = true;
 
     try {
       const report = this.buildReportFromRow(row);
       const blob = this.pdf.generate(report);
+
       this.pdf.download(blob, `TICKET_${row.ticketLabel}.pdf`);
 
       Swal.fire({
@@ -534,7 +623,7 @@ export class PesadaList implements OnInit {
 
   private toNumber(value: any): number {
     const n = Number(value);
-    return isNaN(n) ? 0 : n;
+    return Number.isNaN(n) ? 0 : n;
   }
 
   private normalizeNumericString(value: any): string {

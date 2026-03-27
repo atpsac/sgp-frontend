@@ -969,7 +969,7 @@ export class WeighingService {
      GET /scale-tickets
      ========================================================= */
 
-  listScaleTickets(
+listScaleTickets(
   query: any = {}
 ): Observable<Paginated<ScaleTicketListItem>> {
   let params = new HttpParams();
