@@ -5,6 +5,7 @@
     class="tara-add-close"
     (click)="close()"
     [disabled]="loading"
+    aria-label="Cerrar"
   >
     &times;
   </button>
@@ -57,7 +58,7 @@
         </div>
       </div>
 
-      <!-- Fila de 3 columnas (4+4+4) -->
+      <!-- Fila de 3 columnas -->
       <div class="tara-add-row-3">
         <!-- Código -->
         <div class="tara-col-4">
@@ -69,7 +70,6 @@
             type="text"
             class="tara-add-control"
             formControlName="codigo"
-            placeholder="Ej: SPC"
             readonly
           />
         </div>
@@ -85,8 +85,13 @@
             step="0.01"
             class="tara-add-control tara-add-control--number"
             formControlName="taraPorEmpaqueKg"
-            readonly
+            [readonly]="!isEstimatedOrigin"
+            [class.is-invalid]="f['taraPorEmpaqueKg'].touched && f['taraPorEmpaqueKg'].invalid"
+            [attr.title]="isEstimatedOrigin ? 'Editable (ESTIMATED)' : 'Automática'"
           />
+          <div class="tara-add-hint" *ngIf="isEstimatedOrigin">
+            Ingresa la tara estimada por empaque (el sistema la validará al resolver).
+          </div>
         </div>
 
         <!-- Cantidad -->
@@ -124,12 +129,11 @@
           type="text"
           class="tara-add-control"
           formControlName="descripcion"
-          placeholder="Descripción del empaque"
           readonly
         />
       </div>
 
-      <!-- Fila inferior: botones + Tara total -->
+      <!-- Fila inferior -->
       <div class="col-12 tara-add-bottom">
         <!-- Botones -->
         <div class="tara-add-footer">
@@ -160,7 +164,9 @@
         <!-- Tarjeta Tara total -->
         <div class="tara-add-total-card">
           <span class="tara-add-total-label">Tara total</span>
+
           <div class="tara-add-total-value">
+            <span *ngIf="loadingResolve" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
             {{ (form.get('taraKg')?.value ?? 0) | number : '1.2-2' }}
             <span class="tara-add-total-unit">kg</span>
           </div>

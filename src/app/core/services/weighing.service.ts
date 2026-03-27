@@ -59,6 +59,21 @@ export interface CreateScaleTicketPayload {
   }>;
 }
 
+
+/* =========================================================
+   NUEVO: TOTALES DEL DETALLE DEL TICKET
+   GET /scale-tickets/{ticketId}/details/totals
+   ========================================================= */
+
+export interface ScaleTicketDetailsTotals {
+  scaleTicketId?: number;
+  cantidadItems: number;
+  totalPesoBruto: number;
+  totalTara: number;
+  subtotalPesoNeto: number;
+}
+
+
 export interface ScaleTicketCreated {
   id?: number;
   scaleTicketId?: number;
@@ -207,9 +222,9 @@ export interface PackagingType {
   id: number;
   code: string;
   name: string;
-  unitTareWeight: number;     // viene como string, lo convertimos a number
+  unitTareWeight: number;
   description?: string;
-  unitOrigin?: string;        // ej: "UNIT"
+  unitOrigin?: string;
 }
 
 /* =========================================================
@@ -240,7 +255,7 @@ export interface Paginated<T> {
 }
 
 export interface ScaleTicketDetailPackagingQuery {
-  page?: number; // 1-based
+  page?: number;
   pageSize?: number;
   sortBy?: string;
   sortDirection?: SortDirection;
@@ -276,10 +291,37 @@ export interface ScaleTicketDetail {
 }
 
 export interface ScaleTicketDetailsQuery {
-  page?: number; // 1-based
+  page?: number;
   pageSize?: number;
-  sort?: string; // ej: 'grossWeight'
-  sortDirection?: SortDirection; // 'asc' | 'desc'
+  sort?: string;
+  sortDirection?: SortDirection;
+}
+
+/* =========================================================
+   NUEVO: TOTALES DEL DETALLE DEL TICKET
+   GET /scale-tickets/{ticketId}/details/totals
+   ========================================================= */
+
+export interface ScaleTicketDetailsTotals {
+  totalGrossWeight: number;
+  totalTareWeight: number;
+  totalNetWeight: number;
+  totalTareAdjustment?: number;
+  totalRecords?: number;
+  [key: string]: any;
+}
+
+/* =========================================================
+   NUEVO: CERRAR TICKET
+   PATCH /scale-tickets/{ticketId}/close
+   ========================================================= */
+
+export interface ScaleTicketClosed {
+  id?: number;
+  scaleTicketId?: number;
+  status?: string;
+  message?: string;
+  [key: string]: any;
 }
 
 /* =========================================================
@@ -290,9 +332,9 @@ export interface ScaleTicketDetailsQuery {
 
 export interface WeighingType {
   weighingTypeId: number;
-  name: string;        // "PALLET+PRODUCT"
-  code: string;        // "PPR"
-  description: string; // "USADO PARA..."
+  name: string;
+  code: string;
+  description: string;
   isTest: boolean;
 }
 
@@ -316,13 +358,12 @@ export class WeighingService {
   private auth = inject(AuthService);
 
   /* =========================================================
-     AUTH HEADER (si no hay token aquí, se asume interceptor)
+     AUTH HEADER
      ========================================================= */
 
   private readAccessToken(): string | null {
     const a: any = this.auth as any;
 
-    // Intenta nombres comunes (sin romper compilación)
     const token =
       a?.getAccessToken?.() ??
       a?.getToken?.() ??
@@ -336,7 +377,7 @@ export class WeighingService {
 
   private withAuthHeader() {
     const token = this.readAccessToken();
-    if (!token) return {}; // si tienes interceptor, esto es suficiente
+    if (!token) return {};
     return {
       headers: new HttpHeaders({
         Authorization: `Bearer ${token}`,
@@ -353,29 +394,44 @@ export class WeighingService {
     if (!user?.id) throw new Error('User not found in AuthService');
 
     return this.http
-      .get<ApiResponse<UserStationsData>>(`users/${user.id}/buying-stations`, this.withAuthHeader())
+      .get<ApiResponse<UserStationsData>>(
+        `users/${user.id}/buying-stations`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data?.[0]?.stations ?? []));
   }
 
   getNonPrincipalBuyingStations(): Observable<BuyingStation[]> {
     return this.http
-      .get<ApiResponse<BuyingStation>>(`buying-stations/non-principal`, this.withAuthHeader())
+      .get<ApiResponse<BuyingStation>>(
+        `buying-stations/non-principal`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data ?? []));
   }
 
   getPrincipalBuyingStation(): Observable<BuyingStation> {
     return this.http
-      .get<ApiResponse<BuyingStation>>(`buying-stations/principal`, this.withAuthHeader())
+      .get<ApiResponse<BuyingStation>>(
+        `buying-stations/principal`,
+        this.withAuthHeader()
+      )
       .pipe(
         map((res) =>
-          requireFirstRow(res, 'No se encontró la sede principal en la respuesta del backend.')
+          requireFirstRow(
+            res,
+            'No se encontró la sede principal en la respuesta del backend.'
+          )
         )
       );
   }
 
   getOperationsByStation(stationId: number): Observable<OperationStation[]> {
     return this.http
-      .get<ApiResponse<OperationStation>>(`operations/station/${stationId}`, this.withAuthHeader())
+      .get<ApiResponse<OperationStation>>(
+        `operations/station/${stationId}`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data ?? []));
   }
 
@@ -400,13 +456,18 @@ export class WeighingService {
       )
       .pipe(
         map((res) =>
-          requireFirstRow(res, 'No se encontraron documentos para la operación especificada.')
+          requireFirstRow(
+            res,
+            'No se encontraron documentos para la operación especificada.'
+          )
         )
       );
   }
 
   getDocumentTypesByOperation(operationId: number): Observable<DocumentType[]> {
-    return this.getOperationDocuments(operationId).pipe(map((od) => od.documents ?? []));
+    return this.getOperationDocuments(operationId).pipe(
+      map((od) => od.documents ?? [])
+    );
   }
 
   /* =========================================================
@@ -421,19 +482,28 @@ export class WeighingService {
 
   getCarrierDrivers(carrierId: number): Observable<CarrierDriver[]> {
     return this.http
-      .get<ApiResponse<CarrierDriver>>(`carriers/${carrierId}/drivers`, this.withAuthHeader())
+      .get<ApiResponse<CarrierDriver>>(
+        `carriers/${carrierId}/drivers`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data ?? []));
   }
 
   getCarrierTrailers(carrierId: number): Observable<CarrierTrailer[]> {
     return this.http
-      .get<ApiResponse<CarrierTrailer>>(`carriers/${carrierId}/trailers`, this.withAuthHeader())
+      .get<ApiResponse<CarrierTrailer>>(
+        `carriers/${carrierId}/trailers`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data ?? []));
   }
 
   getCarrierTrucks(carrierId: number): Observable<CarrierTruck[]> {
     return this.http
-      .get<ApiResponse<CarrierTruck>>(`carriers/${carrierId}/trucks`, this.withAuthHeader())
+      .get<ApiResponse<CarrierTruck>>(
+        `carriers/${carrierId}/trucks`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data ?? []));
   }
 
@@ -441,10 +511,23 @@ export class WeighingService {
      TICKET CABECERA
      ========================================================= */
 
-  createScaleTicketHeader(payload: CreateScaleTicketPayload): Observable<ScaleTicketCreated> {
+  createScaleTicketHeader(
+    payload: CreateScaleTicketPayload
+  ): Observable<ScaleTicketCreated> {
     return this.http
-      .post<ApiResponse<ScaleTicketCreated>>(`scale-tickets`, payload, this.withAuthHeader())
-      .pipe(map((res) => requireFirstRow(res, 'No se recibió data al crear el ticket de balanza.')));
+      .post<ApiResponse<ScaleTicketCreated>>(
+        `scale-tickets`,
+        payload,
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al crear el ticket de balanza.'
+          )
+        )
+      );
   }
 
   /* =========================================================
@@ -453,7 +536,10 @@ export class WeighingService {
 
   getProductsByOperation(operationId: number): Observable<ProductByOperation[]> {
     return this.http
-      .get<ApiResponse<ProductByOperation>>(`products/operation/${operationId}`, this.withAuthHeader())
+      .get<ApiResponse<ProductByOperation>>(
+        `weighing-types/${operationId}/products`,
+        this.withAuthHeader()
+      )
       .pipe(map((res) => res?.data ?? []));
   }
 
@@ -478,7 +564,10 @@ export class WeighingService {
      POST /scale-tickets/{ticketId}/measurements
      ========================================================= */
 
-  createMeasurement(ticketId: number, payload: CreateMeasurementPayload): Observable<MeasurementCreated> {
+  createMeasurement(
+    ticketId: number,
+    payload: CreateMeasurementPayload
+  ): Observable<MeasurementCreated> {
     if (!ticketId) throw new Error('ticketId inválido para crear la pesada.');
 
     return this.http
@@ -487,40 +576,61 @@ export class WeighingService {
         payload,
         this.withAuthHeader()
       )
-      .pipe(map((res) => requireFirstRow(res, 'No se recibió data al crear el detalle de pesada.')));
+      .pipe(
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al crear el detalle de pesada.'
+          )
+        )
+      );
   }
 
   /* =========================================================
      NUEVO: TIPOS DE EMPAQUE
-     GET /packaging-types
+     GET /scale-tickets-details/{scaleTicketDetailId}/packaging-types
      ========================================================= */
 
-getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
-  return this.http
-    .get<ApiResponse<any>>(
-      `scale-tickets-details/${scaleTicketDetailId}/packaging-types`,
-      this.withAuthHeader()
-    )
-    .pipe(
-      map((res) => (res?.data ?? []).map((x: any) => ({
-        id: Number(x?.id ?? 0),
-        code: String(x?.code ?? ''),
-        name: String(x?.name ?? ''),
-        unitTareWeight: Number(x?.unitTareWeight ?? 0),
-        description: x?.description ?? null,
-        unitOrigin: x?.unitOrigin ?? null,
-      } as PackagingType)))
-    );
-}
+  getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
+    return this.http
+      .get<ApiResponse<any>>(
+        `scale-tickets-details/${scaleTicketDetailId}/packaging-types`,
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res) =>
+          (res?.data ?? []).map(
+            (x: any) =>
+              ({
+                id: Number(x?.id ?? 0),
+                code: String(x?.code ?? ''),
+                name: String(x?.name ?? ''),
+                unitTareWeight: Number(x?.unitTareWeight ?? 0),
+                description: x?.description ?? null,
+                unitOrigin: x?.unitOrigin ?? null,
+              }) as PackagingType
+          )
+        )
+      );
+  }
+
   /* =========================================================
-     NUEVO: CREAR TARA (ASOCIAR EMPAQUE A DETALLE)
+     NUEVO: CREAR TARA
      POST /scale-ticket-details/packaging-types
      ========================================================= */
 
   createTare(payload: CreateTarePayload): Observable<any> {
     return this.http
-      .post<ApiResponse<any>>(`scale-ticket-details/packaging-types`, payload, this.withAuthHeader())
-      .pipe(map((res) => requireFirstRow(res, 'No se recibió data al registrar la tara.')));
+      .post<ApiResponse<any>>(
+        `scale-ticket-details/packaging-types`,
+        payload,
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res) =>
+          requireFirstRow(res, 'No se recibió data al registrar la tara.')
+        )
+      );
   }
 
   /* =========================================================
@@ -535,9 +645,13 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
 
     let params = new HttpParams();
     if (query.page != null) params = params.set('page', String(query.page));
-    if (query.pageSize != null) params = params.set('pageSize', String(query.pageSize));
+    if (query.pageSize != null) {
+      params = params.set('pageSize', String(query.pageSize));
+    }
     if (query.sortBy) params = params.set('sortBy', query.sortBy);
-    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+    if (query.sortDirection) {
+      params = params.set('sortDirection', query.sortDirection);
+    }
 
     return this.http
       .get<ApiResponse<Paginated<ScaleTicketDetailPackaging>>>(
@@ -545,7 +659,12 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
         { params, ...(this.withAuthHeader() as any) }
       )
       .pipe(
-        map((res: any) => requireFirstRow(res, 'No se recibió data al listar taras del detalle.')),
+        map((res: any) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al listar taras del detalle.'
+          )
+        ),
         map((row: any) => ({
           items: row.items ?? [],
           total: Number(row.total ?? 0),
@@ -567,7 +686,14 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
         `scale-ticket-details-packaging-types/scale-ticket-details/${scaleTicketDetailsId}/totals`,
         this.withAuthHeader()
       )
-      .pipe(map((res) => requireFirstRow(res, 'No se recibió data al obtener totales de tara.')));
+      .pipe(
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al obtener totales de tara.'
+          )
+        )
+      );
   }
 
   /* =========================================================
@@ -578,21 +704,35 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
     ticketId: number,
     query: ScaleTicketDetailsQuery = {}
   ): Observable<Paginated<ScaleTicketDetail>> {
-    if (!ticketId) throw new Error('ticketId inválido para listar detalles.');
+    if (!ticketId) {
+      throw new Error('ticketId inválido para listar detalles.');
+    }
 
     let params = new HttpParams();
     if (query.page != null) params = params.set('page', String(query.page));
-    if (query.pageSize != null) params = params.set('pageSize', String(query.pageSize));
+    if (query.pageSize != null) {
+      params = params.set('pageSize', String(query.pageSize));
+    }
     if (query.sort) params = params.set('sort', query.sort);
-    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+    if (query.sortDirection) {
+      params = params.set('sortDirection', query.sortDirection);
+    }
 
     return this.http
-      .get<ApiResponse<Paginated<ScaleTicketDetail>>>(`scale-tickets/${ticketId}/details`, {
-        params,
-        ...(this.withAuthHeader() as any),
-      })
+      .get<ApiResponse<Paginated<ScaleTicketDetail>>>(
+        `scale-tickets-details/${ticketId}`,
+        {
+          params,
+          ...(this.withAuthHeader() as any),
+        }
+      )
       .pipe(
-        map((res: any) => requireFirstRow(res, 'No se recibió data al listar los detalles del ticket.')),
+        map((res: any) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al listar los detalles del ticket.'
+          )
+        ),
         map((row: any) => ({
           items: row.items ?? [],
           total: Number(row.total ?? 0),
@@ -603,12 +743,100 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
   }
 
   /* =========================================================
+     ✅ NUEVO: TOTALES DE DETALLES DEL TICKET
+     GET /scale-tickets/{ticketId}/details/totals
+     ========================================================= */
+
+  getScaleTicketDetailsTotals(ticketId: number): Observable<ScaleTicketDetailsTotals> {
+  if (!ticketId) {
+    throw new Error('ticketId inválido para obtener totales del detalle.');
+  }
+
+  return this.http
+    .get<ApiResponse<any>>(
+      `scale-tickets/${ticketId}/details/totals`,
+      this.withAuthHeader()
+    )
+    .pipe(
+      map((res) =>
+        requireFirstRow(
+          res,
+          'No se recibió data al obtener los totales del detalle del ticket.'
+        )
+      ),
+      map((row: any) => ({
+        ...row,
+        scaleTicketId: Number(row?.scaleTicketId ?? ticketId),
+        cantidadItems: Number(
+          row?.cantidadItems ??
+          row?.quantity ??
+          row?.totalItems ??
+          row?.itemCount ??
+          row?.totalRecords ??
+          row?.totalActiveRecords ??
+          0
+        ),
+        totalPesoBruto: Number(
+          row?.totalPesoBruto ??
+          row?.grossWeightTotal ??
+          row?.totalGrossWeight ??
+          row?.grossTotal ??
+          0
+        ),
+        totalTara: Number(
+          row?.totalTara ??
+          row?.tareWeightTotal ??
+          row?.totalTareWeight ??
+          row?.tareTotal ??
+          0
+        ),
+        subtotalPesoNeto: Number(
+          row?.subtotalPesoNeto ??
+          row?.totalPesoNeto ??
+          row?.netWeightTotal ??
+          row?.totalNetWeight ??
+          row?.netTotal ??
+          0
+        ),
+      }))
+    );
+}
+
+  /* =========================================================
+     ✅ NUEVO: CERRAR TICKET DE BALANZA
+     PATCH /scale-tickets/{ticketId}/close
+     ========================================================= */
+
+  closeScaleTicket(ticketId: number): Observable<ScaleTicketClosed> {
+    if (!ticketId) {
+      throw new Error('ticketId inválido para cerrar el ticket.');
+    }
+
+    return this.http
+      .patch<ApiResponse<ScaleTicketClosed>>(
+        `scale-tickets/${ticketId}/close`,
+        {},
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al cerrar el ticket de balanza.'
+          )
+        )
+      );
+  }
+
+  /* =========================================================
      ✅ NUEVO: LISTAR TIPOS DE PESADA
      GET /scales/{scalesId}/weighing-types
      ========================================================= */
 
   getWeighingTypes(scalesId: number): Observable<WeighingType[]> {
-    if (!scalesId) throw new Error('scalesId inválido para listar tipos de pesada.');
+    if (!scalesId) {
+      throw new Error('scalesId inválido para listar tipos de pesada.');
+    }
 
     return this.http
       .get<ApiResponse<WeighingType>>(
@@ -623,11 +851,15 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
      POST /scales/{scalesId}/weighings/{weighingTypeId}/initialize
      ========================================================= */
 
-  initializeScale(scalesId: number, weighingTypeId: number): Observable<InitializedDevice> {
+  initializeScale(
+    scalesId: number,
+    weighingTypeId: number
+  ): Observable<InitializedDevice> {
     if (!scalesId) throw new Error('scalesId inválido para inicializar.');
-    if (!weighingTypeId) throw new Error('weighingTypeId inválido para inicializar.');
+    if (!weighingTypeId) {
+      throw new Error('weighingTypeId inválido para inicializar.');
+    }
 
-    // No requiere body según tu ejemplo (POST vacío)
     return this.http
       .post<ApiResponse<InitializeScaleRow>>(
         `scales/${scalesId}/weighings/${weighingTypeId}/initialize`,
@@ -635,8 +867,35 @@ getPackagingTypes(scaleTicketDetailId: number): Observable<PackagingType[]> {
         this.withAuthHeader()
       )
       .pipe(
-        map((res) => requireFirstRow(res, 'No se recibió data al inicializar la balanza.')),
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al inicializar la balanza.'
+          )
+        ),
         map((row) => row.device)
+      );
+  }
+
+  resolvePackagingTare(scaleTicketDetailId: number, payload: any) {
+    if (!scaleTicketDetailId) {
+      throw new Error(
+        'scaleTicketDetailId inválido para resolver tara de empaque.'
+      );
+    }
+
+    return this.http
+      .post<any>(
+        `scale-tickets-details/${scaleTicketDetailId}/resolve-packaging-tare`,
+        payload,
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res: any) => {
+          const d = res?.data;
+          if (Array.isArray(d)) return d[0] ?? null;
+          return d ?? null;
+        })
       );
   }
 }

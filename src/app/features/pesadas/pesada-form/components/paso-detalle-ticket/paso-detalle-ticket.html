@@ -8,91 +8,82 @@
     <div class="alert alert-warning mt-2 mb-0" *ngIf="locked">
       El ticket está en proceso de guardado. Espera un momento para continuar.
     </div>
+
+    <div class="alert alert-danger mt-2 mb-0" *ngIf="detailsError">
+      {{ detailsError }}
+    </div>
   </div>
 
-  <button
-    type="button"
-    class="ux-btn ux-btn--green"
-    (click)="onAdd()"
-    [disabled]="locked"
-  >
-    <span class="material-symbols-rounded">add</span>
-    <span>Agregar pesada</span>
-  </button>
+  <div class="d-flex gap-2">
+    <!--
+    <button
+      type="button"
+      class="ux-btn ux-btn--ghost"
+      (click)="reloadDetails()"
+      [disabled]="locked || loadingDetails"
+      title="Refrescar"
+    >
+      <span class="material-symbols-rounded">refresh</span>
+      <span>{{ loadingDetails ? 'Cargando…' : 'Refrescar' }}</span>
+    </button>
+    -->
+
+    <button
+      type="button"
+      class="ux-btn ux-btn--green"
+      (click)="onAdd()"
+      [disabled]="locked"
+    >
+      <span class="material-symbols-rounded">add</span>
+      <span>Agregar pesada</span>
+    </button>
+  </div>
 </div>
 
 <!-- =========================
-     CABECERA (6 inputs)
+     CABECERA TOTALES
 ========================= -->
 <div class="totals-bar" [formGroup]="formGroup">
   <div class="row g-3 align-items-end">
-    <!-- 1 -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3">
       <label class="total-label mb-1">Cantidad ítems</label>
       <input
         type="text"
         class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
-        [value]="(totales?.cantidadItems ?? 0) | number: '2.0-0'"
+        [value]="(viewTotals?.cantidadItems ?? 0) | number: '2.0-0'"
         disabled
         readonly
       />
     </div>
 
-    <!-- 2 -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-      <label class="total-label mb-1">Cantidad pallets</label>
-      <input
-        type="text"
-        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
-        [value]="(totales?.cantidadPallets ?? totales?.cantidadPallet ?? 0) | number: '2.0-0'"
-        disabled
-        readonly
-      />
-    </div>
-
-    <!-- 3 -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-      <label class="total-label mb-1">Peso pallets (Kg)</label>
-      <input
-        type="text"
-        class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
-        [value]="(totales?.pesoPalletsKg ?? 0) | number: '1.2-2'"
-        disabled
-        readonly
-      />
-    </div>
-
-    <!-- 4 -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3">
       <label class="total-label mb-1">Total peso bruto (Kg)</label>
       <input
         type="text"
         class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
-        [value]="(totales?.totalPesoBruto ?? 0) | number: '1.2-2'"
+        [value]="(viewTotals?.totalPesoBruto ?? 0) | number: '1.2-2'"
         disabled
         readonly
       />
     </div>
 
-    <!-- 5 -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3">
       <label class="total-label mb-1">Total tara (Kg)</label>
       <input
         type="text"
         class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
-        [value]="(totales?.totalTara ?? 0) | number: '1.2-2'"
+        [value]="(viewTotals?.totalTara ?? 0) | number: '1.2-2'"
         disabled
         readonly
       />
     </div>
 
-    <!-- 6 -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3">
       <label class="total-label mb-1">Sub total peso neto (Kg)</label>
       <input
         type="text"
         class="form-control ux-input border-0 border-bottom rounded-0 bg-transparent px-0"
-        [value]="(totales?.subtotalPesoNeto ?? 0) | number: '1.2-2'"
+        [value]="(viewTotals?.subtotalPesoNeto ?? 0) | number: '1.2-2'"
         disabled
         readonly
       />
@@ -120,37 +111,49 @@
     </thead>
 
     <tbody>
-      <tr *ngFor="let p of pesadas; let i = index">
+      <tr *ngIf="loadingDetails">
+        <td colspan="12" class="text-center py-3">
+          Cargando detalles del ticket…
+        </td>
+      </tr>
+
+      <tr *ngFor="let p of rows; let i = index">
         <td class="ux-col-idx" [attr.data-label]="'Item'">
           {{ i + 1 | number: '2.0-0' }}
         </td>
-        <td [attr.data-label]="'Producto'">{{ p.producto }}</td>
-        <td [attr.data-label]="'Balanza'">{{ p.balanza }}</td>
-        <td [attr.data-label]="'Tipo-Pesada'">PALLET CON PRODUCTO</td>
+
+        <td [attr.data-label]="'Producto'">{{ p.producto || '-' }}</td>
+        <td [attr.data-label]="'Balanza'">{{ p.balanza || '-' }}</td>
+
+        <td [attr.data-label]="'Tipo-Pesada'">
+          {{ p.tipoPesadaLabel || '-' }}
+        </td>
 
         <td class="text-end" [attr.data-label]="'Peso bruto (Kg)'">
           {{ p.pesoBrutoKg | number: '1.2-2' }}
         </td>
+
         <td class="text-end" [attr.data-label]="'Tara (Kg)'">
           {{ p.taraTotalKg | number: '1.2-2' }}
         </td>
+
         <td class="text-end" [attr.data-label]="'Peso neto (Kg)'">
           {{ p.pesoNetoKg | number: '1.2-2' }}
         </td>
 
-        <td [attr.data-label]="'Observaciones'">{{ p.observaciones || '-' }}</td>
+        <td [attr.data-label]="'Observaciones'">
+          {{ p.observaciones || '-' }}
+        </td>
 
-        <!-- ✅ Requiere Tara (TEXTO) -->
         <td [attr.data-label]="'Requiere Tara'">
           <span
             class="ux-yesno"
-            [ngClass]="p.tieneTara ? 'ux-yesno--yes' : 'ux-yesno--no'"
+            [ngClass]="p.requiereTara ? 'ux-yesno--yes' : 'ux-yesno--no'"
           >
-            {{ p.tieneTara ? 'SI' : 'NO' }}
+            {{ p.requiereTara ? 'SI' : 'NO' }}
           </span>
         </td>
 
-        <!-- ✅ Tiene Tara (TEXTO) -->
         <td [attr.data-label]="'Tiene Tara'">
           <span
             class="ux-yesno"
@@ -174,6 +177,7 @@
 
         <td class="ux-col-actions" [attr.data-label]="'Acciones'">
           <button
+            *ngIf="p.requiereTara"
             type="button"
             class="ux-icon-btn ux-icon-btn--medium"
             (click)="onManageTaras(i)"
@@ -205,7 +209,7 @@
         </td>
       </tr>
 
-      <tr *ngIf="(pesadas?.length || 0) === 0">
+      <tr *ngIf="!loadingDetails && (rows?.length || 0) === 0">
         <td colspan="12" class="text-center py-3">
           Aún no se han registrado pesadas para este ticket.
         </td>

@@ -102,7 +102,6 @@
 
         <!-- PASO 5 -->
         <div *ngSwitchCase="5" class="step-panel">
-          <!-- opcional: si no hay id, no renderiza el hijo -->
           <ng-container *ngIf="headerTicketId; else noTicketId">
             <app-paso-detalle-ticket
               [formGroup]="detalleTicket"
