@@ -38,7 +38,7 @@ export interface PesadaDocumentoModel {
   pesoNetoKg: number;
 }
 
-/** ✅ Validador: Bruto >= Neto */
+/** Validador: Bruto >= Neto */
 function grossGteNetValidator(group: AbstractControl): ValidationErrors | null {
   const brutoCtrl = group.get('pesoBrutoKg');
   const netoCtrl = group.get('pesoNetoKg');
@@ -46,9 +46,12 @@ function grossGteNetValidator(group: AbstractControl): ValidationErrors | null {
   const bruto = Number(brutoCtrl?.value);
   const neto = Number(netoCtrl?.value);
 
-  // si alguno no está aún, no dispares este error (los required ya lo cubren)
-  if (brutoCtrl?.value == null || netoCtrl?.value == null || brutoCtrl?.value === '' || netoCtrl?.value === '') {
-    // limpia error de comparación si existía
+  if (
+    brutoCtrl?.value == null ||
+    netoCtrl?.value == null ||
+    brutoCtrl?.value === '' ||
+    netoCtrl?.value === ''
+  ) {
     if (netoCtrl?.errors?.['netGreaterThanGross']) {
       const { netGreaterThanGross, ...rest } = netoCtrl.errors || {};
       netoCtrl.setErrors(Object.keys(rest).length ? rest : null);
@@ -56,11 +59,9 @@ function grossGteNetValidator(group: AbstractControl): ValidationErrors | null {
     return null;
   }
 
-  // si no son números válidos, deja que Validators.min/required hagan su trabajo
   if (Number.isNaN(bruto) || Number.isNaN(neto)) return null;
 
   if (neto > bruto) {
-    // setear error en el neto (para pintar el input)
     const current = netoCtrl?.errors || {};
     if (!current['netGreaterThanGross']) {
       netoCtrl?.setErrors({ ...current, netGreaterThanGross: true });
@@ -68,7 +69,6 @@ function grossGteNetValidator(group: AbstractControl): ValidationErrors | null {
     return { grossGteNet: true };
   }
 
-  // si ya está bien, limpia ese error puntual sin borrar otros
   if (netoCtrl?.errors?.['netGreaterThanGross']) {
     const { netGreaterThanGross, ...rest } = netoCtrl.errors || {};
     netoCtrl.setErrors(Object.keys(rest).length ? rest : null);
@@ -100,7 +100,7 @@ export class PesadaDocumento implements OnInit {
   loadingPartners = false;
   loadingDocs = false;
 
-  /** ✅ activa bordes rojo/verde cuando intentas Guardar */
+  /** activa bordes rojo/verde cuando intentas Guardar */
   showValidation = false;
 
   constructor(
@@ -113,7 +113,8 @@ export class PesadaDocumento implements OnInit {
         idBusinessPartners: [null, Validators.required],
         idDocumentTypes: [null, Validators.required],
 
-        fechaDocumento: ['', Validators.required],
+        // ✅ por defecto hoy
+        fechaDocumento: [this.getTodayDateInputValue(), Validators.required],
 
         serie: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(4)]],
 
@@ -122,13 +123,13 @@ export class PesadaDocumento implements OnInit {
         pesoBrutoKg: [null, [Validators.required, Validators.min(0)]],
         pesoNetoKg: [null, [Validators.required, Validators.min(0)]],
       },
-      { validators: [grossGteNetValidator] }
+      // { validators: [grossGteNetValidator] }
     );
 
-    // ✅ Para que revalide comparación cuando cambie bruto/neto
     this.form.get('pesoBrutoKg')?.valueChanges.subscribe(() => {
       this.form.updateValueAndValidity({ emitEvent: false });
     });
+
     this.form.get('pesoNetoKg')?.valueChanges.subscribe(() => {
       this.form.updateValueAndValidity({ emitEvent: false });
     });
@@ -149,6 +150,14 @@ export class PesadaDocumento implements OnInit {
         pesoNetoKg: this.data.pesoNetoKg,
       });
       this.form.updateValueAndValidity({ emitEvent: false });
+    } else {
+      // ✅ asegura fecha actual en modo nuevo
+      this.form.patchValue(
+        {
+          fechaDocumento: this.getTodayDateInputValue(),
+        },
+        { emitEvent: false }
+      );
     }
   }
 
@@ -178,7 +187,9 @@ export class PesadaDocumento implements OnInit {
           } else {
             for (const op of data) {
               const docs = op?.documents;
-              if (Array.isArray(docs)) for (const d of docs) flatDocs.push(d);
+              if (Array.isArray(docs)) {
+                for (const d of docs) flatDocs.push(d);
+              }
             }
           }
         }
@@ -210,7 +221,9 @@ export class PesadaDocumento implements OnInit {
       const bp = this.businessPartners.find(
         (x: any) => String(x.companyName || '').trim().toLowerCase() === name
       );
-      if (bp?.id) this.form.patchValue({ idBusinessPartners: bp.id }, { emitEvent: false });
+      if (bp?.id) {
+        this.form.patchValue({ idBusinessPartners: bp.id }, { emitEvent: false });
+      }
     }
 
     if (!currentDT && this.documentTypes.length) {
@@ -225,22 +238,57 @@ export class PesadaDocumento implements OnInit {
       );
 
       const found = byCode ?? byName;
-      if (found?.id) this.form.patchValue({ idDocumentTypes: found.id }, { emitEvent: false });
+      if (found?.id) {
+        this.form.patchValue({ idDocumentTypes: found.id }, { emitEvent: false });
+      }
     }
   }
 
-  /** ✅ Forzar mayúsculas y cortar a 4 */
+  /** Forzar mayúsculas y cortar a 4 */
   onSerieInput(): void {
     const ctrl = this.form.get('serie');
-    const v = String(ctrl?.value || '').toUpperCase().replace(/\s+/g, '');
+    const v = String(ctrl?.value || '')
+      .toUpperCase()
+      .replace(/\s+/g, '');
     const cut = v.substring(0, 4);
-    if (cut !== ctrl?.value) ctrl?.setValue(cut, { emitEvent: false });
+
+    if (cut !== ctrl?.value) {
+      ctrl?.setValue(cut, { emitEvent: false });
+    }
+  }
+
+  private getTodayDateInputValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private toDateInputValue(value: string | Date): string {
-    if (!value) return '';
-    if (value instanceof Date) return value.toISOString().substring(0, 10);
-    return String(value).substring(0, 10);
+    if (!value) return this.getTodayDateInputValue();
+
+    if (value instanceof Date) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    const str = String(value).trim();
+
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+
+    const date = new Date(str);
+    if (isNaN(date.getTime())) return this.getTodayDateInputValue();
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   cancelar(): void {
@@ -274,14 +322,15 @@ export class PesadaDocumento implements OnInit {
   guardar(): void {
     this.showValidation = true;
 
-    // fuerza validación del grupo (incluye bruto>=neto)
     this.form.updateValueAndValidity({ emitEvent: false });
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
 
-      // mensaje específico si bruto < neto
-      if (this.form.errors?.['grossGteNet'] || this.form.get('pesoNetoKg')?.errors?.['netGreaterThanGross']) {
+      if (
+        this.form.errors?.['grossGteNet'] ||
+        this.form.get('pesoNetoKg')?.errors?.['netGreaterThanGross']
+      ) {
         this.showToastWarning('El peso bruto debe ser mayor o igual que el peso neto.');
       } else {
         this.showToastWarning('Completa los datos del documento antes de guardar.');
@@ -298,8 +347,12 @@ export class PesadaDocumento implements OnInit {
     const idBusinessPartners = Number(raw.idBusinessPartners);
     const idDocumentTypes = Number(raw.idDocumentTypes);
 
-    const bp = this.businessPartners.find((x: any) => Number(x.id) === idBusinessPartners);
-    const dt = this.documentTypes.find((x: any) => Number(x.id) === idDocumentTypes);
+    const bp = this.businessPartners.find(
+      (x: any) => Number(x.id) === idBusinessPartners
+    );
+    const dt = this.documentTypes.find(
+      (x: any) => Number(x.id) === idDocumentTypes
+    );
 
     if (!bp || !dt) {
       this.isSaving = false;
@@ -309,7 +362,11 @@ export class PesadaDocumento implements OnInit {
       return;
     }
 
-    const serie = String(raw.serie || '').trim().toUpperCase().substring(0, 4);
+    const serie = String(raw.serie || '')
+      .trim()
+      .toUpperCase()
+      .substring(0, 4);
+
     const numeroCorrelativo = String(raw.numeroCorrelativo || '').trim();
     const numeroDocumento = `${serie}-${numeroCorrelativo}`;
 

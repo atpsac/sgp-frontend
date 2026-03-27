@@ -7,7 +7,12 @@
       </p>
     </div>
 
-    <button type="button" class="btn-close" aria-label="Close" (click)="cancelar()"></button>
+    <button
+      type="button"
+      class="btn-close"
+      aria-label="Close"
+      (click)="cancelar()"
+    ></button>
   </div>
 
   <div class="modal-body pt-3">
@@ -20,7 +25,9 @@
       <div class="row g-3 mb-3">
         <!-- Socio de negocio -->
         <div class="col-lg-6 col-md-6 col-12">
-          <label class="form-label mb-1 small text-muted">Socio de negocio *</label>
+          <label class="form-label mb-1 small text-muted">
+            Socio de negocio *
+          </label>
 
           <div class="ux-select">
             <select class="form-select ux-input" formControlName="idBusinessPartners">
@@ -41,7 +48,9 @@
 
         <!-- Tipo documento -->
         <div class="col-lg-6 col-md-6 col-12">
-          <label class="form-label mb-1 small text-muted">Tipo de documento *</label>
+          <label class="form-label mb-1 small text-muted">
+            Tipo de documento *
+          </label>
 
           <div class="ux-select">
             <select class="form-select ux-input" formControlName="idDocumentTypes">
@@ -63,8 +72,14 @@
 
       <div class="row g-3 mb-3">
         <div class="col-lg-4 col-md-4 col-12">
-          <label class="form-label mb-1 small text-muted">Fecha del documento *</label>
-          <input type="date" class="form-control ux-input" formControlName="fechaDocumento" />
+          <label class="form-label mb-1 small text-muted">
+            Fecha del documento *
+          </label>
+          <input
+            type="date"
+            class="form-control ux-input"
+            formControlName="fechaDocumento"
+          />
           <small class="text-danger" *ngIf="isInvalid('fechaDocumento')">
             Selecciona la fecha del documento.
           </small>
@@ -142,7 +157,6 @@
             El peso neto no puede ser negativo.
           </small>
 
-          <!-- ✅ Regla Bruto >= Neto -->
           <small class="text-danger" *ngIf="hasError('pesoNetoKg', 'netGreaterThanGross')">
             El peso neto no puede ser mayor que el peso bruto.
           </small>
@@ -160,14 +174,23 @@
       Cancelar
     </button>
 
-    <button type="button" class="ux-btn ux-btn--primary" (click)="guardar()" [disabled]="isSaving">
+    <button
+      type="button"
+      class="ux-btn ux-btn--primary"
+      (click)="guardar()"
+      [disabled]="isSaving"
+    >
       <ng-container *ngIf="!isSaving">
         <span class="material-symbols-rounded">save</span>
         <span>Guardar</span>
       </ng-container>
 
       <ng-container *ngIf="isSaving">
-        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        <span
+          class="spinner-border spinner-border-sm me-1"
+          role="status"
+          aria-hidden="true"
+        ></span>
         <span>Guardando…</span>
       </ng-container>
     </button>

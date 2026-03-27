@@ -60,6 +60,63 @@ export interface CreateScaleTicketPayload {
 }
 
 
+
+
+
+/* =========================================================
+   NUEVO: LISTADO DE TICKETS DE BALANZA
+   GET /scale-tickets
+   ========================================================= */
+
+export interface ScaleTicketListItem {
+  id: number;
+
+  creationDate?: string | null;
+
+  idBuyingStations?: number | null;
+  idBuyingStationsOrigin?: number | null;
+  idBuyingStationsDestination?: number | null;
+  idOperations?: number | null;
+  idEmployees?: number | null;
+  idBusinessPartnersCarriers?: number | null;
+  idBusinessPartnersDrivers?: number | null;
+  idTrucks?: number | null;
+  idTrailers?: number | null;
+  idScaleTicketStatus?: number | null;
+
+  totalGrossWeight?: number | string | null;
+  totalTareWeight?: number | string | null;
+  totalTareAdjustment?: number | string | null;
+  totalNetWeight?: number | string | null;
+
+  buyingStation?: any;
+  operation?: any;
+  employee?: any;
+  carrier?: any;
+  driver?: any;
+  truck?: any;
+  trailer?: any;
+  status?: any;
+
+  [key: string]: any;
+}
+
+export interface ScaleTicketsQuery {
+  buyingStationId?: number | null;
+  operationId?: number | null;
+
+  page?: number;
+  pageSize?: number;
+
+  sortBy?: string;
+  sortDirection?: SortDirection;
+
+  creationDateFrom?: string | null;
+  creationDateTo?: string | null;
+}
+
+
+
 /* =========================================================
    NUEVO: TOTALES DEL DETALLE DEL TICKET
    GET /scale-tickets/{ticketId}/details/totals
@@ -898,4 +955,96 @@ export class WeighingService {
         })
       );
   }
+
+
+
+
+
+
+
+
+
+    /* =========================================================
+     NUEVO: LISTAR TICKETS DE BALANZA
+     GET /scale-tickets
+     ========================================================= */
+
+  listScaleTickets(
+  query: any = {}
+): Observable<Paginated<ScaleTicketListItem>> {
+  let params = new HttpParams();
+
+  if (query.buyingStationId != null) {
+    params = params.set('buyingStationId', String(query.buyingStationId));
+  }
+
+  if (query.ticketId != null && query.ticketId !== '') {
+    params = params.set('ticketId', String(query.ticketId));
+  }
+
+  if (query.operationId != null) {
+    params = params.set('operationId', String(query.operationId));
+  }
+
+  if (query.page != null) {
+    params = params.set('page', String(query.page));
+  }
+
+  if (query.pageSize != null) {
+    params = params.set('pageSize', String(query.pageSize));
+  }
+
+  if (query.sortBy) {
+    params = params.set('sortBy', String(query.sortBy));
+  }
+
+  if (query.sortDirection) {
+    params = params.set('sortDirection', String(query.sortDirection));
+  }
+
+  if (query.creationDateFrom) {
+    params = params.set('creationDateFrom', String(query.creationDateFrom));
+  }
+
+  if (query.creationDateTo) {
+    params = params.set('creationDateTo', String(query.creationDateTo));
+  }
+
+  return this.http
+    .get<ApiResponse<Paginated<ScaleTicketListItem>>>(
+      `scale-tickets`,
+      {
+        params,
+        ...(this.withAuthHeader() as any),
+      }
+    )
+    .pipe(
+      map((res: any) =>
+        requireFirstRow(
+          res,
+          'No se recibió data al listar los tickets de balanza.'
+        )
+      ),
+      map((row: any) => ({
+        items: row?.items ?? row?.rows ?? row?.data ?? [],
+        total: Number(
+          row?.total ??
+          row?.totalItems ??
+          row?.count ??
+          row?.recordsTotal ??
+          0
+        ),
+        page: Number(row?.page ?? query.page ?? 1),
+        pageSize: Number(
+          row?.pageSize ??
+          row?.limit ??
+          query.pageSize ??
+          10
+        ),
+      }))
+    );
+}
+
+
+
 }

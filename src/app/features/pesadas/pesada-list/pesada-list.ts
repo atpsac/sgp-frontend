@@ -1,43 +1,41 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
-import { TicketBalanzaPdfService } from '../../../core/pdf/ticket-balanza-pdf.service';
+import { finalize } from 'rxjs';
 
-// ✅ USA EL TYPE DEL MODEL (NO LO DECLARES EN ESTE COMPONENTE)
+import { TicketBalanzaPdfService } from '../../../core/pdf/ticket-balanza-pdf.service';
 import {
   TicketBalanzaReport,
-  // Si tu model exporta EstadoTicket, déjalo. Si no existe, borra esta línea.
   EstadoTicket,
 } from '../../../core/models/ticket-balanza-report.model';
 
-interface Pesada {
-  NumeroTicket: string;
-  SedeOperacion: string;
-  Fecha: string;
-  Operacion: string;
-  PesoBruto: number;
-  PesoTara: number;
-  PorcentajeMerma: number;
-  PesoNeto: number;
-  Estado: string;
-  FlagActivo: number;
+import {
+  WeighingService,
+  BuyingStation,
+  OperationStation,
+} from '../../../core/services/weighing.service';
 
-  Calidad?: string;
-  Chofer?: string;
-  Transporte?: string;
-  GRE?: string;
-  GI?: string;
-  PesoNetoSede?: number;
-  MermaKg?: number;
+type TicketActionCode = 'PRT' | 'EDT' | 'CAN';
+type SortDirection = 'asc' | 'desc';
 
-  SacosGrandes?: number;
-  SacosMedianos?: number;
-  SacosPequenos?: number;
-  SacosYute?: number;
-  TotalSacos?: number;
+interface PesadaRow {
+  id: number;
+  ticketLabel: string;
+  creationDate: string | null;
+  isActive: boolean;
+
+  grossWeight: number;
+  tareWeight: number;
+  netWeight: number;
+
+  buyingStationName: string;
+  operationName: string;
+  scaleTicketStatusName: string;
+
+  actions: TicketActionCode[];
+  raw?: any;
 }
 
 @Component({
@@ -48,27 +46,24 @@ interface Pesada {
   styleUrl: './pesada-list.scss',
 })
 export class PesadaList implements OnInit {
-  data: Pesada[] = [];
-  private allPesadas: Pesada[] = [];
+  data: PesadaRow[] = [];
 
   filters: {
-    search: string;
-    sede: string;
-    operacion: string;
+    buyingStationId: number | null;
+    operationId: number | null;
+    ticketId: string;
     fechaDesde: string | null;
     fechaHasta: string | null;
-    numero: string;
   } = {
-    search: '',
-    sede: 'ALL',
-    operacion: 'ALL',
+    buyingStationId: null,
+    operationId: null,
+    ticketId: '',
     fechaDesde: null,
     fechaHasta: null,
-    numero: '',
   };
 
-  sedeOptions: string[] = [];
-  operacionOptions: string[] = [];
+  sedeOptions: BuyingStation[] = [];
+  operacionOptions: OperationStation[] = [];
 
   pageSize = 10;
   currentPage = 1;
@@ -78,128 +73,191 @@ export class PesadaList implements OnInit {
 
   isLoading = false;
   downloading = false;
-  showAdvancedFilters = false;
 
-  actionsOpenTicket: string | null = null;
+  sortBy = 'id';
+  sortDirection: SortDirection = 'desc';
+
+  actionsOpenTicket: number | null = null;
 
   constructor(
-    private http: HttpClient,
+    private weighingService: WeighingService,
     public router: Router,
     private pdf: TicketBalanzaPdfService
   ) {}
 
   ngOnInit(): void {
-    this.loadDataFromJson();
+    this.loadBuyingStations();
+    this.loadScaleTickets();
   }
 
-  // ================== CARGA DATA ==================
-  private loadDataFromJson(): void {
-    this.isLoading = true;
+  /* =========================================================
+     CARGA CATÁLOGOS
+     ========================================================= */
 
-    this.http.get<{ data?: Pesada[] }>('assets/data/pesadas.json').subscribe({
-      next: (resp) => {
-        this.allPesadas = Array.isArray(resp?.data) ? resp.data : [];
-        this.buildFilterOptions();
-        this.applyFilters();
-        this.isLoading = false;
+  private loadBuyingStations(): void {
+    this.weighingService.getUserBuyingStations().subscribe({
+      next: (rows) => {
+        this.sedeOptions = Array.isArray(rows) ? rows : [];
       },
       error: (err) => {
-        console.error('Error cargando pesadas.json', err);
-        this.isLoading = false;
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'No se pudo cargar la lista de pesadas.',
-        });
+        console.error('Error cargando sedes', err);
+        this.sedeOptions = [];
       },
     });
   }
 
-  private buildFilterOptions(): void {
-    const sedes = new Set<string>();
-    const ops = new Set<string>();
+  onBuyingStationChange(): void {
+    this.filters.operationId = null;
+    this.operacionOptions = [];
 
-    this.allPesadas.forEach((p) => {
-      if (p?.SedeOperacion) sedes.add(p.SedeOperacion);
-      if (p?.Operacion) ops.add(p.Operacion);
-    });
+    if (!this.filters.buyingStationId) return;
 
-    this.sedeOptions = Array.from(sedes).sort();
-    this.operacionOptions = Array.from(ops).sort();
-  }
-
-  // ================== FILTROS + PAGINACIÓN ==================
-  applyFilters(): void {
-    this.currentPage = 1;
-    this.filterAndPaginate();
-  }
-
-  resetFilters(): void {
-    this.filters = {
-      search: '',
-      sede: 'ALL',
-      operacion: 'ALL',
-      fechaDesde: null,
-      fechaHasta: null,
-      numero: '',
-    };
-    this.currentPage = 1;
-    this.filterAndPaginate();
-  }
-
-  private filterAndPaginate(): void {
-    this.isLoading = true;
-
-    const search = (this.filters.search || '').toLowerCase().trim();
-    const sede = this.filters.sede;
-    const operacion = this.filters.operacion;
-    const numero = (this.filters.numero || '').toLowerCase().trim();
-
-    const fechaDesde = this.filters.fechaDesde ? new Date(this.filters.fechaDesde) : null;
-    const fechaHasta = this.filters.fechaHasta ? new Date(this.filters.fechaHasta) : null;
-
-    let filtered = [...this.allPesadas];
-
-    if (search) {
-      filtered = filtered.filter((p) => {
-        const haystack = `${p.NumeroTicket} ${p.SedeOperacion} ${p.Operacion}`.toLowerCase().trim();
-        return haystack.includes(search);
+    this.weighingService
+      .getOperationsByStation(this.filters.buyingStationId)
+      .subscribe({
+        next: (rows) => {
+          this.operacionOptions = Array.isArray(rows) ? rows : [];
+        },
+        error: (err) => {
+          console.error('Error cargando operaciones por sede', err);
+          this.operacionOptions = [];
+        },
       });
-    }
-
-    if (sede !== 'ALL') filtered = filtered.filter((p) => p.SedeOperacion === sede);
-    if (operacion !== 'ALL') filtered = filtered.filter((p) => p.Operacion === operacion);
-    if (numero) filtered = filtered.filter((p) => p.NumeroTicket.toLowerCase().includes(numero));
-
-    if (fechaDesde) filtered = filtered.filter((p) => new Date(p.Fecha) >= fechaDesde);
-    if (fechaHasta) {
-      fechaHasta.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((p) => new Date(p.Fecha) <= fechaHasta);
-    }
-
-    this.totalRecords = filtered.length;
-    this.totalPages = this.totalRecords === 0 ? 0 : Math.ceil(this.totalRecords / this.pageSize);
-
-    if (this.currentPage > this.totalPages && this.totalPages > 0) this.currentPage = this.totalPages;
-    if (this.currentPage < 1) this.currentPage = 1;
-
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.data = filtered.slice(start, end);
-
-    this.isLoading = false;
   }
+
+  onTicketIdInput(value: string): void {
+    this.filters.ticketId = this.normalizeNumericString(value);
+  }
+
+  /* =========================================================
+     LISTADO PRINCIPAL
+     ========================================================= */
+
+  applyFilters(): void {
+    if (!this.validateDateRange()) return;
+    this.currentPage = 1;
+    this.loadScaleTickets();
+  }
+
+  private loadScaleTickets(): void {
+  if (!this.validateDateRange()) return;
+
+  this.isLoading = true;
+  this.actionsOpenTicket = null;
+
+  const query: any = {
+    page: this.currentPage,
+    pageSize: this.pageSize,
+    sortBy: this.sortBy,
+    sortDirection: this.sortDirection,
+  };
+
+  if (this.filters.buyingStationId != null) {
+    query.buyingStationId = this.filters.buyingStationId;
+  }
+
+  if (this.filters.operationId != null) {
+    query.operationId = this.filters.operationId;
+  }
+
+  if (this.filters.ticketId) {
+    query.ticketId = Number(this.filters.ticketId);
+  }
+
+  const creationDateFrom = this.toApiStartOfDay(this.filters.fechaDesde);
+  const creationDateTo = this.toApiEndOfDay(this.filters.fechaHasta);
+
+  if (creationDateFrom) query.creationDateFrom = creationDateFrom;
+  if (creationDateTo) query.creationDateTo = creationDateTo;
+
+  this.weighingService.listScaleTickets(query).subscribe({
+    next: (resp: any) => {
+      const items = Array.isArray(resp?.items) ? resp.items : [];
+
+      this.data = items.map((item: any) => this.mapRow(item));
+      this.totalRecords = Number(resp?.total ?? 0);
+      this.currentPage = Number(resp?.page ?? this.currentPage);
+      this.pageSize = Number(resp?.pageSize ?? this.pageSize);
+      this.totalPages =
+        this.totalRecords > 0
+          ? Math.ceil(this.totalRecords / this.pageSize)
+          : 0;
+
+      this.isLoading = false;
+    },
+    error: (err) => {
+      console.error('Error listando tickets de pesada', err);
+      this.data = [];
+      this.totalRecords = 0;
+      this.totalPages = 0;
+      this.isLoading = false;
+    },
+  });
+}
+
+  private mapRow(item: any): PesadaRow {
+    const id = Number(item?.id ?? 0);
+
+    return {
+      id,
+      ticketLabel: `TKP-${String(id).padStart(6, '0')}`,
+      creationDate: item?.creationDate ?? null,
+      isActive: Boolean(item?.isActive),
+
+      grossWeight: this.toNumber(item?.grossWeight),
+      tareWeight: this.toNumber(item?.tareWeight),
+      netWeight: this.toNumber(item?.netWeight),
+
+      buyingStationName: String(
+        item?.buyingStationName ?? item?.buyingStation?.name ?? '—'
+      ),
+      operationName: String(
+        item?.operationName ?? item?.operation?.name ?? '—'
+      ),
+      scaleTicketStatusName: String(
+        item?.scaleTicketStatusName ?? item?.status?.name ?? '—'
+      ),
+
+      actions: this.normalizeActions(item?.actions),
+      raw: item,
+    };
+  }
+
+  private normalizeActions(actions: any): TicketActionCode[] {
+    const valid: TicketActionCode[] = ['PRT', 'EDT', 'CAN'];
+
+    if (!Array.isArray(actions)) return [];
+
+    return actions
+      .map((a) => String(a || '').trim().toUpperCase())
+      .filter((a): a is TicketActionCode =>
+        valid.includes(a as TicketActionCode)
+      );
+  }
+
+  hasAction(row: PesadaRow, code: TicketActionCode): boolean {
+    return row.actions.includes(code);
+  }
+
+  /* =========================================================
+     PAGINACIÓN / ORDEN
+     ========================================================= */
 
   changePageSize(newSize: number): void {
-    this.pageSize = +newSize;
+    this.pageSize = Number(newSize);
     this.currentPage = 1;
-    this.filterAndPaginate();
+    this.loadScaleTickets();
   }
 
   changePage(page: number): void {
-    if (page < 1 || page > this.totalPages) return;
+    if (page < 1 || page > this.totalPages || page === this.currentPage) return;
     this.currentPage = page;
-    this.filterAndPaginate();
+    this.loadScaleTickets();
+  }
+
+  onSortDirectionChange(): void {
+    this.currentPage = 1;
+    this.loadScaleTickets();
   }
 
   getPageRange(): number[] {
@@ -217,6 +275,7 @@ export class PesadaList implements OnInit {
 
     const start = Math.max(2, this.currentPage - 2);
     const end = Math.min(total - 1, this.currentPage + 2);
+
     for (let i = start; i <= end; i++) range.push(i);
 
     if (this.currentPage < total - 3) range.push(-2);
@@ -226,230 +285,154 @@ export class PesadaList implements OnInit {
   }
 
   get startRecord(): number {
-    return this.totalRecords === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return this.totalRecords === 0
+      ? 0
+      : (this.currentPage - 1) * this.pageSize + 1;
   }
 
   get endRecord(): number {
     return Math.min(this.currentPage * this.pageSize, this.totalRecords);
   }
 
-  // ================== FILTROS AVANZADOS ==================
-  toggleAdvancedFilters(): void {
-    this.showAdvancedFilters = !this.showAdvancedFilters;
+  /* =========================================================
+     FECHAS
+     ========================================================= */
+
+  private validateDateRange(): boolean {
+    const { fechaDesde, fechaHasta } = this.filters;
+
+    if (fechaDesde && fechaHasta && fechaDesde > fechaHasta) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Rango inválido',
+        text: 'La fecha desde no puede ser mayor que la fecha hasta.',
+      });
+      return false;
+    }
+
+    return true;
   }
 
-  // ================== BADGES ==================
+  private toApiStartOfDay(value: string | null): string | undefined {
+    if (!value) return undefined;
+
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return undefined;
+
+    return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0)).toISOString();
+  }
+
+  private toApiEndOfDay(value: string | null): string | undefined {
+    if (!value) return undefined;
+
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return undefined;
+
+    return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999)).toISOString();
+  }
+
+  formatDateTime(value: string | null | undefined): string {
+    if (!value) return '—';
+
+    const match = String(value).match(
+      /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?/
+    );
+
+    if (match) {
+      const [, y, m, d, hh = '00', mm = '00'] = match;
+      return `${d}/${m}/${y} ${hh}:${mm}`;
+    }
+
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return String(value);
+
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mo = String(date.getMonth() + 1).padStart(2, '0');
+    const yy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mi = String(date.getMinutes()).padStart(2, '0');
+
+    return `${dd}/${mo}/${yy} ${hh}:${mi}`;
+  }
+
+  /* =========================================================
+     BADGES
+     ========================================================= */
+
   getEstadoClass(estado: string): string {
     const e = (estado || '').toUpperCase();
-    if (e.includes('REGISTRO')) return 'ux-status--registro';
-    if (e.includes('EVALUAC')) return 'ux-status--evaluacion';
-    if (e.includes('CERRAD')) return 'ux-status--cerrado';
-    if (e.includes('ANULAD')) return 'ux-status--anulado';
+
+    if (e.includes('ABIER')) return 'ux-status--registro';
+    if (e.includes('CERR')) return 'ux-status--cerrado';
+    if (e.includes('CANCEL') || e.includes('ANUL')) return 'ux-status--anulado';
+    if (e.includes('PEND')) return 'ux-status--evaluacion';
+
     return 'ux-status--otro';
   }
 
-  // ================== ACCIONES ==================
-  toggleActions(row: Pesada, ev?: MouseEvent): void {
+  /* =========================================================
+     ACCIONES
+     ========================================================= */
+
+  toggleActions(row: PesadaRow, ev?: MouseEvent): void {
     ev?.stopPropagation();
     ev?.preventDefault();
+
+    if (!row.actions?.length) return;
+
     this.actionsOpenTicket =
-      this.actionsOpenTicket === row.NumeroTicket ? null : row.NumeroTicket;
+      this.actionsOpenTicket === row.id ? null : row.id;
   }
 
-
-
-
-
-  onAction(
-    action: 'continuar' | 'generar' | 'generar_corto' | 'duplicar' | 'cancelar',
-    row: Pesada,
-    ev?: MouseEvent
-  ): void {
+  onAction(action: TicketActionCode, row: PesadaRow, ev?: MouseEvent): void {
     ev?.stopPropagation();
     ev?.preventDefault();
     this.actionsOpenTicket = null;
 
-    if (action === 'generar') {
+    if (action === 'PRT') {
       this.generarPdf(row);
       return;
     }
 
-    if (action === 'generar_corto') {
-      this.generarPdfCorto(row);
+    if (action === 'EDT') {
+      this.router.navigateByUrl(`pesadas/editar/${encodeURIComponent(String(row.id))}`);
       return;
     }
 
-
-
-    if (action === 'continuar') {
-      this.router.navigateByUrl(`pesadas/editar/${encodeURIComponent(row.NumeroTicket)}`);
-      return;
+    if (action === 'CAN') {
+      this.cancelarTicket(row);
     }
+  }
 
+  private cancelarTicket(row: PesadaRow): void {
     Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'info',
-      title:
-        action === 'duplicar'
-          ? `Duplicar datos de la pesada ${row.NumeroTicket}.`
-          : `Cancelar la pesada ${row.NumeroTicket}.`,
-      showConfirmButton: false,
-      timer: 2200,
+      icon: 'warning',
+      title: 'Cancelar ticket',
+      text: `El ticket ${row.ticketLabel} está marcado con acción CAN, pero aún debes enlazar aquí el endpoint real de cancelación.`,
+      confirmButtonText: 'Entendido',
     });
   }
 
+  /* =========================================================
+     PDF
+     ========================================================= */
 
-
-
-generarPdfCorto(row: Pesada): void {
-  if (this.downloading) return;
-  this.downloading = true;
-
-  try {
-    const report = this.buildReport(row);
-    const blob = this.pdf.generateTicket(report); // ✅ este método lo crearás en el service
-    this.pdf.download(blob, `TICKET_CORTO_${row.NumeroTicket}.pdf`);
-
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: `Ticket corto generado: ${row.NumeroTicket}`,
-      showConfirmButton: false,
-      timer: 1500,
-    });
-  } catch (e: any) {
-    console.error(e);
-    Swal.fire({ icon: 'error', title: 'Error', text: e?.message || 'No se pudo generar.' });
-  } finally {
-    this.downloading = false;
-  }
-}
-
-
-
-
-
-private buildReport(row: Pesada): TicketBalanzaReport {
-  // ⚠️ Aquí armamos un ejemplo completo con la data que me pasaste.
-  // Si tu row ya trae más campos, reemplazas los "—" o los valores fijos.
-
-  const numeroTicket = row.NumeroTicket;
-
-  return {
-    empresa: {
-      razonSocial: 'AMAZONAS TRADING PERU S.A.C.',
-      ruc: '20521137682',
-      direccion: '—',
-    },
-
-    ticket: {
-      numeroTicket,
-      fechaEmision: row.Fecha,
-      estado: row.Estado ?? '—',
-      sedeOperacion: row.SedeOperacion,
-      operacion: row.Operacion,
-      calidad: row.Calidad ?? '—',
-      gre: row.GRE ?? '—',
-      gi: row.GI ?? '—',
-      chofer: row.Chofer ?? '—',
-      transporte: row.Transporte ?? '—',
-    },
-
-    origenDestino: {
-      sedeOrigen: 'ATP - BAGUA GRANDE',
-      sedeDestino: row.SedeOperacion || 'ATP - LIMA PLANTA',
-    },
-
-    documentos: [
-      {
-        item: 1,
-        socioNegocio: 'AMAZONAS TRADING PERU S.A.C.',
-        tipoDoc: 'EF',
-        documento: 'FACTURA ELECTRONICA',
-        fechaDoc: '2026-01-05',
-        numeroDocumento: 'TR5-0473247',
-        pesoBrutoKg: 12434,
-        pesoNetoKg: 4344,
-      },
-    ],
-
-    transporte: {
-      transportista: {
-        razonSocial: 'TRANSPORTES & NEGOCIACIONES SERLUZ S.R.L.',
-        ruc: '20555619821',
-      },
-      conductor: {
-        nombreCompleto: 'JOSELITO ROJAS SALDAÑA',
-        tipoDocumento: 'DNI',
-        numeroDocumento: '21570832',
-        licencia: 'Q21570832',
-      },
-      vehiculo: {
-        placa: 'ZZI974',
-        trailer: 'AUR778',
-      },
-    },
-
-    resumen: {
-      cantidadItems: 1,
-      totalPesoBrutoKg: Number(row.PesoBruto ?? 0),
-      totalTaraKg: Number(row.PesoTara ?? 0),
-      subtotalPesoNetoKg: Number(row.PesoNeto ?? 0),
-      ajusteKg: 0,
-      totalPesoNetoKg: Number(row.PesoNeto ?? 0),
-    },
-
-    pesadas: [
-      {
-        item: 1,
-        producto: 'CACAO EN GRANO HÚMEDO',
-        balanza: 'COM3 Precix Weight 8513',
-        pesoBrutoKg: Number(row.PesoBruto ?? 0),
-        taraKg: Number(row.PesoTara ?? 0),
-        pesoNetoKg: Number(row.PesoNeto ?? 0),
-        estado: row.Estado ?? '—',
-        taras: [
-          {
-            empaque: 'SACO PLÁSTICO CREMA 150 GR',
-            codigo: 'SPC',
-            taraEmpaqueKg: 0.15,
-            cantidad: 1,
-            taraTotalKg: 0.15,
-          },
-        ],
-      },
-    ],
-  };
-}
-
-
-
-
-
-
-
-  // ================== NORMALIZADORES (TIPOS DEL MODEL) ==================
   private normalizeEstadoTicket(raw?: string): EstadoTicket | undefined {
     const e = (raw || '').toUpperCase().trim();
     if (!e) return undefined;
 
-    // Ajusta aquí a los literales EXACTOS que tengas en tu union EstadoTicket
-    if (e.includes('REGISTRO')) return 'EN REGISTRO' as EstadoTicket;
+    if (e.includes('ABIER')) return 'EN REGISTRO' as EstadoTicket;
     if (e.includes('CERR')) return 'CERRADA' as EstadoTicket;
-    if (e.includes('ANUL')) return 'ANULADA' as EstadoTicket;
-    if (e.includes('EVALU')) return 'EVALUACION' as EstadoTicket;
+    if (e.includes('CANCEL') || e.includes('ANUL')) {
+      return 'ANULADA' as EstadoTicket;
+    }
+    if (e.includes('PEND')) return 'EVALUACION' as EstadoTicket;
 
-    // si no calza con tu union, mejor undefined (y en el PDF pintas “—”)
     return undefined;
   }
 
-  // ================== BUILD REPORTE (USANDO EL MODEL REAL) ==================
-  private buildReportFromRow(row: Pesada): TicketBalanzaReport {
-    // ⚠️ OJO: NO pongas "—" en campos tipados como union.
-    // Mejor undefined y el PDF service renderiza "—".
-    const report: TicketBalanzaReport = {
+  private buildReportFromRow(row: PesadaRow): TicketBalanzaReport {
+    return {
       empresa: {
         razonSocial: 'AMAZONAS TRADING PERU S.A.C.',
         ruc: '20521137682',
@@ -457,114 +440,75 @@ private buildReport(row: Pesada): TicketBalanzaReport {
       },
 
       ticket: {
-        numeroTicket: row.NumeroTicket,
-        fechaEmision: row.Fecha,
-        sedeOperacion: row.SedeOperacion,
-        operacion: row.Operacion,
-
-        calidad: row.Calidad || undefined,
-        estado: this.normalizeEstadoTicket(row.Estado),
-
-        gi: row.GI || undefined,
-        gre: row.GRE || undefined,
-        chofer: row.Chofer || undefined,
-
-        pesoNetoSedeKg: row.PesoNetoSede,
-        mermaKg: row.MermaKg,
-
-        sacosGrandes: row.SacosGrandes,
-        sacosMedianos: row.SacosMedianos,
-        sacosPequenos: row.SacosPequenos,
-        sacosYute: row.SacosYute,
-        totalSacos: row.TotalSacos,
+        numeroTicket: row.ticketLabel,
+        fechaEmision: row.creationDate ?? '',
+        sedeOperacion: row.buyingStationName,
+        operacion: row.operationName,
+        estado: this.normalizeEstadoTicket(row.scaleTicketStatusName),
       },
 
       origenDestino: {
-        sedeOrigen: 'ATP - BAGUA GRANDE',
-        sedeDestino: row.SedeOperacion || 'ATP - LIMA',
+        sedeOrigen: '—',
+        sedeDestino: row.buyingStationName || '—',
       },
 
-      documentos: [
-        {
-          item: 1,
-          socioNegocio: 'AMAZONAS TRADING PERU S.A.C.',
-          tipoDoc: 'EF',
-          documento: 'FACTURA ELECTRONICA',
-          fechaDoc: '2026-01-06',
-          numeroDocumento: 'TR5-0473247',
-          pesoBrutoKg: 12434,
-          pesoNetoKg: 4344,
-        },
-      ],
+      documentos: [],
 
       transporte: {
         transportista: {
-          razonSocial: 'TRANSPORTES & NEGOCIACIONES SERLUZ S.R.L.',
-          ruc: '20555619821',
+          razonSocial: '—',
+          ruc: '—',
         },
         conductor: {
-          nombreCompleto: 'JOSELITO ROJAS SALDAÑA',
-          tipoDocumento: 'DNI',
-          numeroDocumento: '21570832',
-          licencia: 'Q21570832',
+          nombreCompleto: '—',
+          tipoDocumento: '—',
+          numeroDocumento: '—',
+          licencia: '—',
         },
         vehiculo: {
-          placa: 'ZZI974',
-          trailer: 'AUR778',
+          placa: '—',
+          trailer: '—',
         },
       },
 
       resumen: {
         cantidadItems: 1,
-        totalPesoBrutoKg: Number(row.PesoBruto ?? 0),
-        totalTaraKg: Number(row.PesoTara ?? 0),
-        subtotalPesoNetoKg: Number(row.PesoNeto ?? 0),
+        totalPesoBrutoKg: Number(row.grossWeight ?? 0),
+        totalTaraKg: Number(row.tareWeight ?? 0),
+        subtotalPesoNetoKg: Number(row.netWeight ?? 0),
         ajusteKg: 0,
-        totalPesoNetoKg: Number(row.PesoNeto ?? 0),
+        totalPesoNetoKg: Number(row.netWeight ?? 0),
       },
 
       pesadas: [
         {
           item: 1,
-          producto: 'CACAO EN GRANO HÚMEDO',
-          balanza: 'COM3 Precix Weight 8513',
-          pesoBrutoKg: Number(row.PesoBruto ?? 0),
-          taraKg: Number(row.PesoTara ?? 0),
-          pesoNetoKg: Number(row.PesoNeto ?? 0),
-          observaciones: '—',
-          estado: row.Estado || undefined,
-          taras: [
-            {
-              empaque: 'SACO PLÁSTICO CREMA 150 GR',
-              codigo: 'SPC',
-              taraEmpaqueKg: 0.15,
-              cantidad: 1,
-              taraTotalKg: 0.15,
-            },
-          ],
+          producto: '—',
+          balanza: '—',
+          pesoBrutoKg: Number(row.grossWeight ?? 0),
+          taraKg: Number(row.tareWeight ?? 0),
+          pesoNetoKg: Number(row.netWeight ?? 0),
+          estado: row.scaleTicketStatusName || undefined,
+          taras: [],
         },
       ],
     };
-
-    return report;
   }
 
-  // ================== PDF ==================
-  generarPdf(row: Pesada): void {
+  generarPdf(row: PesadaRow): void {
     if (this.downloading) return;
     this.downloading = true;
 
     try {
       const report = this.buildReportFromRow(row);
-
       const blob = this.pdf.generate(report);
-      this.pdf.download(blob, `TICKET_${row.NumeroTicket}.pdf`);
+      this.pdf.download(blob, `TICKET_${row.ticketLabel}.pdf`);
 
       Swal.fire({
         toast: true,
         position: 'top-end',
         icon: 'success',
-        title: `PDF generado: ${row.NumeroTicket}`,
+        title: `PDF generado: ${row.ticketLabel}`,
         showConfirmButton: false,
         timer: 1500,
       });
@@ -580,27 +524,33 @@ private buildReport(row: Pesada): TicketBalanzaReport {
     }
   }
 
-  // ================== EXPORT (placeholder) ==================
-  exportarExcel(): void {
-    this.downloading = true;
-    setTimeout(() => {
-      this.downloading = false;
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: 'Exportación generada.',
-        showConfirmButton: false,
-        timer: 1800,
-      });
-    }, 900);
-  }
-
   crear(): void {
     this.router.navigateByUrl('pesadas/nuevo');
   }
 
-  // ================== CLOSE MENU ==================
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+
+  private toNumber(value: any): number {
+    const n = Number(value);
+    return isNaN(n) ? 0 : n;
+  }
+
+  private normalizeNumericString(value: any): string {
+    const onlyDigits = String(value ?? '').replace(/\D+/g, '');
+    if (!onlyDigits) return '';
+    return onlyDigits.replace(/^0+(?=\d)/, '');
+  }
+
+  trackByRow(_: number, row: PesadaRow): number {
+    return row.id;
+  }
+
+  /* =========================================================
+     CLOSE MENU
+     ========================================================= */
+
   @HostListener('document:click')
   onDocClick(): void {
     this.actionsOpenTicket = null;
