@@ -83,7 +83,6 @@ export class PasoDatosOperacion implements OnInit {
     this.minFechaEmision = this.minFechaEmision ?? min;
     this.maxFechaEmision = this.maxFechaEmision ?? max;
 
-    // si fechaEmision está vacía, setea hoy (sin emitir)
     const ctrl = this.formGroup.get('fechaEmision');
     if (ctrl && !ctrl.value) {
       ctrl.setValue(this.shiftDateLocal(today, 0), { emitEvent: false });
@@ -97,6 +96,58 @@ export class PasoDatosOperacion implements OnInit {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${dd}`;
+  }
+
+  // =========================
+  // Compare para select
+  // =========================
+  compareSelectValues = (a: any, b: any): boolean => {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    return String(a) === String(b);
+  };
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private setControlValueIfChanged(path: string, value: any, emitEvent = false): void {
+    const ctrl = this.formGroup.get(path);
+    if (!ctrl) return;
+
+    if (this.compareSelectValues(ctrl.value, value)) {
+      return;
+    }
+
+    ctrl.setValue(value, { emitEvent });
+  }
+
+  private normalizeSelectedStationValue(): void {
+    const ctrl = this.formGroup.get('sedeOperacion');
+    if (!ctrl) return;
+
+    const current = this.toNumberOrNull(ctrl.value);
+    if (!current) return;
+
+    const found = this.stations.find((s) => Number(s.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged('sedeOperacion', found.id, false);
+  }
+
+  private normalizeSelectedOperationValue(): void {
+    const ctrl = this.formGroup.get('operacion');
+    if (!ctrl) return;
+
+    const current = this.toNumberOrNull(ctrl.value);
+    if (!current) return;
+
+    const found = this.operations.find((o) => Number(o.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged('operacion', found.id, false);
   }
 
   // =========================
@@ -115,7 +166,6 @@ export class PasoDatosOperacion implements OnInit {
         next: (stations) => {
           this.stations = stations || [];
 
-          // Si no hay sedes, limpiamos selects relacionados
           if (!this.stations.length) {
             this.operations = [];
             this.formGroup.patchValue(
@@ -125,7 +175,6 @@ export class PasoDatosOperacion implements OnInit {
             return;
           }
 
-          // Detectar principal (según tu API: isPrincipal)
           const principal =
             this.stations.find((s: any) => (s as any).isPrincipal === true) ??
             this.stations[0];
@@ -138,18 +187,19 @@ export class PasoDatosOperacion implements OnInit {
             all: this.stations,
           });
 
-          // si hay sede guardada en draft, valida y carga operaciones
-          const savedStationId = Number(
-            this.formGroup.get('sedeOperacion')?.value || 0
+          // Normaliza el valor actual del select para que haga match aunque venga string
+          this.normalizeSelectedStationValue();
+
+          const savedStationId = this.toNumberOrNull(
+            this.formGroup.get('sedeOperacion')?.value
           );
 
           if (
             savedStationId &&
-            this.stations.some((s) => s.id === savedStationId)
+            this.stations.some((s) => Number(s.id) === savedStationId)
           ) {
             this.loadOperations(savedStationId, true);
           } else {
-            // si el draft tenía una sede inválida, la limpiamos
             if (savedStationId) {
               this.formGroup.patchValue(
                 { sedeOperacion: null, operacion: null },
@@ -190,11 +240,24 @@ export class PasoDatosOperacion implements OnInit {
             return;
           }
 
-          // keepOperation=true: valida que la operación guardada siga existiendo
-          const currentOp = Number(this.formGroup.get('operacion')?.value || 0);
-          if (currentOp && !this.operations.some((o) => o.id === currentOp)) {
+          const currentOp = this.toNumberOrNull(
+            this.formGroup.get('operacion')?.value
+          );
+
+          if (!currentOp) {
             this.formGroup.patchValue({ operacion: null }, { emitEvent: false });
+            return;
           }
+
+          const found = this.operations.find((o) => Number(o.id) === currentOp);
+
+          if (!found) {
+            this.formGroup.patchValue({ operacion: null }, { emitEvent: false });
+            return;
+          }
+
+          // Normaliza el valor actual del select para que haga match aunque venga string
+          this.normalizeSelectedOperationValue();
         },
         error: (err) => console.error('Error cargando operaciones', err),
       });
@@ -212,12 +275,14 @@ export class PasoDatosOperacion implements OnInit {
       .subscribe((val) => {
         if (this.locked) return;
 
-        const stationId = Number(val || 0);
+        const stationId = this.toNumberOrNull(val);
+
         if (!stationId) {
           this.operations = [];
           this.formGroup.patchValue({ operacion: null }, { emitEvent: false });
           return;
         }
+
         this.loadOperations(stationId, false);
       });
   }
@@ -229,7 +294,7 @@ export class PasoDatosOperacion implements OnInit {
     ctrl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((val) => {
-        const opId = Number(val || 0);
+        const opId = this.toNumberOrNull(val) ?? 0;
         this.operationChange.emit(opId);
       });
   }

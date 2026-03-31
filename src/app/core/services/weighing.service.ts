@@ -1,4 +1,3 @@
-// src/app/core/services/weighing.service.ts
 import { Injectable, inject } from '@angular/core';
 import {
   HttpClient,
@@ -12,7 +11,7 @@ import { AuthService } from './auth';
    TIPOS GENERALES
    ========================================================= */
 
-type SortDirection = 'asc' | 'desc';
+export type SortDirection = 'asc' | 'desc';
 
 interface ApiResponse<T> {
   status: string;
@@ -27,7 +26,7 @@ function requireFirstRow<T>(res: ApiResponse<T>, errMsg: string): T {
 }
 
 /* =========================================================
-   INTERFACES EXISTENTES
+   PAYLOADS / RESPUESTAS GENERALES
    ========================================================= */
 
 export interface CreateScaleTicketPayload {
@@ -40,7 +39,7 @@ export interface CreateScaleTicketPayload {
     idBusinessPartnersCarriers: number;
     idBusinessPartnersDrivers: number;
     idTrucks: number;
-    idTrailers: number;
+    idTrailers: number | null;
     idScaleTicketStatus?: number;
     creationDate: string;
 
@@ -59,12 +58,24 @@ export interface CreateScaleTicketPayload {
   }>;
 }
 
+export interface ScaleTicketCreated {
+  id?: number;
+  scaleTicketId?: number;
+  ScaleTicketId?: number;
+  idScaleTicket?: number;
+  idScaleTickets?: number;
+  [key: string]: any;
+}
 
-
-
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
 
 /* =========================================================
-   NUEVO: LISTADO DE TICKETS DE BALANZA
+   LISTADO DE TICKETS
    GET /scale-tickets
    ========================================================= */
 
@@ -103,6 +114,7 @@ export interface ScaleTicketListItem {
 
 export interface ScaleTicketsQuery {
   buyingStationId?: number | null;
+  ticketId?: number | null;
   operationId?: number | null;
 
   page?: number;
@@ -115,28 +127,9 @@ export interface ScaleTicketsQuery {
   creationDateTo?: string | null;
 }
 
-
-
 /* =========================================================
-   NUEVO: TOTALES DEL DETALLE DEL TICKET
-   GET /scale-tickets/{ticketId}/details/totals
+   SEDES / OPERACIONES
    ========================================================= */
-
-export interface ScaleTicketDetailsTotals {
-  scaleTicketId?: number;
-  cantidadItems: number;
-  totalPesoBruto: number;
-  totalTara: number;
-  subtotalPesoNeto: number;
-}
-
-
-export interface ScaleTicketCreated {
-  id?: number;
-  scaleTicketId?: number;
-  ScaleTicketId?: number;
-  [key: string]: any;
-}
 
 export interface BuyingStation {
   id: number;
@@ -174,6 +167,18 @@ export interface OperationDocuments {
   documents: DocumentType[];
 }
 
+interface UserStationsData {
+  userId: number;
+  username: string;
+  employeeId: number;
+  employeeFullName: string;
+  stations: BuyingStation[];
+}
+
+/* =========================================================
+   TRANSPORTISTAS / CONDUCTORES / VEHÍCULOS
+   ========================================================= */
+
 export interface Carrier {
   id: number;
   companyName: string;
@@ -206,6 +211,94 @@ export interface CarrierTruck {
   configuration: string;
 }
 
+/* =========================================================
+   OBTENER CABECERA DEL TICKET
+   GET /scale-tickets/{ticketId}/header
+   ========================================================= */
+
+export interface ScaleTicketHeaderNamedEntity {
+  id: number;
+  name: string;
+}
+
+export interface ScaleTicketHeaderBusinessPartner {
+  idBusinessPartners: number;
+  companyName: string;
+  documentNumber: string;
+  idIdentityDocumentTypes: number;
+  identityDocumentTypeName: string;
+}
+
+export interface ScaleTicketHeaderDriver {
+  idBusinessPartners: number;
+  idLicense: number | null;
+  companyName: string;
+  documentNumber: string;
+  idIdentityDocumentTypes: number;
+  identityDocumentTypeName: string;
+}
+
+export interface ScaleTicketHeaderVehicle {
+  id: number;
+  licensePlate: string;
+}
+
+export interface ScaleTicketHeaderStatus {
+  id: number;
+  name: string;
+}
+
+export interface ScaleTicketHeaderDocument {
+  id: number;
+  idScaleTickets: number;
+  idDocumentTypes: number | null;
+  documentSerial: string;
+  documentNumber: string;
+  documentDate: string;
+  documentGrossWeight: number;
+  documentNetWeight: number;
+  documentTypeName: string;
+  documentTypeCode: string;
+}
+
+export interface ScaleTicketHeaderCore {
+  id: number;
+  idBuyingStations: number;
+  idBuyingStationsOrigin: number | null;
+  idBuyingStationsDestination: number | null;
+  idEmployees: number | null;
+  idOperations: number;
+  idBusinessPartnersCarriers: number | null;
+  idBusinessPartnersDrivers: number | null;
+  idBusinessPartnersClients: number | null;
+  idBusinessPartnersSuppliers: number | null;
+  idTrucks: number | null;
+  idTrailers: number | null;
+  idScaleTicketStatus: number | null;
+  creationDate: string;
+  isActive: boolean;
+}
+
+export interface ScaleTicketHeaderData {
+  scaleTicket: ScaleTicketHeaderCore;
+  buyingStation: ScaleTicketHeaderNamedEntity | null;
+  buyingStationOrigin: ScaleTicketHeaderNamedEntity | null;
+  buyingStationDestination: ScaleTicketHeaderNamedEntity | null;
+  operation: ScaleTicketHeaderNamedEntity | null;
+  carrier: ScaleTicketHeaderBusinessPartner | null;
+  client: ScaleTicketHeaderBusinessPartner | null;
+  supplier: ScaleTicketHeaderBusinessPartner | null;
+  driver: ScaleTicketHeaderDriver | null;
+  truck: ScaleTicketHeaderVehicle | null;
+  trailer: ScaleTicketHeaderVehicle | null;
+  scaleTicketStatus: ScaleTicketHeaderStatus | null;
+  documents: ScaleTicketHeaderDocument[];
+}
+
+/* =========================================================
+   PRODUCTOS
+   ========================================================= */
+
 export interface ProductByOperation {
   productId: number;
   productCode: string;
@@ -214,17 +307,8 @@ export interface ProductByOperation {
   productTypeName: string;
 }
 
-// /users/{id}/buying-stations
-interface UserStationsData {
-  userId: number;
-  username: string;
-  employeeId: number;
-  employeeFullName: string;
-  stations: BuyingStation[];
-}
-
 /* =========================================================
-   NUEVO: BALANZAS OPERATIVAS
+   BALANZAS OPERATIVAS
    ========================================================= */
 
 export interface OperationalScaleType {
@@ -234,7 +318,7 @@ export interface OperationalScaleType {
 }
 
 export interface OperationalScaleStatus {
-  name: string; // "OPERATIVO", etc.
+  name: string;
 }
 
 export interface OperationalScale {
@@ -252,16 +336,16 @@ export interface OperationalScale {
 }
 
 /* =========================================================
-   NUEVO: PESADA (MEASUREMENT)
+   PESADA (MEASUREMENT)
    ========================================================= */
 
 export interface CreateMeasurementPayload {
-  idProduct: number;
+  idProduct: number | null;
   idScale: number;
-  idStableWeight: string; // UUID
-  idWeighingType: any;
+  idStableWeight: string;
+  idWeighingType: number | string;
   grossWeight: number;
-  measurementWeight: any;
+  measurementWeight: number | string;
   observations?: string | null;
 }
 
@@ -272,7 +356,7 @@ export interface MeasurementCreated {
 }
 
 /* =========================================================
-   NUEVO: TIPOS DE EMPAQUE
+   TIPOS DE EMPAQUE
    ========================================================= */
 
 export interface PackagingType {
@@ -285,7 +369,7 @@ export interface PackagingType {
 }
 
 /* =========================================================
-   NUEVO: TARA POR DETALLE (PACKAGING TYPES EN DETALLE)
+   TARA POR DETALLE
    ========================================================= */
 
 export interface CreateTarePayload {
@@ -304,13 +388,6 @@ export interface ScaleTicketDetailPackaging {
   packagingType: PackagingType;
 }
 
-export interface Paginated<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 export interface ScaleTicketDetailPackagingQuery {
   page?: number;
   pageSize?: number;
@@ -326,7 +403,7 @@ export interface TareTotals {
 }
 
 /* =========================================================
-   NUEVO: DETALLES DEL TICKET
+   DETALLES DEL TICKET
    ========================================================= */
 
 export interface ScaleTicketDetail {
@@ -354,23 +431,19 @@ export interface ScaleTicketDetailsQuery {
   sortDirection?: SortDirection;
 }
 
-/* =========================================================
-   NUEVO: TOTALES DEL DETALLE DEL TICKET
-   GET /scale-tickets/{ticketId}/details/totals
-   ========================================================= */
-
 export interface ScaleTicketDetailsTotals {
-  totalGrossWeight: number;
-  totalTareWeight: number;
-  totalNetWeight: number;
+  scaleTicketId?: number;
+  cantidadItems: number;
+  totalPesoBruto: number;
+  totalTara: number;
+  subtotalPesoNeto: number;
   totalTareAdjustment?: number;
   totalRecords?: number;
   [key: string]: any;
 }
 
 /* =========================================================
-   NUEVO: CERRAR TICKET
-   PATCH /scale-tickets/{ticketId}/close
+   CERRAR TICKET
    ========================================================= */
 
 export interface ScaleTicketClosed {
@@ -382,9 +455,7 @@ export interface ScaleTicketClosed {
 }
 
 /* =========================================================
-   NUEVO: WEIGHING TYPES + INITIALIZE
-   GET  /scales/{scalesId}/weighing-types
-   POST /scales/{scalesId}/weighings/{weighingTypeId}/initialize
+   WEIGHING TYPES + INITIALIZE
    ========================================================= */
 
 export interface WeighingType {
@@ -434,12 +505,32 @@ export class WeighingService {
 
   private withAuthHeader() {
     const token = this.readAccessToken();
-    if (!token) return {};
+
+    if (!token) {
+      return {};
+    }
+
     return {
       headers: new HttpHeaders({
         Authorization: `Bearer ${token}`,
       }),
     };
+  }
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private toNumber(value: any, fallback = 0): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  private toTrimmedString(value: any, fallback = ''): string {
+    const s = String(value ?? '').trim();
+    return s || fallback;
   }
 
   /* =========================================================
@@ -448,7 +539,9 @@ export class WeighingService {
 
   getUserBuyingStations(): Observable<BuyingStation[]> {
     const user = this.auth.getUser();
-    if (!user?.id) throw new Error('User not found in AuthService');
+    if (!user?.id) {
+      throw new Error('User not found in AuthService');
+    }
 
     return this.http
       .get<ApiResponse<UserStationsData>>(
@@ -496,7 +589,9 @@ export class WeighingService {
      DOCUMENTOS
      ========================================================= */
 
-  getBusinessPartnersByOperation(operationId: number): Observable<BusinessPartner[]> {
+  getBusinessPartnersByOperation(
+    operationId: number
+  ): Observable<BusinessPartner[]> {
     return this.http
       .get<ApiResponse<BusinessPartner>>(
         `business-partners/operation/${operationId}`,
@@ -587,6 +682,190 @@ export class WeighingService {
       );
   }
 
+  getScaleTicketHeader(ticketId: number): Observable<ScaleTicketHeaderData> {
+    if (!ticketId) {
+      throw new Error('ticketId inválido para obtener la cabecera del ticket.');
+    }
+
+    return this.http
+      .get<ApiResponse<any>>(
+        `scale-tickets/${ticketId}/header`,
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al obtener la cabecera del ticket de balanza.'
+          )
+        ),
+        map((row: any): ScaleTicketHeaderData => ({
+          scaleTicket: {
+            id: this.toNumber(row?.scaleTicket?.id),
+            idBuyingStations: this.toNumber(row?.scaleTicket?.idBuyingStations),
+            idBuyingStationsOrigin: this.toNumberOrNull(
+              row?.scaleTicket?.idBuyingStationsOrigin
+            ),
+            idBuyingStationsDestination: this.toNumberOrNull(
+              row?.scaleTicket?.idBuyingStationsDestination
+            ),
+            idEmployees: this.toNumberOrNull(row?.scaleTicket?.idEmployees),
+            idOperations: this.toNumber(row?.scaleTicket?.idOperations),
+            idBusinessPartnersCarriers: this.toNumberOrNull(
+              row?.scaleTicket?.idBusinessPartnersCarriers
+            ),
+            idBusinessPartnersDrivers: this.toNumberOrNull(
+              row?.scaleTicket?.idBusinessPartnersDrivers
+            ),
+            idBusinessPartnersClients: this.toNumberOrNull(
+              row?.scaleTicket?.idBusinessPartnersClients
+            ),
+            idBusinessPartnersSuppliers: this.toNumberOrNull(
+              row?.scaleTicket?.idBusinessPartnersSuppliers
+            ),
+            idTrucks: this.toNumberOrNull(row?.scaleTicket?.idTrucks),
+            idTrailers: this.toNumberOrNull(row?.scaleTicket?.idTrailers),
+            idScaleTicketStatus: this.toNumberOrNull(
+              row?.scaleTicket?.idScaleTicketStatus
+            ),
+            creationDate: String(row?.scaleTicket?.creationDate ?? ''),
+            isActive: Boolean(row?.scaleTicket?.isActive),
+          },
+
+          buyingStation: row?.buyingStation
+            ? {
+                id: this.toNumber(row.buyingStation.id),
+                name: this.toTrimmedString(row.buyingStation.name),
+              }
+            : null,
+
+          buyingStationOrigin: row?.buyingStationOrigin
+            ? {
+                id: this.toNumber(row.buyingStationOrigin.id),
+                name: this.toTrimmedString(row.buyingStationOrigin.name),
+              }
+            : null,
+
+          buyingStationDestination: row?.buyingStationDestination
+            ? {
+                id: this.toNumber(row.buyingStationDestination.id),
+                name: this.toTrimmedString(row.buyingStationDestination.name),
+              }
+            : null,
+
+          operation: row?.operation
+            ? {
+                id: this.toNumber(row.operation.id),
+                name: this.toTrimmedString(row.operation.name),
+              }
+            : null,
+
+          carrier: row?.carrier
+            ? {
+                idBusinessPartners: this.toNumber(
+                  row.carrier.idBusinessPartners
+                ),
+                companyName: this.toTrimmedString(row.carrier.companyName),
+                documentNumber: this.toTrimmedString(row.carrier.documentNumber),
+                idIdentityDocumentTypes: this.toNumber(
+                  row.carrier.idIdentityDocumentTypes
+                ),
+                identityDocumentTypeName: this.toTrimmedString(
+                  row.carrier.identityDocumentTypeName
+                ),
+              }
+            : null,
+
+          client: row?.client
+            ? {
+                idBusinessPartners: this.toNumber(row.client.idBusinessPartners),
+                companyName: this.toTrimmedString(row.client.companyName),
+                documentNumber: this.toTrimmedString(row.client.documentNumber),
+                idIdentityDocumentTypes: this.toNumber(
+                  row.client.idIdentityDocumentTypes
+                ),
+                identityDocumentTypeName: this.toTrimmedString(
+                  row.client.identityDocumentTypeName
+                ),
+              }
+            : null,
+
+          supplier: row?.supplier
+            ? {
+                idBusinessPartners: this.toNumber(
+                  row.supplier.idBusinessPartners
+                ),
+                companyName: this.toTrimmedString(row.supplier.companyName),
+                documentNumber: this.toTrimmedString(
+                  row.supplier.documentNumber
+                ),
+                idIdentityDocumentTypes: this.toNumber(
+                  row.supplier.idIdentityDocumentTypes
+                ),
+                identityDocumentTypeName: this.toTrimmedString(
+                  row.supplier.identityDocumentTypeName
+                ),
+              }
+            : null,
+
+          driver: row?.driver
+            ? {
+                idBusinessPartners: this.toNumber(
+                  row.driver.idBusinessPartners
+                ),
+                idLicense: this.toNumberOrNull(row.driver.idLicense),
+                companyName: this.toTrimmedString(row.driver.companyName),
+                documentNumber: this.toTrimmedString(row.driver.documentNumber),
+                idIdentityDocumentTypes: this.toNumber(
+                  row.driver.idIdentityDocumentTypes
+                ),
+                identityDocumentTypeName: this.toTrimmedString(
+                  row.driver.identityDocumentTypeName
+                ),
+              }
+            : null,
+
+          truck: row?.truck
+            ? {
+                id: this.toNumber(row.truck.id),
+                licensePlate: this.toTrimmedString(row.truck.licensePlate),
+              }
+            : null,
+
+          trailer: row?.trailer
+            ? {
+                id: this.toNumber(row.trailer.id),
+                licensePlate: this.toTrimmedString(row.trailer.licensePlate),
+              }
+            : null,
+
+          scaleTicketStatus: row?.scaleTicketStatus
+            ? {
+                id: this.toNumber(row.scaleTicketStatus.id),
+                name: this.toTrimmedString(row.scaleTicketStatus.name),
+              }
+            : null,
+
+          documents: Array.isArray(row?.documents)
+            ? row.documents.map(
+                (doc: any): ScaleTicketHeaderDocument => ({
+                  id: this.toNumber(doc?.id),
+                  idScaleTickets: this.toNumber(doc?.idScaleTickets),
+                  idDocumentTypes: this.toNumberOrNull(doc?.idDocumentTypes),
+                  documentSerial: this.toTrimmedString(doc?.documentSerial),
+                  documentNumber: this.toTrimmedString(doc?.documentNumber),
+                  documentDate: String(doc?.documentDate ?? ''),
+                  documentGrossWeight: this.toNumber(doc?.documentGrossWeight),
+                  documentNetWeight: this.toNumber(doc?.documentNetWeight),
+                  documentTypeName: this.toTrimmedString(doc?.documentTypeName),
+                  documentTypeCode: this.toTrimmedString(doc?.documentTypeCode),
+                })
+              )
+            : [],
+        }))
+      );
+  }
+
   /* =========================================================
      PRODUCTOS
      ========================================================= */
@@ -601,7 +880,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: BALANZAS OPERATIVAS POR TICKET
+     BALANZAS OPERATIVAS POR TICKET
      GET /operational-scales?ticketId=9
      ========================================================= */
 
@@ -617,7 +896,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: AGREGAR PESADA (MEASUREMENT)
+     AGREGAR PESADA
      POST /scale-tickets/{ticketId}/measurements
      ========================================================= */
 
@@ -625,7 +904,9 @@ export class WeighingService {
     ticketId: number,
     payload: CreateMeasurementPayload
   ): Observable<MeasurementCreated> {
-    if (!ticketId) throw new Error('ticketId inválido para crear la pesada.');
+    if (!ticketId) {
+      throw new Error('ticketId inválido para crear la pesada.');
+    }
 
     return this.http
       .post<ApiResponse<MeasurementCreated>>(
@@ -644,7 +925,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: TIPOS DE EMPAQUE
+     TIPOS DE EMPAQUE
      GET /scale-tickets-details/{scaleTicketDetailId}/packaging-types
      ========================================================= */
 
@@ -659,10 +940,10 @@ export class WeighingService {
           (res?.data ?? []).map(
             (x: any) =>
               ({
-                id: Number(x?.id ?? 0),
-                code: String(x?.code ?? ''),
-                name: String(x?.name ?? ''),
-                unitTareWeight: Number(x?.unitTareWeight ?? 0),
+                id: this.toNumber(x?.id),
+                code: this.toTrimmedString(x?.code),
+                name: this.toTrimmedString(x?.name),
+                unitTareWeight: this.toNumber(x?.unitTareWeight),
                 description: x?.description ?? null,
                 unitOrigin: x?.unitOrigin ?? null,
               }) as PackagingType
@@ -672,7 +953,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: CREAR TARA
+     CREAR TARA
      POST /scale-ticket-details/packaging-types
      ========================================================= */
 
@@ -691,21 +972,31 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: LISTAR TARAS POR DETALLE (PAGINADO)
+     LISTAR TARAS POR DETALLE
      ========================================================= */
 
   listTaresByScaleTicketDetail(
     scaleTicketDetailsId: number,
     query: ScaleTicketDetailPackagingQuery = {}
   ): Observable<Paginated<ScaleTicketDetailPackaging>> {
-    if (!scaleTicketDetailsId) throw new Error('scaleTicketDetailsId inválido.');
+    if (!scaleTicketDetailsId) {
+      throw new Error('scaleTicketDetailsId inválido.');
+    }
 
     let params = new HttpParams();
-    if (query.page != null) params = params.set('page', String(query.page));
+
+    if (query.page != null) {
+      params = params.set('page', String(query.page));
+    }
+
     if (query.pageSize != null) {
       params = params.set('pageSize', String(query.pageSize));
     }
-    if (query.sortBy) params = params.set('sortBy', query.sortBy);
+
+    if (query.sortBy) {
+      params = params.set('sortBy', query.sortBy);
+    }
+
     if (query.sortDirection) {
       params = params.set('sortDirection', query.sortDirection);
     }
@@ -713,7 +1004,10 @@ export class WeighingService {
     return this.http
       .get<ApiResponse<Paginated<ScaleTicketDetailPackaging>>>(
         `scale-ticket-details-packaging-types/scale-ticket-details/${scaleTicketDetailsId}`,
-        { params, ...(this.withAuthHeader() as any) }
+        {
+          params,
+          ...(this.withAuthHeader() as any),
+        }
       )
       .pipe(
         map((res: any) =>
@@ -732,11 +1026,13 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: TOTALES DE TARA PARA CABECERA
+     TOTALES DE TARA POR DETALLE
      ========================================================= */
 
   getTareTotals(scaleTicketDetailsId: number): Observable<TareTotals> {
-    if (!scaleTicketDetailsId) throw new Error('scaleTicketDetailsId inválido.');
+    if (!scaleTicketDetailsId) {
+      throw new Error('scaleTicketDetailsId inválido.');
+    }
 
     return this.http
       .get<ApiResponse<TareTotals>>(
@@ -754,7 +1050,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     NUEVO: LISTAR DETALLES DEL TICKET
+     LISTAR DETALLES DEL TICKET
      ========================================================= */
 
   listScaleTicketDetails(
@@ -766,11 +1062,19 @@ export class WeighingService {
     }
 
     let params = new HttpParams();
-    if (query.page != null) params = params.set('page', String(query.page));
+
+    if (query.page != null) {
+      params = params.set('page', String(query.page));
+    }
+
     if (query.pageSize != null) {
       params = params.set('pageSize', String(query.pageSize));
     }
-    if (query.sort) params = params.set('sort', query.sort);
+
+    if (query.sort) {
+      params = params.set('sort', query.sort);
+    }
+
     if (query.sortDirection) {
       params = params.set('sortDirection', query.sortDirection);
     }
@@ -800,67 +1104,71 @@ export class WeighingService {
   }
 
   /* =========================================================
-     ✅ NUEVO: TOTALES DE DETALLES DEL TICKET
+     TOTALES DE DETALLES DEL TICKET
      GET /scale-tickets/{ticketId}/details/totals
      ========================================================= */
 
-  getScaleTicketDetailsTotals(ticketId: number): Observable<ScaleTicketDetailsTotals> {
-  if (!ticketId) {
-    throw new Error('ticketId inválido para obtener totales del detalle.');
+  getScaleTicketDetailsTotals(
+    ticketId: number
+  ): Observable<ScaleTicketDetailsTotals> {
+    if (!ticketId) {
+      throw new Error(
+        'ticketId inválido para obtener totales del detalle.'
+      );
+    }
+
+    return this.http
+      .get<ApiResponse<any>>(
+        `scale-tickets/${ticketId}/details/totals`,
+        this.withAuthHeader()
+      )
+      .pipe(
+        map((res) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al obtener los totales del detalle del ticket.'
+          )
+        ),
+        map((row: any) => ({
+          ...row,
+          scaleTicketId: this.toNumber(row?.scaleTicketId ?? ticketId),
+          cantidadItems: this.toNumber(
+            row?.cantidadItems ??
+              row?.quantity ??
+              row?.totalItems ??
+              row?.itemCount ??
+              row?.totalRecords ??
+              row?.totalActiveRecords ??
+              0
+          ),
+          totalPesoBruto: this.toNumber(
+            row?.totalPesoBruto ??
+              row?.grossWeightTotal ??
+              row?.totalGrossWeight ??
+              row?.grossTotal ??
+              0
+          ),
+          totalTara: this.toNumber(
+            row?.totalTara ??
+              row?.tareWeightTotal ??
+              row?.totalTareWeight ??
+              row?.tareTotal ??
+              0
+          ),
+          subtotalPesoNeto: this.toNumber(
+            row?.subtotalPesoNeto ??
+              row?.totalPesoNeto ??
+              row?.netWeightTotal ??
+              row?.totalNetWeight ??
+              row?.netTotal ??
+              0
+          ),
+        }))
+      );
   }
 
-  return this.http
-    .get<ApiResponse<any>>(
-      `scale-tickets/${ticketId}/details/totals`,
-      this.withAuthHeader()
-    )
-    .pipe(
-      map((res) =>
-        requireFirstRow(
-          res,
-          'No se recibió data al obtener los totales del detalle del ticket.'
-        )
-      ),
-      map((row: any) => ({
-        ...row,
-        scaleTicketId: Number(row?.scaleTicketId ?? ticketId),
-        cantidadItems: Number(
-          row?.cantidadItems ??
-          row?.quantity ??
-          row?.totalItems ??
-          row?.itemCount ??
-          row?.totalRecords ??
-          row?.totalActiveRecords ??
-          0
-        ),
-        totalPesoBruto: Number(
-          row?.totalPesoBruto ??
-          row?.grossWeightTotal ??
-          row?.totalGrossWeight ??
-          row?.grossTotal ??
-          0
-        ),
-        totalTara: Number(
-          row?.totalTara ??
-          row?.tareWeightTotal ??
-          row?.totalTareWeight ??
-          row?.tareTotal ??
-          0
-        ),
-        subtotalPesoNeto: Number(
-          row?.subtotalPesoNeto ??
-          row?.totalPesoNeto ??
-          row?.netWeightTotal ??
-          row?.totalNetWeight ??
-          row?.netTotal ??
-          0
-        ),
-      }))
-    );
-}
-
   /* =========================================================
-     ✅ NUEVO: CERRAR TICKET DE BALANZA
+     CERRAR TICKET DE BALANZA
      PATCH /scale-tickets/{ticketId}/close
      ========================================================= */
 
@@ -886,7 +1194,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     ✅ NUEVO: LISTAR TIPOS DE PESADA
+     LISTAR TIPOS DE PESADA
      GET /scales/{scalesId}/weighing-types
      ========================================================= */
 
@@ -904,7 +1212,7 @@ export class WeighingService {
   }
 
   /* =========================================================
-     ✅ NUEVO: INICIALIZAR BALANZA POR TIPO DE PESADA
+     INICIALIZAR BALANZA
      POST /scales/{scalesId}/weighings/{weighingTypeId}/initialize
      ========================================================= */
 
@@ -912,7 +1220,10 @@ export class WeighingService {
     scalesId: number,
     weighingTypeId: number
   ): Observable<InitializedDevice> {
-    if (!scalesId) throw new Error('scalesId inválido para inicializar.');
+    if (!scalesId) {
+      throw new Error('scalesId inválido para inicializar.');
+    }
+
     if (!weighingTypeId) {
       throw new Error('weighingTypeId inválido para inicializar.');
     }
@@ -933,6 +1244,10 @@ export class WeighingService {
         map((row) => row.device)
       );
   }
+
+  /* =========================================================
+     RESOLVER TARA DE EMPAQUE
+     ========================================================= */
 
   resolvePackagingTare(scaleTicketDetailId: number, payload: any) {
     if (!scaleTicketDetailId) {
@@ -956,95 +1271,79 @@ export class WeighingService {
       );
   }
 
-
-
-
-
-
-
-
-
-    /* =========================================================
-     NUEVO: LISTAR TICKETS DE BALANZA
+  /* =========================================================
+     LISTAR TICKETS DE BALANZA
      GET /scale-tickets
      ========================================================= */
 
-listScaleTickets(
-  query: any = {}
-): Observable<Paginated<ScaleTicketListItem>> {
-  let params = new HttpParams();
+  listScaleTickets(
+    query: ScaleTicketsQuery = {}
+  ): Observable<Paginated<ScaleTicketListItem>> {
+    let params = new HttpParams();
 
-  if (query.buyingStationId != null) {
-    params = params.set('buyingStationId', String(query.buyingStationId));
-  }
+    if (query.buyingStationId != null) {
+      params = params.set('buyingStationId', String(query.buyingStationId));
+    }
 
-  if (query.ticketId != null && query.ticketId !== '') {
-    params = params.set('ticketId', String(query.ticketId));
-  }
+    if (query.ticketId != null && query.ticketId !== 0) {
+      params = params.set('ticketId', String(query.ticketId));
+    }
 
-  if (query.operationId != null) {
-    params = params.set('operationId', String(query.operationId));
-  }
+    if (query.operationId != null) {
+      params = params.set('operationId', String(query.operationId));
+    }
 
-  if (query.page != null) {
-    params = params.set('page', String(query.page));
-  }
+    if (query.page != null) {
+      params = params.set('page', String(query.page));
+    }
 
-  if (query.pageSize != null) {
-    params = params.set('pageSize', String(query.pageSize));
-  }
+    if (query.pageSize != null) {
+      params = params.set('pageSize', String(query.pageSize));
+    }
 
-  if (query.sortBy) {
-    params = params.set('sortBy', String(query.sortBy));
-  }
+    if (query.sortBy) {
+      params = params.set('sortBy', String(query.sortBy));
+    }
 
-  if (query.sortDirection) {
-    params = params.set('sortDirection', String(query.sortDirection));
-  }
+    if (query.sortDirection) {
+      params = params.set('sortDirection', String(query.sortDirection));
+    }
 
-  if (query.creationDateFrom) {
-    params = params.set('creationDateFrom', String(query.creationDateFrom));
-  }
+    if (query.creationDateFrom) {
+      params = params.set('creationDateFrom', String(query.creationDateFrom));
+    }
 
-  if (query.creationDateTo) {
-    params = params.set('creationDateTo', String(query.creationDateTo));
-  }
+    if (query.creationDateTo) {
+      params = params.set('creationDateTo', String(query.creationDateTo));
+    }
 
-  return this.http
-    .get<ApiResponse<Paginated<ScaleTicketListItem>>>(
-      `scale-tickets`,
-      {
-        params,
-        ...(this.withAuthHeader() as any),
-      }
-    )
-    .pipe(
-      map((res: any) =>
-        requireFirstRow(
-          res,
-          'No se recibió data al listar los tickets de balanza.'
-        )
-      ),
-      map((row: any) => ({
-        items: row?.items ?? row?.rows ?? row?.data ?? [],
-        total: Number(
-          row?.total ??
-          row?.totalItems ??
-          row?.count ??
-          row?.recordsTotal ??
-          0
+    return this.http
+      .get<ApiResponse<Paginated<ScaleTicketListItem>>>(
+        `scale-tickets`,
+        {
+          params,
+          ...(this.withAuthHeader() as any),
+        }
+      )
+      .pipe(
+        map((res: any) =>
+          requireFirstRow(
+            res,
+            'No se recibió data al listar los tickets de balanza.'
+          )
         ),
-        page: Number(row?.page ?? query.page ?? 1),
-        pageSize: Number(
-          row?.pageSize ??
-          row?.limit ??
-          query.pageSize ??
-          10
-        ),
-      }))
-    );
-}
-
-
-
+        map((row: any) => ({
+          items: row?.items ?? row?.rows ?? row?.data ?? [],
+          total: Number(
+            row?.total ??
+              row?.totalItems ??
+              row?.count ??
+              row?.recordsTotal ??
+              0
+          ),
+          page: Number(row?.page ?? query.page ?? 1),
+          pageSize: Number(row?.pageSize ?? row?.limit ?? query.pageSize ?? 10),
+        }))
+      );
+  }
 }

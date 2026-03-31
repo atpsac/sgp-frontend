@@ -19,11 +19,10 @@ export const PESADAS_ROUTES: Routes = [
       import('./pesada-test/pesada-test').then(m => m.PesadaTest),
     data: { permission: 'pesadas:create', breadcrumb: 'Nuevo' },
   },
-  // {
-  //   path: ':id/editar',
-  //   loadComponent: () =>
-  //     import('./sedes-form/sedes-form').then(m => m.SedesForm),
-  //   data: { permission: 'sedes:update', breadcrumb: 'Editar' },
-  
-  // },
+  {
+    path: ':id/editar',
+    loadComponent: () =>
+      import('./pesada-form/pesada-form').then(m => m.PesadaForm),
+    data: { permission: 'pesadas:create', breadcrumb: 'Editar' },
+  },
 ];

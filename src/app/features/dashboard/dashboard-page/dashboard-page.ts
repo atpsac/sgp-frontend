@@ -15,6 +15,7 @@ import {
 } from 'ng-apexcharts';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { PesadaList } from '../../pesadas/pesada-list/pesada-list';
 
 export type ChartOptions = {
   series: ApexAxisChartSeries;
@@ -41,7 +42,7 @@ export type DonutOptions = {
 @Component({
   standalone: true,
   selector: 'app-dashboard',
-  imports: [CommonModule, NgApexchartsModule],
+  imports: [CommonModule, NgApexchartsModule, PesadaList ],
   templateUrl: './dashboard-page.html',
   styleUrls: ['./dashboard-page.scss'],
 })

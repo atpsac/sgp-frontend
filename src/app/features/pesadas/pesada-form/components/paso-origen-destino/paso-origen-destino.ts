@@ -4,7 +4,10 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
 
-import { BuyingStation, WeighingService } from '../../../../../core/services/weighing.service';
+import {
+  BuyingStation,
+  WeighingService,
+} from '../../../../../core/services/weighing.service';
 
 @Component({
   selector: 'app-paso-origen-destino',
@@ -17,9 +20,8 @@ export class PasoOrigenDestino implements OnInit {
   @Input() formGroup!: FormGroup;
   @Input() locked = false;
 
-  // ✅ IMPORTANTE: estos Inputs EVITAN el NG8002 si el padre los bindea
-  @Input() originStations: BuyingStation[] | null = null;        // non-principal (opcional)
-  @Input() destinationStations: BuyingStation[] | null = null;   // principal (opcional)
+  @Input() originStations: BuyingStation[] | null = null;
+  @Input() destinationStations: BuyingStation[] | null = null;
 
   private api = inject(WeighingService);
   private destroyRef = inject(DestroyRef);
@@ -31,23 +33,75 @@ export class PasoOrigenDestino implements OnInit {
   destinationOptions: BuyingStation[] = [];
 
   ngOnInit(): void {
-    // ORIGEN: si el padre manda lista, úsala; si no, llama API non-principal
     if (this.originStations?.length) {
       this.originOptions = [...this.originStations];
+      this.normalizeSelectedOrigenValue();
       this.validateSavedSelections();
     } else {
       this.loadOriginStations();
     }
 
-    // DESTINO: si el padre manda lista, úsala; si no, llama API principal
     if (this.destinationStations?.length) {
       this.destinationOptions = [...this.destinationStations];
+      this.normalizeSelectedDestinoValue();
       this.autoselectDestinoIfSingle();
       this.validateSavedSelections();
       this.ensureNoDuplicateSelection();
     } else {
       this.loadDestinationStations();
     }
+  }
+
+  // =========================
+  // Compare para select
+  // =========================
+  compareSelectValues = (a: any, b: any): boolean => {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    return String(a) === String(b);
+  };
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private setControlValueIfChanged(path: string, value: any, emitEvent = false): void {
+    const ctrl = this.formGroup?.get(path);
+    if (!ctrl) return;
+
+    if (this.compareSelectValues(ctrl.value, value)) {
+      return;
+    }
+
+    ctrl.setValue(value, { emitEvent });
+  }
+
+  private normalizeSelectedOrigenValue(): void {
+    const ctrl = this.formGroup?.get('sedeOrigen');
+    if (!ctrl) return;
+
+    const current = this.toNumberOrNull(ctrl.value);
+    if (!current) return;
+
+    const found = this.originOptions.find((s) => Number(s.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged('sedeOrigen', found.id, false);
+  }
+
+  private normalizeSelectedDestinoValue(): void {
+    const ctrl = this.formGroup?.get('sedeDestino');
+    if (!ctrl) return;
+
+    const current = this.toNumberOrNull(ctrl.value);
+    if (!current) return;
+
+    const found = this.destinationOptions.find((s) => Number(s.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged('sedeDestino', found.id, false);
   }
 
   onOrigenChange(): void {
@@ -73,6 +127,7 @@ export class PasoOrigenDestino implements OnInit {
       .subscribe({
         next: (stations) => {
           this.originOptions = stations || [];
+          this.normalizeSelectedOrigenValue();
           this.validateSavedSelections();
         },
         error: (err) => {
@@ -84,7 +139,7 @@ export class PasoOrigenDestino implements OnInit {
   }
 
   // =========================
-  // DESTINO: Principal (1 item)
+  // DESTINO: Principal
   // =========================
   private loadDestinationStations(): void {
     this.loadingDestinationStations = true;
@@ -98,6 +153,7 @@ export class PasoOrigenDestino implements OnInit {
       .subscribe({
         next: (principal) => {
           this.destinationOptions = principal ? [principal] : [];
+          this.normalizeSelectedDestinoValue();
           this.autoselectDestinoIfSingle();
           this.validateSavedSelections();
           this.ensureNoDuplicateSelection();
@@ -113,7 +169,10 @@ export class PasoOrigenDestino implements OnInit {
   private autoselectDestinoIfSingle(): void {
     if (this.locked) return;
 
-    const currentDestino = Number(this.formGroup?.get('sedeDestino')?.value || 0);
+    const currentDestino = this.toNumberOrNull(
+      this.formGroup?.get('sedeDestino')?.value
+    );
+
     if (!currentDestino && this.destinationOptions.length === 1) {
       this.formGroup.patchValue(
         { sedeDestino: this.destinationOptions[0].id },
@@ -123,11 +182,14 @@ export class PasoOrigenDestino implements OnInit {
   }
 
   private ensureNoDuplicateSelection(): void {
-    const origenId = Number(this.formGroup?.get('sedeOrigen')?.value || 0);
-    const destinoId = Number(this.formGroup?.get('sedeDestino')?.value || 0);
+    const origenId = this.toNumberOrNull(
+      this.formGroup?.get('sedeOrigen')?.value
+    );
+    const destinoId = this.toNumberOrNull(
+      this.formGroup?.get('sedeDestino')?.value
+    );
 
     if (origenId && destinoId && origenId === destinoId) {
-      // como destino es principal, reseteo origen
       this.formGroup.patchValue({ sedeOrigen: null }, { emitEvent: true });
     }
   }
@@ -135,14 +197,24 @@ export class PasoOrigenDestino implements OnInit {
   private validateSavedSelections(): void {
     if (!this.formGroup) return;
 
-    const origenId = Number(this.formGroup.get('sedeOrigen')?.value || 0);
-    const destinoId = Number(this.formGroup.get('sedeDestino')?.value || 0);
+    const origenId = this.toNumberOrNull(
+      this.formGroup.get('sedeOrigen')?.value
+    );
+    const destinoId = this.toNumberOrNull(
+      this.formGroup.get('sedeDestino')?.value
+    );
 
-    if (origenId && !this.originOptions.some((s) => s.id === origenId)) {
+    if (
+      origenId &&
+      !this.originOptions.some((s) => Number(s.id) === origenId)
+    ) {
       this.formGroup.patchValue({ sedeOrigen: null }, { emitEvent: false });
     }
 
-    if (destinoId && !this.destinationOptions.some((s) => s.id === destinoId)) {
+    if (
+      destinoId &&
+      !this.destinationOptions.some((s) => Number(s.id) === destinoId)
+    ) {
       this.formGroup.patchValue({ sedeDestino: null }, { emitEvent: false });
     }
   }

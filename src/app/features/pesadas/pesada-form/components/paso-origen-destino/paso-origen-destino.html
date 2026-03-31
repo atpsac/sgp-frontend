@@ -4,21 +4,24 @@
     Origen: sedes NO principales. Destino: sede principal.
   </p>
 
-  <div class="alert alert-warning mt-2 mb-0" *ngIf="locked">
+  <!-- <div class="alert alert-warning mt-2 mb-0" *ngIf="locked">
     El encabezado ya fue guardado. No se puede modificar Origen/Destino.
-  </div>
+  </div> -->
 </div>
 
 <div [formGroup]="formGroup">
   <div class="row g-4">
     <!-- ORIGEN -->
     <div class="col-md-6 col-12">
-      <label class="form-label mb-1 small text-muted">Sede de origen (No principal)</label>
+      <label class="form-label mb-1 small text-muted">
+        Sede de origen (No principal)
+      </label>
 
       <div class="ux-select">
         <select
           class="form-select ux-input"
           formControlName="sedeOrigen"
+          [compareWith]="compareSelectValues"
           (change)="onOrigenChange()"
           [disabled]="locked || loadingOriginStations"
         >
@@ -37,12 +40,15 @@
 
     <!-- DESTINO -->
     <div class="col-md-6 col-12">
-      <label class="form-label mb-1 small text-muted">Sede de destino (Principal)</label>
+      <label class="form-label mb-1 small text-muted">
+        Sede de destino (Principal)
+      </label>
 
       <div class="ux-select">
         <select
           class="form-select ux-input"
           formControlName="sedeDestino"
+          [compareWith]="compareSelectValues"
           (change)="onDestinoChange()"
           [disabled]="locked || loadingDestinationStations"
         >

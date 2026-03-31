@@ -649,4 +649,9 @@ export class PesadaList implements OnInit {
   onEsc(): void {
     this.actionsOpenTicket = null;
   }
+
+  verDetalle(row: PesadaRow): void {
+    this.router.navigateByUrl(`pesadas/${encodeURIComponent(String(row.id))}/editar`);
+  }
+
 }

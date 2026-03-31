@@ -140,7 +140,7 @@
 
         <tbody *ngIf="!isLoading">
           <tr *ngFor="let row of data; trackBy: trackByRow">
-            <td class="ux-col-ticket" [attr.data-label]="'Ticket'">
+            <td class="ux-col-ticket" [attr.data-label]="'Ticket'" (click)="verDetalle(row)" style="cursor: pointer;">
               <a href="javascript:void(0)" class="ux-ticket-link">
                 {{ row.ticketLabel }}
               </a>

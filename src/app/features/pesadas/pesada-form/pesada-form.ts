@@ -12,15 +12,24 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { firstValueFrom, Subject, takeUntil } from 'rxjs';
+import {
+  firstValueFrom,
+  Subject,
+  takeUntil,
+} from 'rxjs';
 import Swal from 'sweetalert2';
 
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import {
   WeighingService,
   BuyingStation,
+  ScaleTicketHeaderData,
+  ScaleTicketHeaderDocument,
+  ScaleTicketDetail,
+  ScaleTicketDetailPackaging,
+  ScaleTicketDetailsTotals,
 } from '../../../core/services/weighing.service';
 
 import { StepperNav, WizardStep } from './components/stepper-nav/stepper-nav';
@@ -113,6 +122,7 @@ export interface TotalesPesadas {
 })
 export class PesadaForm implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private isHydrating = false;
 
   minFechaEmision!: string;
   maxFechaEmision!: string;
@@ -123,6 +133,13 @@ export class PesadaForm implements OnInit, OnDestroy {
   showValidation = false;
 
   operationIdSelected: number | null = null;
+
+  loading = false;
+  loadingMessage = 'Cargando ticket...';
+  loadErrorMessage = '';
+
+  isEditMode = false;
+  routeTicketId: number | null = null;
 
   /**
    * El hijo PasoDetalleTicket espera string[]
@@ -202,52 +219,53 @@ export class PesadaForm implements OnInit, OnDestroy {
   }
 
   constructor(
-  private fb: FormBuilder,
-  public toast: ToastService,
-  private weighingService: WeighingService,
-  private ticketDraftService: TicketDraftService,
-  private pdf: TicketBalanzaPdfService,
-  private router: Router
-) {
-  const today = new Date();
-  this.minFechaEmision = this.shiftDateLocal(today, -3);
-  this.maxFechaEmision = this.shiftDateLocal(today, 3);
-  this.todayStr = this.shiftDateLocal(today, 0);
+    private fb: FormBuilder,
+    public toast: ToastService,
+    private weighingService: WeighingService,
+    private ticketDraftService: TicketDraftService,
+    private pdf: TicketBalanzaPdfService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
+    const today = new Date();
+    this.minFechaEmision = this.shiftDateLocal(today, -3);
+    this.maxFechaEmision = this.shiftDateLocal(today, 3);
+    this.todayStr = this.shiftDateLocal(today, 0);
 
-  this.ticketForm = this.fb.group({
-    datosOperacion: this.fb.group({
-      fechaEmision: [this.todayStr, Validators.required],
-      operacion: [null, Validators.required],
-      sedeOperacion: [null, Validators.required],
-    }),
-    origenDestino: this.fb.group({
-      sedeOrigen: [null, Validators.required],
-      sedeDestino: [null, Validators.required],
-    }),
-    transporte: this.fb.group({
-      transportista: this.fb.group({
-        transportistaId: [null, Validators.required],
-        nombre: [{ value: '', disabled: true }],
-        tipoDocumento: [{ value: '', disabled: true }],
-        numeroDocumento: [{ value: '', disabled: true }],
+    this.ticketForm = this.fb.group({
+      datosOperacion: this.fb.group({
+        fechaEmision: [this.todayStr, Validators.required],
+        operacion: [null, Validators.required],
+        sedeOperacion: [null, Validators.required],
       }),
-      conductor: this.fb.group({
-        conductorId: [null, Validators.required],
-        nombre: [{ value: '', disabled: true }],
-        tipoDocumento: [{ value: '', disabled: true }],
-        numeroDocumento: [{ value: '', disabled: true }],
-        licenciaConducir: [{ value: '', disabled: true }],
+      origenDestino: this.fb.group({
+        sedeOrigen: [null, Validators.required],
+        sedeDestino: [null, Validators.required],
       }),
-      vehiculo: this.fb.group({
-        vehiculoId: [null, Validators.required],
-        trailerId: [null],
+      transporte: this.fb.group({
+        transportista: this.fb.group({
+          transportistaId: [null, Validators.required],
+          nombre: [{ value: '', disabled: true }],
+          tipoDocumento: [{ value: '', disabled: true }],
+          numeroDocumento: [{ value: '', disabled: true }],
+        }),
+        conductor: this.fb.group({
+          conductorId: [null, Validators.required],
+          nombre: [{ value: '', disabled: true }],
+          tipoDocumento: [{ value: '', disabled: true }],
+          numeroDocumento: [{ value: '', disabled: true }],
+          licenciaConducir: [{ value: '', disabled: true }],
+        }),
+        vehiculo: this.fb.group({
+          vehiculoId: [null, Validators.required],
+          trailerId: [null],
+        }),
       }),
-    }),
-    detalleTicket: this.fb.group({
-      ajusteKg: [0],
-    }),
-  });
-}
+      detalleTicket: this.fb.group({
+        ajusteKg: [0],
+      }),
+    });
+  }
 
   /* =========================================================
      GETTERS
@@ -269,14 +287,43 @@ export class PesadaForm implements OnInit, OnDestroy {
     return this.ticketForm.get('detalleTicket') as FormGroup;
   }
 
+
+    get ticketDisplayCode(): string {
+    const id = this.headerTicketId ?? this.routeTicketId ?? null;
+    if (!id) return '';
+    return `TKP - ${String(id).padStart(6, '0')}`;
+  }
+
+  get pageTitle(): string {
+    const id = this.headerTicketId ?? this.routeTicketId ?? null;
+
+    if (this.isEditMode && id) {
+      return `Ticket de balanza - ${this.ticketDisplayCode}`;
+    }
+
+    return 'Ticket de balanza - Nuevo';
+  }
+
+  
   /* =========================================================
      CICLO DE VIDA
      ========================================================= */
 
   ngOnInit(): void {
-    this.loadDraftFromStorage();
-    this.recalcularTotalesPesadas();
+    this.setupFormSubscriptions();
+    this.listenRouteParams();
+  }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /* =========================================================
+     INICIALIZACIÓN
+     ========================================================= */
+
+  private setupFormSubscriptions(): void {
     this.datosOperacion
       .get('operacion')
       ?.valueChanges.pipe(takeUntil(this.destroy$))
@@ -309,6 +356,32 @@ export class PesadaForm implements OnInit, OnDestroy {
         this.recalcularTotalesPesadas();
         this.saveDraftToStorage();
       });
+  }
+
+  private listenRouteParams(): void {
+    this.route.paramMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        const rawId = params.get('id');
+        const ticketId = this.parsePositiveInt(rawId);
+        void this.initializeComponent(ticketId);
+      });
+  }
+
+  private async initializeComponent(ticketId: number | null): Promise<void> {
+    this.loadErrorMessage = '';
+    this.routeTicketId = ticketId;
+    this.isEditMode = !!ticketId;
+
+    this.resetFormStateOnly();
+
+    if (ticketId) {
+      await this.loadTicketForEdit(ticketId);
+      return;
+    }
+
+    this.loadDraftFromStorage();
+    this.recalcularTotalesPesadas();
 
     if (this.headerSaved) {
       this.lockHeaderEdition();
@@ -317,9 +390,507 @@ export class PesadaForm implements OnInit, OnDestroy {
     this.updateStepsState();
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+  private async loadTicketForEdit(ticketId: number): Promise<void> {
+    this.loading = true;
+    this.isHydrating = true;
+    this.loadingMessage = `Cargando ticket #${ticketId}...`;
+
+    try {
+      this.loadingMessage = 'Cargando cabecera del ticket...';
+
+      const header = await firstValueFrom(
+        this.weighingService.getScaleTicketHeader(ticketId)
+      );
+
+      await this.applyHeaderDataToForm(header, ticketId);
+
+      this.loadingMessage = 'Cargando detalle del ticket...';
+      await this.loadStep5ForEdit(ticketId);
+
+      this.headerTicketId = ticketId;
+      this.headerSaved = true;
+      this.currentStep = 1;
+      this.showValidation = false;
+
+      this.lockHeaderEdition();
+      this.recalcularTotalesPesadas();
+      this.updateStepsState();
+    } catch (error: any) {
+      console.error('Error cargando ticket para edición', error);
+
+      this.loadErrorMessage =
+        error?.message || 'No se pudo cargar la información del ticket.';
+
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo cargar el ticket',
+        text: this.loadErrorMessage,
+      });
+    } finally {
+      this.isHydrating = false;
+      this.loading = false;
+    }
+  }
+
+  private async applyHeaderDataToForm(
+    header: ScaleTicketHeaderData,
+    ticketId: number
+  ): Promise<void> {
+    const fechaEmision = this.toDateInputValue(
+      header?.scaleTicket?.creationDate
+    );
+
+    const sedeOperacion = this.createStationLite(
+      header?.buyingStation?.id ?? null,
+      header?.buyingStation?.name ?? '',
+      true
+    );
+
+    const sedeOrigen = this.createStationLite(
+      header?.buyingStationOrigin?.id ?? null,
+      header?.buyingStationOrigin?.name ?? '',
+      false
+    );
+
+    const sedeDestino = this.createStationLite(
+      header?.buyingStationDestination?.id ?? null,
+      header?.buyingStationDestination?.name ?? '',
+      true
+    );
+
+    this.originStations = this.mergeStations(
+      sedeOrigen ? [sedeOrigen] : [],
+      this.originStations
+    );
+
+    this.destinationStations = this.mergeStations(
+      sedeDestino ? [sedeDestino] : [],
+      sedeOperacion ? [sedeOperacion, ...this.destinationStations] : this.destinationStations
+    );
+
+    this.ticketForm.patchValue(
+      {
+        datosOperacion: {
+          fechaEmision,
+          operacion: this.asSelectValue(header?.operation?.id),
+          sedeOperacion: this.asSelectValue(header?.buyingStation?.id),
+        },
+        origenDestino: {
+          sedeOrigen: this.asSelectValue(header?.buyingStationOrigin?.id),
+          sedeDestino: this.asSelectValue(header?.buyingStationDestination?.id),
+        },
+        transporte: {
+          transportista: {
+            transportistaId: this.asSelectValue(header?.carrier?.idBusinessPartners),
+            nombre: header?.carrier?.companyName ?? '',
+            tipoDocumento: header?.carrier?.identityDocumentTypeName ?? '',
+            numeroDocumento: header?.carrier?.documentNumber ?? '',
+          },
+          conductor: {
+            conductorId: this.asSelectValue(header?.driver?.idBusinessPartners),
+            nombre: header?.driver?.companyName ?? '',
+            tipoDocumento: header?.driver?.identityDocumentTypeName ?? '',
+            numeroDocumento: header?.driver?.documentNumber ?? '',
+            licenciaConducir:
+              header?.driver?.idLicense != null
+                ? String(header.driver.idLicense)
+                : '',
+          },
+          vehiculo: {
+            vehiculoId: this.asSelectValue(header?.truck?.id),
+            trailerId: this.asSelectValue(header?.trailer?.id),
+          },
+        },
+        detalleTicket: {
+          ajusteKg: 0,
+        },
+      },
+      { emitEvent: false }
+    );
+
+    this.documentos = this.mapHeaderDocumentsToUi(header);
+    this.pesadas = [];
+
+    this.headerTicketId = ticketId;
+    this.syncOperationIdSelected(header?.operation?.id ?? null);
+
+    await this.triggerDependentEditPrefill(header);
+    this.patchReadonlyTransportSnapshot(header);
+  }
+
+  private async triggerDependentEditPrefill(
+    header: ScaleTicketHeaderData
+  ): Promise<void> {
+    const sedeOperacionId = this.asSelectValue(header?.buyingStation?.id);
+    const operacionId = this.asSelectValue(header?.operation?.id);
+    const carrierId = this.asSelectValue(header?.carrier?.idBusinessPartners);
+    const driverId = this.asSelectValue(header?.driver?.idBusinessPartners);
+    const truckId = this.asSelectValue(header?.truck?.id);
+    const trailerId = this.asSelectValue(header?.trailer?.id);
+
+    if (sedeOperacionId != null) {
+      this.datosOperacion.get('sedeOperacion')?.setValue(sedeOperacionId, {
+        emitEvent: true,
+      });
+      await this.delay(150);
+    }
+
+    if (operacionId != null) {
+      this.datosOperacion.get('operacion')?.setValue(operacionId, {
+        emitEvent: true,
+      });
+      await this.delay(150);
+    }
+
+    if (carrierId != null) {
+      this.transporte.get('transportista.transportistaId')?.setValue(carrierId, {
+        emitEvent: true,
+      });
+      await this.delay(150);
+    }
+
+    if (driverId != null) {
+      this.transporte.get('conductor.conductorId')?.setValue(driverId, {
+        emitEvent: true,
+      });
+    }
+
+    if (truckId != null) {
+      this.transporte.get('vehiculo.vehiculoId')?.setValue(truckId, {
+        emitEvent: true,
+      });
+    }
+
+    if (trailerId != null) {
+      this.transporte.get('vehiculo.trailerId')?.setValue(trailerId, {
+        emitEvent: true,
+      });
+    }
+
+    await this.delay(100);
+  }
+
+  private patchReadonlyTransportSnapshot(
+    header: ScaleTicketHeaderData
+  ): void {
+    this.ticketForm.patchValue(
+      {
+        transporte: {
+          transportista: {
+            nombre: header?.carrier?.companyName ?? '',
+            tipoDocumento: header?.carrier?.identityDocumentTypeName ?? '',
+            numeroDocumento: header?.carrier?.documentNumber ?? '',
+          },
+          conductor: {
+            nombre: header?.driver?.companyName ?? '',
+            tipoDocumento: header?.driver?.identityDocumentTypeName ?? '',
+            numeroDocumento: header?.driver?.documentNumber ?? '',
+            licenciaConducir:
+              header?.driver?.idLicense != null
+                ? String(header.driver.idLicense)
+                : '',
+          },
+        },
+      },
+      { emitEvent: false }
+    );
+  }
+
+  /* =========================================================
+     PASO 5 EN EDICIÓN
+     ========================================================= */
+
+  private async loadStep5ForEdit(ticketId: number): Promise<void> {
+    const detailsPage = await firstValueFrom(
+      this.weighingService.listScaleTicketDetails(ticketId, {
+        page: 1,
+        pageSize: 500,
+        sort: 'id',
+        sortDirection: 'asc',
+      })
+    );
+
+    const detailItems = detailsPage?.items ?? [];
+
+    const pesadas = await Promise.all(
+      detailItems.map((detail) => this.mapScaleDetailToPesada(detail))
+    );
+
+    this.pesadas = pesadas;
+
+    let totalsFromApi: ScaleTicketDetailsTotals | null = null;
+
+    try {
+      totalsFromApi = await firstValueFrom(
+        this.weighingService.getScaleTicketDetailsTotals(ticketId)
+      );
+    } catch (error) {
+      console.warn('No se pudieron obtener los totales del ticket desde API', error);
+    }
+
+    this.applyStep5Totals(totalsFromApi, pesadas);
+  }
+
+  private async mapScaleDetailToPesada(
+    detail: ScaleTicketDetail
+  ): Promise<PesadaDetalle> {
+    let taras: TaraItem[] = [];
+
+    const detalleId = this.parsePositiveInt(detail?.id);
+
+    if (detalleId && (detail?.hasPackaging || Number(detail?.tareWeight ?? 0) > 0)) {
+      try {
+        const tarePage = await firstValueFrom(
+          this.weighingService.listTaresByScaleTicketDetail(detalleId, {
+            page: 1,
+            pageSize: 300,
+            sortBy: 'id',
+            sortDirection: 'asc',
+          })
+        );
+
+        taras = (tarePage?.items ?? []).map((item) =>
+          this.mapPackagingToTara(item)
+        );
+      } catch (error) {
+        console.warn(
+          `No se pudieron cargar taras para el detalle ${detalleId}`,
+          error
+        );
+      }
+    }
+
+    const taraTotalKg = this.round2(detail?.tareWeight ?? 0);
+
+    return {
+      id: detalleId ?? undefined,
+      idTicketDetail: detalleId ?? undefined,
+      producto: this.safeText(detail?.productName, '—'),
+      balanza: this.safeText(detail?.deviceName, '—'),
+      tipoPesadaLabel: '',
+      pesoBrutoKg: this.round2(detail?.grossWeight ?? 0),
+      taraTotalKg,
+      pesoNetoKg: this.round2(detail?.netWeight ?? 0),
+      observaciones: this.safeText(detail?.observations, ''),
+      requiereTara: !!detail?.hasPackaging || taraTotalKg > 0,
+      tieneTara: taras.length > 0 || taraTotalKg > 0,
+      estado: detail?.isActive ? 'ACTIVO' : 'INACTIVO',
+      taras,
+    };
+  }
+
+  private mapPackagingToTara(
+    item: ScaleTicketDetailPackaging
+  ): TaraItem {
+    return {
+      id: this.parsePositiveInt(item?.id) ?? undefined,
+      empaque: this.safeText(item?.packagingType?.name, '—'),
+      codigo: this.safeText(item?.packagingType?.code, '—'),
+      descripcion: this.safeText(item?.packagingType?.description, ''),
+      taraPorEmpaqueKg: this.round2(
+        item?.registeredUnitTareWeight ??
+          item?.packagingType?.unitTareWeight ??
+          0
+      ),
+      cantidad: this.toNumber(item?.packageQuantity, 0),
+      taraKg: this.round2(item?.subtotalTareWeight ?? 0),
+    };
+  }
+
+  private applyStep5Totals(
+    totalsFromApi: ScaleTicketDetailsTotals | null,
+    pesadas: PesadaDetalle[]
+  ): void {
+    const apiCantidadItems =
+      this.toNumberOrNull(totalsFromApi?.cantidadItems) ?? pesadas.length;
+
+    const apiTotalPesoBruto =
+      this.toNumberOrNull(totalsFromApi?.totalPesoBruto);
+
+    const apiTotalTara =
+      this.toNumberOrNull(totalsFromApi?.totalTara);
+
+    const apiSubtotalPesoNeto =
+      this.toNumberOrNull(totalsFromApi?.subtotalPesoNeto);
+
+    const ajusteKg =
+      this.toNumberOrNull(
+        (totalsFromApi as any)?.ajusteKg ??
+          (totalsFromApi as any)?.totalTareAdjustment ??
+          (totalsFromApi as any)?.tareAdjustment ??
+          0
+      ) ?? 0;
+
+    this.detalleTicket.patchValue(
+      {
+        ajusteKg,
+      },
+      { emitEvent: false }
+    );
+
+    const totalPesoBrutoCalc = this.round2(
+      pesadas.reduce((acc, p) => acc + Number(p?.pesoBrutoKg ?? 0), 0)
+    );
+
+    const totalTaraCalc = this.round2(
+      pesadas.reduce((acc, p) => acc + Number(p?.taraTotalKg ?? 0), 0)
+    );
+
+    const subtotalPesoNetoCalc = this.round2(
+      pesadas.reduce((acc, p) => acc + Number(p?.pesoNetoKg ?? 0), 0)
+    );
+
+    const totalPesoBruto = this.round2(
+      apiTotalPesoBruto ?? totalPesoBrutoCalc
+    );
+
+    const totalTara = this.round2(
+      apiTotalTara ?? totalTaraCalc
+    );
+
+    const subtotalPesoNeto = this.round2(
+      apiSubtotalPesoNeto ?? subtotalPesoNetoCalc
+    );
+
+    const totalPesoNeto = this.round2(subtotalPesoNeto + ajusteKg);
+    const diferenciaAjuste = this.round2(totalPesoNeto - subtotalPesoNeto);
+
+    this.totalesPesadas = {
+      cantidadItems: apiCantidadItems,
+      totalPesoBruto,
+      totalTara,
+      subtotalPesoNeto,
+      ajusteKg: this.round2(ajusteKg),
+      diferenciaAjuste,
+      totalPesoNeto,
+    };
+  }
+
+  /* =========================================================
+     HELPERS DE CARGA
+     ========================================================= */
+
+  private parsePositiveInt(raw: any): number | null {
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  private toNumber(value: any, fallback = 0): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private asSelectValue(value: any): string | null {
+    const n = this.parsePositiveInt(value);
+    return n ? String(n) : null;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private createStationLite(
+    id: number | null,
+    name: string,
+    isPrincipal: boolean
+  ): BuyingStation | null {
+    const stationId = this.parsePositiveInt(id);
+    if (!stationId) return null;
+
+    return {
+      id: stationId,
+      name: String(name || '').trim(),
+      address: '',
+      isPrincipal,
+      ubigeoCode: '',
+      ubigeoRegion: '',
+      ubigeoProvince: '',
+      ubigeoDistrict: '',
+    };
+  }
+
+  private mergeStations(
+    incoming: BuyingStation[],
+    existing: BuyingStation[]
+  ): BuyingStation[] {
+    const map = new Map<number, BuyingStation>();
+
+    for (const item of existing || []) {
+      if (item?.id) {
+        map.set(item.id, item);
+      }
+    }
+
+    for (const item of incoming || []) {
+      if (item?.id) {
+        map.set(item.id, item);
+      }
+    }
+
+    return Array.from(map.values());
+  }
+
+  private resolveDocumentBusinessPartner(header: ScaleTicketHeaderData): {
+    idBusinessPartners: number | null;
+    companyName: string | null;
+  } {
+    const partner =
+      header?.client ??
+      header?.supplier ??
+      header?.carrier ??
+      null;
+
+    return {
+      idBusinessPartners: partner?.idBusinessPartners ?? null,
+      companyName: partner?.companyName ?? null,
+    };
+  }
+
+  private buildDocumentFullNumber(doc: ScaleTicketHeaderDocument): string {
+    const serial = String(doc?.documentSerial ?? '').trim();
+    const number = String(doc?.documentNumber ?? '').trim();
+
+    if (serial && number) return `${serial}-${number}`;
+    if (serial) return serial;
+    if (number) return number;
+    return '';
+  }
+
+  private mapHeaderDocumentsToUi(
+    header: ScaleTicketHeaderData
+  ): DocumentoRelacionado[] {
+    const bp = this.resolveDocumentBusinessPartner(header);
+
+    return (header?.documents ?? []).map((doc) => {
+      const fullNumber = this.buildDocumentFullNumber(doc);
+
+      return {
+        id: doc?.id ?? undefined,
+        socioNegocio: bp.companyName ?? null,
+        tipoDocumento: doc?.documentTypeName ?? null,
+        documento:
+          String(doc?.documentTypeCode ?? '').trim() ||
+          String(doc?.documentTypeName ?? '').trim() ||
+          null,
+        fechaDocumento: this.toDateInputValue(doc?.documentDate),
+        numeroDocumento: fullNumber || null,
+        pesoBrutoKg: this.round2(doc?.documentGrossWeight ?? 0),
+        pesoNetoKg: this.round2(doc?.documentNetWeight ?? 0),
+
+        idBusinessPartners: bp.idBusinessPartners,
+        idDocumentTypes:
+          doc?.idDocumentTypes != null ? Number(doc.idDocumentTypes) : null,
+        serie: String(doc?.documentSerial ?? '').trim() || null,
+        numeroCorrelativo:
+          String(doc?.documentNumber ?? '').trim() || null,
+      };
+    });
   }
 
   /* =========================================================
@@ -347,6 +918,22 @@ export class PesadaForm implements OnInit, OnDestroy {
     return `${d}/${m}/${y}`;
   }
 
+  private toDateInputValue(value: any): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return this.todayStr;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      return raw;
+    }
+
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) {
+      return this.todayStr;
+    }
+
+    return this.formatLocalDate(d);
+  }
+
   /* =========================================================
      HANDLERS USADOS POR EL HTML
      ========================================================= */
@@ -372,6 +959,27 @@ export class PesadaForm implements OnInit, OnDestroy {
   }
 
   async resetDraftConfirm(): Promise<void> {
+    if (this.isEditMode && this.routeTicketId) {
+      const ok = await this.toast.confirm(
+        'Se recargará la información original del ticket desde el servidor. ¿Deseas continuar?',
+        { title: 'Recargar ticket', type: 'warning' }
+      );
+
+      if (!ok) return;
+
+      await this.loadTicketForEdit(this.routeTicketId);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Ticket recargado correctamente.',
+        showConfirmButton: false,
+        timer: 1600,
+      });
+      return;
+    }
+
     if (!this.hasDraft) return;
 
     const ok = await this.toast.confirm(
@@ -402,8 +1010,19 @@ export class PesadaForm implements OnInit, OnDestroy {
     nonPrincipal: BuyingStation[];
     all: BuyingStation[];
   }): void {
-    this.destinationStations = payload?.principal ? [payload.principal] : [];
-    this.originStations = payload?.nonPrincipal || [];
+    const principalList = payload?.principal ? [payload.principal] : [];
+    const nonPrincipalList = payload?.nonPrincipal || [];
+
+    this.destinationStations = this.mergeStations(
+      principalList,
+      this.destinationStations
+    );
+
+    this.originStations = this.mergeStations(
+      nonPrincipalList,
+      this.originStations
+    );
+
     this.saveDraftToStorage();
   }
 
@@ -432,6 +1051,8 @@ export class PesadaForm implements OnInit, OnDestroy {
      ========================================================= */
 
   private saveDraftToStorage(): void {
+    if (this.isHydrating || this.isEditMode) return;
+
     const draft = {
       form: this.ticketForm.getRawValue(),
       documentos: this.documentos,
@@ -452,8 +1073,10 @@ export class PesadaForm implements OnInit, OnDestroy {
     if (!draft) return;
 
     try {
+      this.isHydrating = true;
+
       if (draft.form) {
-        this.ticketForm.patchValue(draft.form);
+        this.ticketForm.patchValue(draft.form, { emitEvent: false });
       }
 
       this.documentos = draft.documentos || [];
@@ -479,10 +1102,26 @@ export class PesadaForm implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error aplicando borrador de ticket', error);
+    } finally {
+      this.isHydrating = false;
     }
   }
 
   private getDraftSnapshot(): any | null {
+    if (this.isEditMode) {
+      return {
+        form: this.ticketForm.getRawValue(),
+        documentos: this.documentos,
+        pesadas: this.pesadas,
+        currentStep: this.currentStep,
+        headerSaved: this.headerSaved,
+        headerTicketId: this.headerTicketId,
+        originStations: this.originStations,
+        destinationStations: this.destinationStations,
+        operationIdSelected: this.operationIdSelected,
+      };
+    }
+
     this.saveDraftToStorage();
     return this.ticketDraftService.loadDraft();
   }
@@ -497,9 +1136,7 @@ export class PesadaForm implements OnInit, OnDestroy {
     }
   }
 
-  private resetDraftHard(): void {
-    this.clearDraftStorage();
-
+  private resetFormStateOnly(): void {
     this.headerSaved = false;
     this.headerTicketId = null;
     this.currentStep = 1;
@@ -510,6 +1147,7 @@ export class PesadaForm implements OnInit, OnDestroy {
     this.destinationStations = [];
     this.documentos = [];
     this.pesadas = [];
+    this.loadErrorMessage = '';
 
     this.ticketForm.enable({ emitEvent: false });
 
@@ -552,6 +1190,11 @@ export class PesadaForm implements OnInit, OnDestroy {
 
     this.recalcularTotalesPesadas();
     this.updateStepsState();
+  }
+
+  private resetDraftHard(): void {
+    this.clearDraftStorage();
+    this.resetFormStateOnly();
   }
 
   /* =========================================================
@@ -789,25 +1432,33 @@ export class PesadaForm implements OnInit, OnDestroy {
     try {
       this.isSavingHeader = true;
 
-      const v: any = this.ticketForm.value;
+      const v: any = this.ticketForm.getRawValue();
 
       const payload: any = {
         ticket: {
-          idBuyingStations: v.datosOperacion.sedeOperacion,
-          idBuyingStationsOrigin: v.origenDestino.sedeOrigen,
-          idBuyingStationsDestination: v.origenDestino.sedeDestino,
+          idBuyingStations: Number(v.datosOperacion.sedeOperacion),
+          idBuyingStationsOrigin: Number(v.origenDestino.sedeOrigen),
+          idBuyingStationsDestination: Number(v.origenDestino.sedeDestino),
           idEmployees: null,
-          idOperations: v.datosOperacion.operacion,
-          idBusinessPartnersCarriers: v.transporte.transportista.transportistaId,
-          idBusinessPartnersDrivers: v.transporte.conductor.conductorId,
-          idTrucks: v.transporte.vehiculo.vehiculoId,
-          idTrailers: v.transporte.vehiculo.trailerId,
+          idOperations: Number(v.datosOperacion.operacion),
+          idBusinessPartnersCarriers: Number(
+            v.transporte.transportista.transportistaId
+          ),
+          idBusinessPartnersDrivers: Number(
+            v.transporte.conductor.conductorId
+          ),
+          idTrucks: Number(v.transporte.vehiculo.vehiculoId),
+          idTrailers: v.transporte.vehiculo.trailerId
+            ? Number(v.transporte.vehiculo.trailerId)
+            : null,
           idScaleTicketStatus: 1,
           creationDate: v.datosOperacion.fechaEmision,
         },
         documents: (this.documentos || []).map((d) => ({
-          idDocumentTypes: Number(d.idDocumentTypes),
-          idBusinessPartners: Number(d.idBusinessPartners),
+          idDocumentTypes:
+            d.idDocumentTypes != null ? Number(d.idDocumentTypes) : null,
+          idBusinessPartners:
+            d.idBusinessPartners != null ? Number(d.idBusinessPartners) : null,
           documentSerial: String(d.serie || 'SN').trim(),
           documentNumber: String(d.numeroCorrelativo || '0').trim(),
           documentDate: d.fechaDocumento,
@@ -910,7 +1561,21 @@ export class PesadaForm implements OnInit, OnDestroy {
 
   private normalizeDate(v: any): string {
     if (!v) return this.todayStr;
-    if (typeof v === 'string') return v;
+
+    if (typeof v === 'string') {
+      const s = v.trim();
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        return s;
+      }
+
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        return this.formatLocalDate(d);
+      }
+
+      return this.todayStr;
+    }
 
     try {
       const d = new Date(v);
@@ -1093,88 +1758,82 @@ export class PesadaForm implements OnInit, OnDestroy {
      ========================================================= */
 
   async guardarTicketCompleto(): Promise<void> {
-  if (this.isSavingFull || this.isSavingHeader) return;
+    if (this.isSavingFull || this.isSavingHeader) return;
 
-  this.showValidation = true;
+    this.showValidation = true;
 
-  const isValid = this.validateUpToStep(this.maxStep);
-  if (!isValid) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Completa todos los datos requeridos antes de guardar el ticket.',
-    });
-    return;
-  }
-
-  if (!this.headerSaved || !this.headerTicketId) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Primero guarda el encabezado (Paso 4).',
-    });
-    return;
-  }
-
-  const ok = await this.toast.confirm(
-    'Se cerrará el ticket de balanza y luego se generará el reporte PDF. ¿Deseas continuar?',
-    {
-      title: `Guardar ticket #${this.headerTicketId}`,
-      type: 'success',
-    }
-  );
-
-  if (!ok) return;
-
-  let ticketCerrado = false;
-
-  try {
-    this.isSavingFull = true;
-
-    // 1) Cerrar ticket en servidor
-    await this.cerrarTicketServidor(this.headerTicketId);
-    ticketCerrado = true;
-
-    // 2) Tomar snapshot actual del borrador
-    const draft = this.getDraftSnapshot();
-    if (!draft) {
-      throw new Error('No se encontró borrador para generar el reporte.');
-    }
-
-    // 3) Generar PDF
-    const qrDataUrl = await this.loadImageAsDataUrlCanvas('assets/qrcode.png');
-    const report = this.buildReportFromDraft(draft, qrDataUrl);
-
-    const filename = `TICKET_BALANZA_${this.headerTicketId}.pdf`;
-    await this.generatePdfFromReport(report, filename);
-
-    // 4) Limpiar proceso y redirigir
-    await Swal.fire({
-      icon: 'success',
-      title: 'Ticket guardado correctamente',
-      text: 'El proceso se completó y serás redirigido al listado.',
-      confirmButtonText: 'Aceptar',
-    });
-
-    this.resetDraftHard();
-    await this.router.navigate(['/pesadas/listar']);
-
-  } catch (e: any) {
-    console.error(e);
-
-    if (ticketCerrado) {
+    const isValid = this.validateUpToStep(this.maxStep);
+    if (!isValid) {
       Swal.fire({
         icon: 'warning',
-        title: 'El ticket fue guardado, pero no se pudo generar el PDF.',
-        text: e?.message || 'Revisa la generación del reporte.',
+        title: 'Completa todos los datos requeridos antes de guardar el ticket.',
       });
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: e?.message || 'No se pudo guardar/cerrar el ticket.',
-      });
+      return;
     }
-  } finally {
-    this.isSavingFull = false;
-  }
-}
 
+    if (!this.headerSaved || !this.headerTicketId) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Primero guarda el encabezado (Paso 4).',
+      });
+      return;
+    }
+
+    const ok = await this.toast.confirm(
+      'Se cerrará el ticket de balanza y luego se generará el reporte PDF. ¿Deseas continuar?',
+      {
+        title: `Guardar ticket #${this.headerTicketId}`,
+        type: 'success',
+      }
+    );
+
+    if (!ok) return;
+
+    let ticketCerrado = false;
+
+    try {
+      this.isSavingFull = true;
+
+      await this.cerrarTicketServidor(this.headerTicketId);
+      ticketCerrado = true;
+
+      const draft = this.getDraftSnapshot();
+      if (!draft) {
+        throw new Error('No se encontró borrador para generar el reporte.');
+      }
+
+      const qrDataUrl = await this.loadImageAsDataUrlCanvas('assets/qrcode.png');
+      const report = this.buildReportFromDraft(draft, qrDataUrl);
+
+      const filename = `TICKET_BALANZA_${this.headerTicketId}.pdf`;
+      await this.generatePdfFromReport(report, filename);
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Ticket guardado correctamente',
+        text: 'El proceso se completó y serás redirigido al listado.',
+        confirmButtonText: 'Aceptar',
+      });
+
+      this.resetDraftHard();
+      await this.router.navigate(['/pesadas/listar']);
+    } catch (e: any) {
+      console.error(e);
+
+      if (ticketCerrado) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'El ticket fue guardado, pero no se pudo generar el PDF.',
+          text: e?.message || 'Revisa la generación del reporte.',
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: e?.message || 'No se pudo guardar/cerrar el ticket.',
+        });
+      }
+    } finally {
+      this.isSavingFull = false;
+    }
+  }
 }

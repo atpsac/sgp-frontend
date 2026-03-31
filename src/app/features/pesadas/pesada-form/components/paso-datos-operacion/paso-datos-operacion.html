@@ -9,7 +9,7 @@
 <div [formGroup]="formGroup">
   <div class="row g-3">
     <div class="col-md-3 col-12">
-      <label class="form-label mb-1 small text-muted"> Fecha de emisión </label>
+      <label class="form-label mb-1 small text-muted">Fecha de emisión</label>
       <input
         type="date"
         class="form-control ux-input"
@@ -33,11 +33,12 @@
     </div>
 
     <div class="col-md-4 col-12">
-      <label class="form-label mb-1 small text-muted"> Sede de operación </label>
+      <label class="form-label mb-1 small text-muted">Sede de operación</label>
       <div class="ux-select">
         <select
           class="form-select ux-input"
           formControlName="sedeOperacion"
+          [compareWith]="compareSelectValues"
           [disabled]="locked || loadingStations"
         >
           <option [ngValue]="null" disabled>
@@ -53,11 +54,12 @@
     </div>
 
     <div class="col-md-5 col-12">
-      <label class="form-label mb-1 small text-muted"> Operación </label>
+      <label class="form-label mb-1 small text-muted">Operación</label>
       <div class="ux-select">
         <select
           class="form-select ux-input"
           formControlName="operacion"
+          [compareWith]="compareSelectValues"
           [disabled]="
             locked ||
             loadingOperations ||

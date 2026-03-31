@@ -37,33 +37,33 @@ export class NavigationComponent {
     {
       type: 'group', title: 'PESADAS',
       children: [
+        { type: 'item', title: 'Listado de ticket',  icon: 'list',  url: '/pesadas/listar' },
         { type: 'item', title: 'Registrar ticket',  icon: 'add',  url: '/pesadas/nuevo' },
-        { type: 'item', title: 'Ticket de balanza',  icon: 'inventory_2',  url: '/pesadas/listar' },
         // { type: 'item', title: 'Balanza prueba',  icon: 'inventory_2',  url: '/pesadas/prueba' },
         // { type: 'item', title: 'Ticket emitidos',  icon: 'folder',  url: '/reportes' },
       ]
     },
-    {
-      type: 'group', title: 'USUARIOS & ACCESO',
-      children: [
-        { type: 'item', title: 'Usuarios', icon: 'group', url: '/usuarios' },
-        { type: 'item', title: 'Roles',    icon: 'badge', url: '/roles' },
-        { type: 'item', title: 'Permisos',    icon: 'lock', url: '/permisos' },
-      ]
-    },
-    {
-      type: 'group', title: 'AJUSTES',
-      children: [
-        { type: 'item', title: 'Empresa',   icon: 'home',       url: '/empresa' },
-        { type: 'item', title: 'Sedes',   icon: 'map',       url: '/sedes' },
-        { type: 'item', title: 'Transportistas',   icon: 'article',       url: '/transportista' }
-      ]
-    },
-    {
-      type: 'group', title: 'PERFIL',
-      children: [
-        { type: 'item', title: 'Mi perfil',   icon: 'person',       url: '/perfil' },
-      ]
-    }
+    // {
+    //   type: 'group', title: 'USUARIOS & ACCESO',
+    //   children: [
+    //     { type: 'item', title: 'Usuarios', icon: 'group', url: '/usuarios' },
+    //     { type: 'item', title: 'Roles',    icon: 'badge', url: '/roles' },
+    //     { type: 'item', title: 'Permisos',    icon: 'lock', url: '/permisos' },
+    //   ]
+    // },
+    // {
+    //   type: 'group', title: 'AJUSTES',
+    //   children: [
+    //     { type: 'item', title: 'Empresa',   icon: 'home',       url: '/empresa' },
+    //     { type: 'item', title: 'Sedes',   icon: 'map',       url: '/sedes' },
+    //     { type: 'item', title: 'Transportistas',   icon: 'article',       url: '/transportista' }
+    //   ]
+    // },
+    // {
+    //   type: 'group', title: 'PERFIL',
+    //   children: [
+    //     { type: 'item', title: 'Mi perfil',   icon: 'person',       url: '/perfil' },
+    //   ]
+    // }
   ];
 }

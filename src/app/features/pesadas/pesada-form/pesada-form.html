@@ -3,7 +3,7 @@
     <!-- HEADER -->
     <div class="ux-form-header">
       <div>
-        <h5 class="ux-title mb-1">Ticket de balanza - Nuevo</h5>
+        <h5 class="ux-title mb-1">{{ pageTitle }}</h5>
         <p class="ux-subtitle mb-0">
           Registro paso a paso del ticket de balanza, documentos relacionados,
           datos de transporte y pesadas asociadas.
@@ -12,10 +12,6 @@
         <div class="mt-2">
           <span class="badge" [ngClass]="headerSaved ? 'text-bg-success' : 'text-bg-secondary'">
             {{ headerSaved ? 'Encabezado guardado' : 'Encabezado pendiente' }}
-          </span>
-
-          <span class="ms-2 text-muted" *ngIf="headerSaved && headerTicketId">
-            ID: {{ headerTicketId }}
           </span>
         </div>
       </div>

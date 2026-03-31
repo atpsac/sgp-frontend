@@ -19,7 +19,6 @@ export class PasoTransporte implements OnInit, OnDestroy {
   @Input() formGroup!: FormGroup;
   @Input() locked = false;
 
-  // ✅ Tipado simple para evitar errores por campos que no existan en interfaces
   carriers: any[] = [];
   carrierDrivers: any[] = [];
   carrierTrucks: any[] = [];
@@ -34,12 +33,10 @@ export class PasoTransporte implements OnInit, OnDestroy {
   trucksMsg = '';
   trailersMsg = '';
 
-  // ✅ FIX: ahora existe lo que tu HTML usa
   get loadingRelations(): boolean {
     return this.loadingDrivers || this.loadingTrucks || this.loadingTrailers;
   }
 
-  // ✅ seguridad para template
   get ready(): boolean {
     return !!this.formGroup
       && !!this.formGroup.get('transportista')
@@ -47,13 +44,22 @@ export class PasoTransporte implements OnInit, OnDestroy {
       && !!this.formGroup.get('vehiculo');
   }
 
+  // ====== compare para select ======
+  compareSelectValues = (a: any, b: any): boolean => {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    return String(a) === String(b);
+  };
+
   // ====== grupos ======
   get transportistaGroup(): FormGroup {
     return this.formGroup.get('transportista') as FormGroup;
   }
+
   get conductorGroup(): FormGroup {
     return this.formGroup.get('conductor') as FormGroup;
   }
+
   get vehiculoGroup(): FormGroup {
     return this.formGroup.get('vehiculo') as FormGroup;
   }
@@ -62,12 +68,15 @@ export class PasoTransporte implements OnInit, OnDestroy {
   private get cTransportistaId(): FormControl | null {
     return this.transportistaGroup.get('transportistaId') as FormControl;
   }
+
   private get cConductorId(): FormControl | null {
     return this.conductorGroup.get('conductorId') as FormControl;
   }
+
   private get cVehiculoId(): FormControl | null {
     return this.vehiculoGroup.get('vehiculoId') as FormControl;
   }
+
   private get cTrailerId(): FormControl | null {
     return this.vehiculoGroup.get('trailerId') as FormControl;
   }
@@ -75,27 +84,10 @@ export class PasoTransporte implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!this.ready) return;
 
-    // dejar campos autollenados en solo lectura (opcional, pero recomendado)
     this.disableReadOnlyFields();
-
-    // trailer opcional
     this.makeTrailerOptional();
-
-    // cargar transportistas
+    this.bindValueChanges();
     this.loadCarriers();
-
-    // si ya venía un transportista cargado (editar)
-    const carrierId = Number(this.cTransportistaId?.value || 0);
-    if (carrierId) {
-      this.loadCarrierRelations(carrierId, true);
-      this.fillCarrierInfoFromList(carrierId, true);
-    }
-
-    // autollenado conductor cuando ya existe (editar)
-    const driverId = Number(this.cConductorId?.value || 0);
-    if (driverId) {
-      this.fillDriverInfo(driverId);
-    }
   }
 
   ngOnDestroy(): void {
@@ -104,27 +96,35 @@ export class PasoTransporte implements OnInit, OnDestroy {
   }
 
   // =========================================================
-  // ✅ HANDLERS QUE TU HTML LLAMA (YA NO HAY ERROR)
+  // BINDS
   // =========================================================
+
+  private bindValueChanges(): void {
+    this.cTransportistaId?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (this.locked) return;
+        this.onTransportistaChange();
+      });
+
+    this.cConductorId?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (this.locked) return;
+        this.onConductorChange();
+      });
+  }
+
+  // =========================================================
+  // HANDLERS
+  // =========================================================
+
   onTransportistaChange(): void {
     if (!this.ready || this.locked) return;
 
-    const carrierId = Number(this.cTransportistaId?.value || 0);
+    const carrierId = this.toNumberOrNull(this.cTransportistaId?.value);
 
-    // limpiar selecciones dependientes
-    this.conductorGroup.patchValue(
-      { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
-      { emitEvent: false }
-    );
-    this.vehiculoGroup.patchValue({ vehiculoId: null, trailerId: null }, { emitEvent: false });
-
-    // limpiar listas
-    this.carrierDrivers = [];
-    this.carrierTrucks = [];
-    this.carrierTrailers = [];
-    this.driversMsg = '';
-    this.trucksMsg = '';
-    this.trailersMsg = '';
+    this.clearCarrierDependentSelections();
 
     if (!carrierId) {
       this.transportistaGroup.patchValue(
@@ -134,22 +134,20 @@ export class PasoTransporte implements OnInit, OnDestroy {
       return;
     }
 
-    // autollenar transportista
     this.fillCarrierInfoFromList(carrierId, false);
-
-    // cargar relaciones
     this.loadCarrierRelations(carrierId, false);
   }
 
   onConductorChange(): void {
     if (!this.ready || this.locked) return;
-    const driverId = Number(this.cConductorId?.value || 0);
+    const driverId = this.toNumberOrNull(this.cConductorId?.value);
     this.fillDriverInfo(driverId);
   }
 
   // =========================================================
   // CARGAS
   // =========================================================
+
   private loadCarriers(): void {
     this.loadingCarriers = true;
 
@@ -159,11 +157,21 @@ export class PasoTransporte implements OnInit, OnDestroy {
       .subscribe({
         next: (res: any) => {
           this.carriers = this.unwrapArray(res);
+
+          this.normalizeSelectedCarrierValue();
+
+          const carrierId = this.toNumberOrNull(this.cTransportistaId?.value);
+          if (carrierId) {
+            this.fillCarrierInfoFromList(carrierId, true);
+            this.loadCarrierRelations(carrierId, true);
+          }
         },
         error: () => {
           this.carriers = [];
         },
-        complete: () => (this.loadingCarriers = false),
+        complete: () => {
+          this.loadingCarriers = false;
+        },
       });
   }
 
@@ -184,26 +192,46 @@ export class PasoTransporte implements OnInit, OnDestroy {
         next: (res: any) => {
           this.carrierDrivers = this.unwrapArray(res);
 
-          const current = Number(this.cConductorId?.value || 0);
+          const current = this.toNumberOrNull(this.cConductorId?.value);
+
           if (!keepSelected) {
             this.conductorGroup.patchValue(
-              { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+              {
+                conductorId: null,
+                nombre: '',
+                tipoDocumento: '',
+                numeroDocumento: '',
+                licenciaConducir: '',
+              },
               { emitEvent: false }
             );
           } else if (current && !this.carrierDrivers.some((d) => Number(d?.id) === current)) {
             this.conductorGroup.patchValue(
-              { conductorId: null, nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+              {
+                conductorId: null,
+                nombre: '',
+                tipoDocumento: '',
+                numeroDocumento: '',
+                licenciaConducir: '',
+              },
               { emitEvent: false }
             );
+          } else {
+            this.normalizeSelectedDriverValue();
+            this.fillDriverInfo(current);
           }
 
-          if (!this.carrierDrivers.length) this.driversMsg = 'Este transportista no tiene conductores activos.';
+          if (!this.carrierDrivers.length) {
+            this.driversMsg = 'Este transportista no tiene conductores activos.';
+          }
         },
         error: () => {
           this.carrierDrivers = [];
           this.driversMsg = 'No se pudo cargar conductores.';
         },
-        complete: () => (this.loadingDrivers = false),
+        complete: () => {
+          this.loadingDrivers = false;
+        },
       });
   }
 
@@ -218,20 +246,33 @@ export class PasoTransporte implements OnInit, OnDestroy {
         next: (res: any) => {
           this.carrierTrucks = this.unwrapArray(res);
 
-          const current = Number(this.cVehiculoId?.value || 0);
+          const current = this.toNumberOrNull(this.cVehiculoId?.value);
+
           if (!keepSelected) {
-            this.vehiculoGroup.patchValue({ vehiculoId: null }, { emitEvent: false });
+            this.vehiculoGroup.patchValue(
+              { vehiculoId: null },
+              { emitEvent: false }
+            );
           } else if (current && !this.carrierTrucks.some((t) => Number(t?.id) === current)) {
-            this.vehiculoGroup.patchValue({ vehiculoId: null }, { emitEvent: false });
+            this.vehiculoGroup.patchValue(
+              { vehiculoId: null },
+              { emitEvent: false }
+            );
+          } else {
+            this.normalizeSelectedTruckValue();
           }
 
-          if (!this.carrierTrucks.length) this.trucksMsg = 'Este transportista no tiene camiones activos.';
+          if (!this.carrierTrucks.length) {
+            this.trucksMsg = 'Este transportista no tiene camiones activos.';
+          }
         },
         error: () => {
           this.carrierTrucks = [];
           this.trucksMsg = 'No se pudo cargar vehículos.';
         },
-        complete: () => (this.loadingTrucks = false),
+        complete: () => {
+          this.loadingTrucks = false;
+        },
       });
   }
 
@@ -246,14 +287,26 @@ export class PasoTransporte implements OnInit, OnDestroy {
         next: (res: any) => {
           this.carrierTrailers = this.unwrapArray(res);
 
-          const current = Number(this.cTrailerId?.value || 0);
+          const current = this.toNumberOrNull(this.cTrailerId?.value);
+
           if (!keepSelected) {
-            this.vehiculoGroup.patchValue({ trailerId: null }, { emitEvent: false });
+            this.vehiculoGroup.patchValue(
+              { trailerId: null },
+              { emitEvent: false }
+            );
           } else if (current && !this.carrierTrailers.some((t) => Number(t?.id) === current)) {
-            this.vehiculoGroup.patchValue({ trailerId: null }, { emitEvent: false });
+            this.vehiculoGroup.patchValue(
+              { trailerId: null },
+              { emitEvent: false }
+            );
+          } else {
+            this.normalizeSelectedTrailerValue();
           }
 
-          if (!this.carrierTrailers.length) this.trailersMsg = 'Este transportista no tiene trailers activos.';
+          if (!this.carrierTrailers.length) {
+            this.trailersMsg = 'Este transportista no tiene trailers activos.';
+          }
+
           this.makeTrailerOptional();
         },
         error: () => {
@@ -261,33 +314,122 @@ export class PasoTransporte implements OnInit, OnDestroy {
           this.trailersMsg = 'No se pudo cargar trailers.';
           this.makeTrailerOptional();
         },
-        complete: () => (this.loadingTrailers = false),
+        complete: () => {
+          this.loadingTrailers = false;
+        },
       });
+  }
+
+  // =========================================================
+  // NORMALIZAR SELECCIONES
+  // =========================================================
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private setControlValueIfChanged(ctrl: FormControl | null, value: any): void {
+    if (!ctrl) return;
+
+    if (this.compareSelectValues(ctrl.value, value)) {
+      return;
+    }
+
+    ctrl.setValue(value, { emitEvent: false });
+  }
+
+  private normalizeSelectedCarrierValue(): void {
+    const current = this.toNumberOrNull(this.cTransportistaId?.value);
+    if (!current) return;
+
+    const found = this.carriers.find((c) => Number(c?.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged(this.cTransportistaId, found.id);
+  }
+
+  private normalizeSelectedDriverValue(): void {
+    const current = this.toNumberOrNull(this.cConductorId?.value);
+    if (!current) return;
+
+    const found = this.carrierDrivers.find((d) => Number(d?.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged(this.cConductorId, found.id);
+  }
+
+  private normalizeSelectedTruckValue(): void {
+    const current = this.toNumberOrNull(this.cVehiculoId?.value);
+    if (!current) return;
+
+    const found = this.carrierTrucks.find((t) => Number(t?.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged(this.cVehiculoId, found.id);
+  }
+
+  private normalizeSelectedTrailerValue(): void {
+    const current = this.toNumberOrNull(this.cTrailerId?.value);
+    if (!current) return;
+
+    const found = this.carrierTrailers.find((t) => Number(t?.id) === current);
+    if (!found) return;
+
+    this.setControlValueIfChanged(this.cTrailerId, found.id);
   }
 
   // =========================================================
   // AUTOLLENADO
   // =========================================================
-  private fillCarrierInfoFromList(carrierId: number, keepIfAlreadyHas: boolean): void {
+
+  private fillCarrierInfoFromList(carrierId: number | null, preserveExisting: boolean): void {
+    if (!carrierId) {
+      this.transportistaGroup.patchValue(
+        { nombre: '', tipoDocumento: '', numeroDocumento: '' },
+        { emitEvent: false }
+      );
+      return;
+    }
+
     const carrier = this.carriers.find((c) => Number(c?.id) === carrierId);
     if (!carrier) return;
 
-    if (keepIfAlreadyHas) return; // cuando editas, no pisar
+    const currentName = String(this.transportistaGroup.get('nombre')?.value ?? '').trim();
+    const currentType = String(this.transportistaGroup.get('tipoDocumento')?.value ?? '').trim();
+    const currentDoc = String(this.transportistaGroup.get('numeroDocumento')?.value ?? '').trim();
 
     this.transportistaGroup.patchValue(
       {
-        nombre: carrier?.companyName ?? '',
-        tipoDocumento: carrier?.documentTypeCode ?? 'RUC',
-        numeroDocumento: carrier?.documentNumber ?? '',
+        nombre:
+          preserveExisting && currentName
+            ? currentName
+            : carrier?.companyName ?? '',
+        tipoDocumento:
+          preserveExisting && currentType
+            ? currentType
+            : carrier?.documentTypeCode ??
+              carrier?.documentTypeName ??
+              'RUC',
+        numeroDocumento:
+          preserveExisting && currentDoc
+            ? currentDoc
+            : carrier?.documentNumber ?? '',
       },
       { emitEvent: false }
     );
   }
 
-  private fillDriverInfo(driverId: number): void {
+  private fillDriverInfo(driverId: number | null): void {
     if (!driverId) {
       this.conductorGroup.patchValue(
-        { nombre: '', tipoDocumento: '', numeroDocumento: '', licenciaConducir: '' },
+        {
+          nombre: '',
+          tipoDocumento: '',
+          numeroDocumento: '',
+          licenciaConducir: '',
+        },
         { emitEvent: false }
       );
       return;
@@ -298,8 +440,11 @@ export class PasoTransporte implements OnInit, OnDestroy {
 
     this.conductorGroup.patchValue(
       {
-        nombre: driver?.fullName ?? '',
-        tipoDocumento: driver?.documentTypeCode ?? 'DNI',
+        nombre: driver?.fullName ?? driver?.companyName ?? '',
+        tipoDocumento:
+          driver?.documentTypeCode ??
+          driver?.documentTypeName ??
+          'DNI',
         numeroDocumento: driver?.documentNumber ?? '',
         licenciaConducir: driver?.license ?? '',
       },
@@ -308,15 +453,14 @@ export class PasoTransporte implements OnInit, OnDestroy {
   }
 
   // =========================================================
-  // Helpers
+  // HELPERS
   // =========================================================
+
   private disableReadOnlyFields(): void {
-    // transportista
     this.transportistaGroup.get('nombre')?.disable({ emitEvent: false });
     this.transportistaGroup.get('tipoDocumento')?.disable({ emitEvent: false });
     this.transportistaGroup.get('numeroDocumento')?.disable({ emitEvent: false });
 
-    // conductor
     this.conductorGroup.get('nombre')?.disable({ emitEvent: false });
     this.conductorGroup.get('tipoDocumento')?.disable({ emitEvent: false });
     this.conductorGroup.get('numeroDocumento')?.disable({ emitEvent: false });
@@ -328,16 +472,59 @@ export class PasoTransporte implements OnInit, OnDestroy {
     this.cTrailerId?.updateValueAndValidity({ emitEvent: false });
   }
 
+  private clearCarrierDependentSelections(): void {
+    this.conductorGroup.patchValue(
+      {
+        conductorId: null,
+        nombre: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+        licenciaConducir: '',
+      },
+      { emitEvent: false }
+    );
+
+    this.vehiculoGroup.patchValue(
+      {
+        vehiculoId: null,
+        trailerId: null,
+      },
+      { emitEvent: false }
+    );
+
+    this.carrierDrivers = [];
+    this.carrierTrucks = [];
+    this.carrierTrailers = [];
+
+    this.driversMsg = '';
+    this.trucksMsg = '';
+    this.trailersMsg = '';
+  }
+
   private unwrapArray(res: any): any[] {
     const data = res?.data ?? res;
     return Array.isArray(data) ? data : [];
   }
 
   getTruckPlate(truck: any): string {
-    return truck?.plateNumber || truck?.plate || truck?.licensePlate || truck?.placa || truck?.description || '';
+    return (
+      truck?.plateNumber ||
+      truck?.plate ||
+      truck?.licensePlate ||
+      truck?.placa ||
+      truck?.description ||
+      ''
+    );
   }
 
   getTrailerPlate(trailer: any): string {
-    return trailer?.plateNumber || trailer?.plate || trailer?.licensePlate || trailer?.placa || trailer?.description || '';
+    return (
+      trailer?.plateNumber ||
+      trailer?.plate ||
+      trailer?.licensePlate ||
+      trailer?.placa ||
+      trailer?.description ||
+      ''
+    );
   }
 }
