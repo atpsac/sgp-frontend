@@ -3,17 +3,22 @@
     <!-- HEADER -->
     <div class="ux-form-header">
       <div>
-        <h5 class="ux-title mb-1">{{ pageTitle }}</h5>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+          <h5 class="ux-title mb-0">{{ pageTitle }}</h5>
+
+          <span
+            *ngIf="hasTicketStatus"
+            class="badge rounded-pill"
+            [ngClass]="ticketStatusChipClass"
+          >
+            {{ ticketStatusName }}
+          </span>
+        </div>
+
         <p class="ux-subtitle mb-0">
           Registro paso a paso del ticket de balanza, documentos relacionados,
           datos de transporte y pesadas asociadas.
         </p>
-
-        <div class="mt-2">
-          <span class="badge" [ngClass]="headerSaved ? 'text-bg-success' : 'text-bg-secondary'">
-            {{ headerSaved ? 'Encabezado guardado' : 'Encabezado pendiente' }}
-          </span>
-        </div>
       </div>
 
       <div class="d-flex flex-wrap gap-2 align-items-start">

@@ -208,6 +208,35 @@ export class PesadaForm implements OnInit, OnDestroy {
   headerSaved = false;
   headerTicketId: number | null = null;
 
+
+  ticketStatusName = '';
+
+get hasTicketStatus(): boolean {
+  return !!String(this.ticketStatusName || '').trim();
+}
+
+get ticketStatusChipClass(): string {
+  const status = String(this.ticketStatusName || '').trim().toUpperCase();
+
+  switch (status) {
+    case 'CERRADO':
+      return 'text-bg-warning';
+    case 'ABIERTO':
+    case 'ACTIVO':
+      return 'text-bg-success';
+    case 'PENDIENTE':
+    case 'EN PROCESO':
+      return 'text-bg-warning';
+    case 'ANULADO':
+    case 'CANCELADO':
+    case 'RECHAZADO':
+      return 'text-bg-danger';
+    default:
+      return 'text-bg-secondary';
+  }
+}
+
+
   get hasDraft(): boolean {
     return (
       this.headerSaved ||
@@ -294,15 +323,15 @@ export class PesadaForm implements OnInit, OnDestroy {
     return `TKP - ${String(id).padStart(6, '0')}`;
   }
 
-  get pageTitle(): string {
-    const id = this.headerTicketId ?? this.routeTicketId ?? null;
+ get pageTitle(): string {
+  const id = this.headerTicketId ?? this.routeTicketId ?? null;
 
-    if (this.isEditMode && id) {
-      return `Ticket de balanza - ${this.ticketDisplayCode}`;
-    }
-
-    return 'Ticket de balanza - Nuevo';
+  if (id) {
+    return `Ticket de balanza - ${this.ticketDisplayCode}`;
   }
+
+  return 'Ticket de balanza - Nuevo';
+}
 
   
   /* =========================================================
@@ -436,6 +465,9 @@ export class PesadaForm implements OnInit, OnDestroy {
     header: ScaleTicketHeaderData,
     ticketId: number
   ): Promise<void> {
+
+    this.applyTicketStatusName(header);
+
     const fechaEmision = this.toDateInputValue(
       header?.scaleTicket?.creationDate
     );
@@ -1051,22 +1083,23 @@ export class PesadaForm implements OnInit, OnDestroy {
      ========================================================= */
 
   private saveDraftToStorage(): void {
-    if (this.isHydrating || this.isEditMode) return;
+  if (this.isHydrating || this.isEditMode) return;
 
-    const draft = {
-      form: this.ticketForm.getRawValue(),
-      documentos: this.documentos,
-      pesadas: this.pesadas,
-      currentStep: this.currentStep,
-      headerSaved: this.headerSaved,
-      headerTicketId: this.headerTicketId,
-      originStations: this.originStations,
-      destinationStations: this.destinationStations,
-      operationIdSelected: this.operationIdSelected,
-    };
+  const draft = {
+    form: this.ticketForm.getRawValue(),
+    documentos: this.documentos,
+    pesadas: this.pesadas,
+    currentStep: this.currentStep,
+    headerSaved: this.headerSaved,
+    headerTicketId: this.headerTicketId,
+    ticketStatusName: this.ticketStatusName,
+    originStations: this.originStations,
+    destinationStations: this.destinationStations,
+    operationIdSelected: this.operationIdSelected,
+  };
 
-    this.ticketDraftService.saveDraft(draft as any);
-  }
+  this.ticketDraftService.saveDraft(draft as any);
+}
 
   private loadDraftFromStorage(): void {
     const draft: any = this.ticketDraftService.loadDraft();
@@ -1086,6 +1119,7 @@ export class PesadaForm implements OnInit, OnDestroy {
       this.headerSaved = !!draft.headerSaved;
       this.headerTicketId =
         typeof draft.headerTicketId === 'number' ? draft.headerTicketId : null;
+        this.ticketStatusName = String(draft.ticketStatusName || '').trim();
 
       this.originStations = draft.originStations || [];
       this.destinationStations = draft.destinationStations || [];
@@ -1116,6 +1150,7 @@ export class PesadaForm implements OnInit, OnDestroy {
         currentStep: this.currentStep,
         headerSaved: this.headerSaved,
         headerTicketId: this.headerTicketId,
+        ticketStatusName: this.ticketStatusName,
         originStations: this.originStations,
         destinationStations: this.destinationStations,
         operationIdSelected: this.operationIdSelected,
@@ -1139,6 +1174,7 @@ export class PesadaForm implements OnInit, OnDestroy {
   private resetFormStateOnly(): void {
     this.headerSaved = false;
     this.headerTicketId = null;
+    this.ticketStatusName = '';
     this.currentStep = 1;
     this.showValidation = false;
 
@@ -1417,85 +1453,95 @@ export class PesadaForm implements OnInit, OnDestroy {
      ========================================================= */
 
   private async confirmAndSaveHeader(): Promise<boolean> {
-    if (this.headerSaved) return true;
+  if (this.headerSaved) return true;
 
-    const isValid = this.validateUpToStep(4);
-    if (!isValid) return false;
+  const isValid = this.validateUpToStep(4);
+  if (!isValid) return false;
 
-    const ok = await this.toast.confirm('¿Desea crear el ticket de balanza?', {
-      title: 'Ticket de balanza - Nuevo',
-      type: 'success',
-    });
+  const ok = await this.toast.confirm('¿Desea crear el ticket de balanza?', {
+    title: 'Ticket de balanza - Nuevo',
+    type: 'success',
+  });
 
-    if (!ok) return false;
+  if (!ok) return false;
+
+  try {
+    this.isSavingHeader = true;
+
+    const v: any = this.ticketForm.getRawValue();
+
+    const payload: any = {
+      ticket: {
+        idBuyingStations: Number(v.datosOperacion.sedeOperacion),
+        idBuyingStationsOrigin: Number(v.origenDestino.sedeOrigen),
+        idBuyingStationsDestination: Number(v.origenDestino.sedeDestino),
+        idEmployees: null,
+        idOperations: Number(v.datosOperacion.operacion),
+        idBusinessPartnersCarriers: Number(
+          v.transporte.transportista.transportistaId
+        ),
+        idBusinessPartnersDrivers: Number(
+          v.transporte.conductor.conductorId
+        ),
+        idTrucks: Number(v.transporte.vehiculo.vehiculoId),
+        idTrailers: v.transporte.vehiculo.trailerId
+          ? Number(v.transporte.vehiculo.trailerId)
+          : null,
+        idScaleTicketStatus: 1,
+        creationDate: v.datosOperacion.fechaEmision,
+      },
+      documents: (this.documentos || []).map((d) => ({
+        idDocumentTypes:
+          d.idDocumentTypes != null ? Number(d.idDocumentTypes) : null,
+        idBusinessPartners:
+          d.idBusinessPartners != null ? Number(d.idBusinessPartners) : null,
+        documentSerial: String(d.serie || 'SN').trim(),
+        documentNumber: String(d.numeroCorrelativo || '0').trim(),
+        documentDate: d.fechaDocumento,
+        documentGrossWeight: Number(d.pesoBrutoKg || 0),
+        documentNetWeight: Number(d.pesoNetoKg || 0),
+      })),
+    };
+
+    const res: any = await firstValueFrom(
+      this.weighingService.createScaleTicketHeader(payload)
+    );
+
+    const row = res?.data?.[0] ?? res?.data ?? res;
+
+    const idNum = Number(
+      row?.id ?? row?.ticketId ?? row?.idScaleTicket ?? row?.idScaleTickets ?? 0
+    );
+
+    this.headerTicketId = Number.isFinite(idNum) && idNum > 0 ? idNum : null;
+
+    if (!this.headerTicketId) {
+      throw new Error('No se recibió el ID del ticket creado.');
+    }
+
+    this.headerSaved = true;
 
     try {
-      this.isSavingHeader = true;
-
-      const v: any = this.ticketForm.getRawValue();
-
-      const payload: any = {
-        ticket: {
-          idBuyingStations: Number(v.datosOperacion.sedeOperacion),
-          idBuyingStationsOrigin: Number(v.origenDestino.sedeOrigen),
-          idBuyingStationsDestination: Number(v.origenDestino.sedeDestino),
-          idEmployees: null,
-          idOperations: Number(v.datosOperacion.operacion),
-          idBusinessPartnersCarriers: Number(
-            v.transporte.transportista.transportistaId
-          ),
-          idBusinessPartnersDrivers: Number(
-            v.transporte.conductor.conductorId
-          ),
-          idTrucks: Number(v.transporte.vehiculo.vehiculoId),
-          idTrailers: v.transporte.vehiculo.trailerId
-            ? Number(v.transporte.vehiculo.trailerId)
-            : null,
-          idScaleTicketStatus: 1,
-          creationDate: v.datosOperacion.fechaEmision,
-        },
-        documents: (this.documentos || []).map((d) => ({
-          idDocumentTypes:
-            d.idDocumentTypes != null ? Number(d.idDocumentTypes) : null,
-          idBusinessPartners:
-            d.idBusinessPartners != null ? Number(d.idBusinessPartners) : null,
-          documentSerial: String(d.serie || 'SN').trim(),
-          documentNumber: String(d.numeroCorrelativo || '0').trim(),
-          documentDate: d.fechaDocumento,
-          documentGrossWeight: Number(d.pesoBrutoKg || 0),
-          documentNetWeight: Number(d.pesoNetoKg || 0),
-        })),
-      };
-
-      const res: any = await firstValueFrom(
-        this.weighingService.createScaleTicketHeader(payload)
+      const freshHeader = await firstValueFrom(
+        this.weighingService.getScaleTicketHeader(this.headerTicketId)
       );
-
-      const row = res?.data?.[0] ?? res?.data ?? res;
-
-      const idNum = Number(
-        row?.id ?? row?.ticketId ?? row?.idScaleTicket ?? row?.idScaleTickets ?? 0
-      );
-
-      this.headerTicketId = Number.isFinite(idNum) && idNum > 0 ? idNum : null;
-
-      if (!this.headerTicketId) {
-        throw new Error('No se recibió el ID del ticket creado.');
-      }
-
-      this.headerSaved = true;
-      this.lockHeaderEdition();
-      this.updateStepsState();
-      this.saveDraftToStorage();
-
-      return true;
-    } catch (err) {
-      console.error('Error guardando encabezado', err);
-      return false;
-    } finally {
-      this.isSavingHeader = false;
+      this.applyTicketStatusName(freshHeader);
+    } catch (error) {
+      this.applyTicketStatusName(row);
     }
+
+    this.lockHeaderEdition();
+    this.updateStepsState();
+    this.saveDraftToStorage();
+
+    return true;
+  } catch (err) {
+    console.error('Error guardando encabezado', err);
+    return false;
+  } finally {
+    this.isSavingHeader = false;
   }
+}
 
   /* =========================================================
      CERRAR TICKET EN SERVIDOR
@@ -1794,7 +1840,9 @@ export class PesadaForm implements OnInit, OnDestroy {
     try {
       this.isSavingFull = true;
 
-      await this.cerrarTicketServidor(this.headerTicketId);
+      const closeRes = await this.cerrarTicketServidor(this.headerTicketId);
+      this.applyTicketStatusName(closeRes, 'CERRADO');
+
       ticketCerrado = true;
 
       const draft = this.getDraftSnapshot();
@@ -1836,4 +1884,24 @@ export class PesadaForm implements OnInit, OnDestroy {
       this.isSavingFull = false;
     }
   }
+
+
+
+  private extractScaleTicketStatusName(source: any): string {
+  const name =
+    source?.scaleTicketStatus?.name ??
+    source?.scaleTicket?.scaleTicketStatus?.name ??
+    source?.status?.name ??
+    source?.scaleTicketStatusName ??
+    source?.statusName ??
+    '';
+
+  return String(name || '').trim();
+}
+
+private applyTicketStatusName(source: any, fallback = ''): void {
+  this.ticketStatusName = this.extractScaleTicketStatusName(source) || fallback;
+}
+
+
 }
