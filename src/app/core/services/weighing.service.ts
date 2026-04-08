@@ -1346,4 +1346,27 @@ export class WeighingService {
         }))
       );
   }
+
+
+
+    /* =========================================================
+     OBTENER PDF DEL TICKET
+     GET /scale-tickets/{ticketId}/pdf
+     ========================================================= */
+
+    getScaleTicketPdf(ticketId: number): Observable<any> {
+      if (!ticketId) {
+        throw new Error('ticketId inválido para obtener el PDF del ticket.');
+      }
+
+      return this.http.get(
+        `scale-tickets/${ticketId}/pdf`,
+        {
+          responseType: 'blob',
+          ...(this.withAuthHeader() as any),
+        }
+      );
+    }
+
+
 }

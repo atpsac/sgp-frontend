@@ -5,12 +5,6 @@ import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { TicketBalanzaPdfService } from '../../../core/pdf/ticket-balanza-pdf.service';
-import {
-  TicketBalanzaReport,
-  EstadoTicket,
-} from '../../../core/models/ticket-balanza-report.model';
-
 import {
   WeighingService,
   BuyingStation,
@@ -78,8 +72,7 @@ export class PesadaList implements OnInit {
 
   constructor(
     private weighingService: WeighingService,
-    public router: Router,
-    private pdf: TicketBalanzaPdfService
+    public router: Router
   ) {}
 
   ngOnInit(): void {
@@ -106,10 +99,7 @@ export class PesadaList implements OnInit {
           return;
         }
 
-        // Seleccionar automáticamente la primera sede
         this.filters.buyingStationId = Number(this.sedeOptions[0].id);
-
-        // Cargar operaciones y luego listar
         this.loadOperationsByStation(this.filters.buyingStationId, true);
       },
       error: (err) => {
@@ -162,7 +152,6 @@ export class PesadaList implements OnInit {
           return;
         }
 
-        // Seleccionar automáticamente la primera operación
         this.filters.operationId = Number(this.operacionOptions[0].id);
 
         if (autoLoadTickets) {
@@ -490,7 +479,9 @@ export class PesadaList implements OnInit {
     }
 
     if (action === 'EDT') {
-      this.router.navigateByUrl(`pesadas/editar/${encodeURIComponent(String(row.id))}`);
+      this.router.navigateByUrl(
+        `pesadas/editar/${encodeURIComponent(String(row.id))}`
+      );
       return;
     }
 
@@ -509,108 +500,63 @@ export class PesadaList implements OnInit {
   }
 
   /* =========================================================
-     PDF
+     PDF REAL DESDE API
      ========================================================= */
 
-  private normalizeEstadoTicket(raw?: string): EstadoTicket | undefined {
-    const e = (raw || '').toUpperCase().trim();
-
-    if (!e) return undefined;
-    if (e.includes('ABIER')) return 'EN REGISTRO' as EstadoTicket;
-    if (e.includes('CERR')) return 'CERRADA' as EstadoTicket;
-    if (e.includes('CANCEL') || e.includes('ANUL')) return 'ANULADA' as EstadoTicket;
-    if (e.includes('PEND')) return 'EVALUACION' as EstadoTicket;
-
-    return undefined;
-  }
-
-  private buildReportFromRow(row: PesadaRow): TicketBalanzaReport {
-    return {
-      empresa: {
-        razonSocial: 'AMAZONAS TRADING PERU S.A.C.',
-        ruc: '20521137682',
-        direccion: '—',
-      },
-      ticket: {
-        numeroTicket: row.ticketLabel,
-        fechaEmision: row.creationDate ?? '',
-        sedeOperacion: row.buyingStationName,
-        operacion: row.operationName,
-        estado: this.normalizeEstadoTicket(row.scaleTicketStatusName),
-      },
-      origenDestino: {
-        sedeOrigen: '—',
-        sedeDestino: row.buyingStationName || '—',
-      },
-      documentos: [],
-      transporte: {
-        transportista: {
-          razonSocial: '—',
-          ruc: '—',
-        },
-        conductor: {
-          nombreCompleto: '—',
-          tipoDocumento: '—',
-          numeroDocumento: '—',
-          licencia: '—',
-        },
-        vehiculo: {
-          placa: '—',
-          trailer: '—',
-        },
-      },
-      resumen: {
-        cantidadItems: 1,
-        totalPesoBrutoKg: Number(row.grossWeight ?? 0),
-        totalTaraKg: Number(row.tareWeight ?? 0),
-        subtotalPesoNetoKg: Number(row.netWeight ?? 0),
-        ajusteKg: 0,
-        totalPesoNetoKg: Number(row.netWeight ?? 0),
-      },
-      pesadas: [
-        {
-          item: 1,
-          producto: '—',
-          balanza: '—',
-          pesoBrutoKg: Number(row.grossWeight ?? 0),
-          taraKg: Number(row.tareWeight ?? 0),
-          pesoNetoKg: Number(row.netWeight ?? 0),
-          estado: row.scaleTicketStatusName || undefined,
-          taras: [],
-        },
-      ],
-    };
-  }
-
   generarPdf(row: PesadaRow): void {
-    if (this.downloading) return;
+    if (this.downloading || !row?.id) return;
 
     this.downloading = true;
+    this.actionsOpenTicket = null;
 
-    try {
-      const report = this.buildReportFromRow(row);
-      const blob = this.pdf.generate(report);
+    this.weighingService
+      .getScaleTicketPdf(row.id)
+      .pipe(finalize(() => (this.downloading = false)))
+      .subscribe({
+        next: (blob: Blob) => {
+          if (!(blob instanceof Blob) || blob.size === 0) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Sin archivo',
+              text: 'El servicio no devolvió un PDF válido.',
+            });
+            return;
+          }
 
-      this.pdf.download(blob, `TICKET_${row.ticketLabel}.pdf`);
+          const fileName = `TICKET_${row.ticketLabel}.pdf`;
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
 
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: `PDF generado: ${row.ticketLabel}`,
-        showConfirmButton: false,
-        timer: 1500,
+          link.href = url;
+          link.download = fileName;
+          link.target = '_blank';
+
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+          }, 1000);
+
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `PDF descargado: ${row.ticketLabel}`,
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        },
+        error: (err) => {
+          console.error('Error descargando PDF del ticket', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo descargar el PDF del ticket.',
+          });
+        },
       });
-    } catch (e: any) {
-      console.error(e);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: e?.message || 'No se pudo generar el PDF.',
-      });
-    } finally {
-      this.downloading = false;
-    }
   }
 
   crear(): void {
@@ -651,7 +597,8 @@ export class PesadaList implements OnInit {
   }
 
   verDetalle(row: PesadaRow): void {
-    this.router.navigateByUrl(`pesadas/${encodeURIComponent(String(row.id))}/editar`);
+    this.router.navigateByUrl(
+      `pesadas/${encodeURIComponent(String(row.id))}/editar`
+    );
   }
-
 }

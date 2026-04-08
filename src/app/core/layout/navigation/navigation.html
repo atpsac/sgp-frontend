@@ -2,24 +2,31 @@
 <div class="offcanvas-overlay" [class.show]="openMobile" (click)="close.emit()"></div>
 
 <aside class="sidebar" [class.collapsed]="collapsed" [class.open-mobile]="openMobile">
-    <div class="sidebar-body">
-        <ul class="list-unstyled m-0">
-            <li class="menu-group" *ngFor="let g of items">
-                <div class="menu-caption" [class.centered]="collapsed">{{ g.title }}</div>
+  <div class="sidebar-body">
+    <ul class="list-unstyled m-0">
+      <li class="menu-group" *ngFor="let g of items">
+        <div class="menu-caption" [class.centered]="collapsed">
+          {{ g.title }}
+        </div>
 
-                <ng-container *ngFor="let it of g.children">
-                    <!-- Mantén el título para tooltip nativo cuando está colapsado -->
-                    <a *ngIf="it.type === 'item'" class="menu-item" [routerLink]="it.url" routerLinkActive="active"
-                        [routerLinkActiveOptions]="{ exact: it.exact ?? false }"
-                        [attr.title]="collapsed ? it.title : null" [attr.aria-label]="it.title">
+        <ng-container *ngFor="let it of g.children">
+          <a
+            *ngIf="it.type === 'item'"
+            class="menu-item"
+            [routerLink]="it.url"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: it.exact ?? false }"
+            [attr.title]="collapsed ? it.title : null"
+            [attr.aria-label]="it.title"
+          >
+            <span class="material-symbols-rounded mi" aria-hidden="true">
+              {{ it.icon }}
+            </span>
 
-                        <!-- Ícono (Material Icons Outlined). OJO: el nombre va como TEXTO -->
-                        <span class="material-icons-outlined mi">{{ it.icon }}</span>
-
-                        <span class="text">{{ it.title }}</span>
-                    </a>
-                </ng-container>
-            </li>
-        </ul>
-    </div>
+            <span class="text">{{ it.title }}</span>
+          </a>
+        </ng-container>
+      </li>
+    </ul>
+  </div>
 </aside>
