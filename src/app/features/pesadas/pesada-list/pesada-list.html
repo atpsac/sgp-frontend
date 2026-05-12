@@ -1,6 +1,5 @@
 <div class="ux-scope">
   <div class="card ux-card p-3">
-    <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
       <div>
         <h5 class="ux-title mb-1">Pesadas</h5>
@@ -21,17 +20,8 @@
       </div>
     </div>
 
-    <!-- FILTROS -->
     <div class="ux-filter-card mb-3">
-      <!-- <div class="ux-filter-head mb-3">
-        <h6 class="ux-filter-title mb-1">Filtros de consulta</h6>
-        <p class="ux-filter-note mb-0">
-          Puedes filtrar por sede, operación, ID del ticket y rango de fechas.
-        </p>
-      </div> -->
-
-      <!-- FILA 1 -->
-      <div class="row g-3 ">
+      <div class="row g-3">
         <div class="col-xl-4 col-lg-4 col-md-6 col-12">
           <label class="form-label mb-1 small text-muted">Sede de operación</label>
           <div class="ux-select">
@@ -56,6 +46,7 @@
             <select
               class="form-select ux-input"
               [(ngModel)]="filters.operationId"
+              (ngModelChange)="onOperationChange()"
               [disabled]="isLoading || !filters.buyingStationId"
             >
               <option [ngValue]="null">Seleccionar</option>
@@ -79,11 +70,12 @@
             (keydown.enter)="applyFilters()"
             [disabled]="isLoading"
           />
-          <div class="ux-help-text">Ingresa solo números, sin TKP- y sin ceros delante.</div>
+          <div class="ux-help-text">
+            Ingresa solo números, sin TKP- y sin ceros delante.
+          </div>
         </div>
       </div>
 
-      <!-- FILA 2 -->
       <div class="row g-3 align-items-end">
         <div class="col-xl-4 col-lg-4 col-md-6 col-12">
           <label class="form-label mb-1 small text-muted">Fecha desde</label>
@@ -120,7 +112,6 @@
       </div>
     </div>
 
-    <!-- TABLA -->
     <div class="table-responsive pt-2">
       <table class="table table-hover ux-table m-0">
         <thead class="ux-table__head">
@@ -140,43 +131,51 @@
 
         <tbody *ngIf="!isLoading">
           <tr *ngFor="let row of data; trackBy: trackByRow">
-            <td class="ux-col-ticket" [attr.data-label]="'Ticket'" (click)="verDetalle(row)" style="cursor: pointer;">
+            <td
+              class="ux-col-ticket"
+              data-label="Ticket"
+              (click)="verDetalle(row)"
+              style="cursor: pointer;"
+            >
               <a href="javascript:void(0)" class="ux-ticket-link">
                 {{ row.ticketLabel }}
               </a>
             </td>
 
-            <td class="ux-col-sede" [attr.data-label]="'Sede de operación'">
+            <td class="ux-col-sede" data-label="Sede de operación">
               {{ row.buyingStationName }}
             </td>
 
-            <td [attr.data-label]="'Fecha'">
+            <td data-label="Fecha">
               {{ formatDateTime(row.creationDate) }}
             </td>
 
-            <td [attr.data-label]="'Operación'">
+            <td data-label="Operación">
               {{ row.operationName }}
             </td>
 
-            <td class="text-end" [attr.data-label]="'Peso bruto'">
+            <td class="text-end" data-label="Peso bruto">
               {{ row.grossWeight | number:'1.2-2' }}
             </td>
 
-            <td class="text-end" [attr.data-label]="'Peso tara'">
+            <td class="text-end" data-label="Peso tara">
               {{ row.tareWeight | number:'1.2-2' }}
             </td>
 
-            <td class="text-end" [attr.data-label]="'Peso neto'">
+            <td class="text-end" data-label="Peso neto">
               {{ row.netWeight | number:'1.2-2' }}
             </td>
 
-            <td [attr.data-label]="'Estado'">
-              <span class="ux-status-badge" [ngClass]="getEstadoClass(row.scaleTicketStatusName)">
+            <td data-label="Estado">
+              <span
+                class="ux-status-badge"
+                [ngClass]="getEstadoClass(row.scaleTicketStatusName)"
+              >
                 {{ row.scaleTicketStatusName }}
               </span>
             </td>
 
-            <td class="ux-col-activo" [attr.data-label]="'Activo'">
+            <td class="ux-col-activo" data-label="Activo">
               <span
                 class="ux-active-pill"
                 [class.ux-active-pill--yes]="row.isActive"
@@ -186,7 +185,7 @@
               </span>
             </td>
 
-            <td class="ux-col-actions" [attr.data-label]="'Acciones'">
+            <td class="ux-col-actions" data-label="Acciones">
               <ng-container *ngIf="row.actions.length > 0; else noActions">
                 <div class="ux-actions-wrapper" (click)="$event.stopPropagation()">
                   <button
@@ -262,7 +261,6 @@
         </tbody>
       </table>
 
-      <!-- FOOTER -->
       <div class="ux-table__footer">
         <div class="ux-footer-left">
           <span class="ux-foot-info">
@@ -274,6 +272,7 @@
               class="form-select ux-input"
               [(ngModel)]="pageSize"
               (change)="changePageSize(pageSize)"
+              [disabled]="isLoading"
             >
               <option *ngFor="let size of pageSizes" [value]="size">
                 {{ size }}
@@ -286,11 +285,13 @@
         <div class="ux-footer-right">
           <div class="ux-order-box">
             <label>Orden</label>
+
             <div class="ux-select ux-select--compact ux-order-select">
               <select
                 class="form-select ux-input"
                 [(ngModel)]="sortDirection"
                 (ngModelChange)="onSortDirectionChange()"
+                [disabled]="isLoading"
               >
                 <option value="asc">ASC</option>
                 <option value="desc">DESC</option>
@@ -302,7 +303,11 @@
           <nav class="ux-pagination">
             <ul class="pagination mb-0">
               <li class="page-item" [class.disabled]="currentPage === 1">
-                <button class="page-link" (click)="changePage(currentPage - 1)">
+                <button
+                  type="button"
+                  class="page-link"
+                  (click)="changePage(currentPage - 1)"
+                >
                   Anterior
                 </button>
               </li>
@@ -313,17 +318,28 @@
                 [class.active]="page === currentPage"
               >
                 <button
+                  type="button"
                   *ngIf="page > 0"
                   class="page-link"
                   (click)="changePage(page)"
                 >
                   {{ page }}
                 </button>
-                <span *ngIf="page === -1 || page === -2" class="page-link">…</span>
+
+                <span *ngIf="page === -1 || page === -2" class="page-link">
+                  …
+                </span>
               </li>
 
-              <li class="page-item" [class.disabled]="currentPage === totalPages || totalPages === 0">
-                <button class="page-link" (click)="changePage(currentPage + 1)">
+              <li
+                class="page-item"
+                [class.disabled]="currentPage === totalPages || totalPages === 0"
+              >
+                <button
+                  type="button"
+                  class="page-link"
+                  (click)="changePage(currentPage + 1)"
+                >
                   Siguiente
                 </button>
               </li>

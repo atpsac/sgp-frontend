@@ -1,0 +1,143 @@
+<div class="modal-content carrier-modal">
+  <div class="modal-header carrier-modal__header">
+    <div>
+      <h5 class="modal-title mb-1">{{ title }}</h5>
+      <p class="carrier-modal__subtitle mb-0">{{ subtitle }}</p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close"
+      aria-label="Cerrar"
+      (click)="close()"
+      [disabled]="isSaving"
+    ></button>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="modal-body">
+      <div *ngIf="isLoading" class="carrier-loading">
+        <div class="spinner-border spinner-border-sm me-2"></div>
+        Cargando información...
+      </div>
+
+      <div class="row g-3" *ngIf="!isLoading">
+        <div class="col-md-4 col-12">
+          <label class="form-label">Tipo documento</label>
+          <select
+            class="form-select ux-input"
+            formControlName="idIdentityDocumentTypes"
+          >
+            <option [value]="1">RUC</option>
+          </select>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Ubigeo</label>
+          <input
+            type="number"
+            class="form-control ux-input"
+            formControlName="idUbigeos"
+            placeholder="1"
+          />
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">RUC <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="documentNumber"
+            placeholder="20601234567"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('documentNumber')">
+            El RUC es obligatorio.
+          </small>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Razón social <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="companyName"
+            placeholder="TRANSPORTES DEL PACIFICO S.A.C."
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('companyName')">
+            La razón social es obligatoria.
+          </small>
+        </div>
+
+        <div class="col-md-6 col-12">
+          <label class="form-label">Correo electrónico</label>
+          <input
+            type="email"
+            class="form-control ux-input"
+            formControlName="email"
+            placeholder="operaciones@empresa.com"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('email')">
+            Ingresa un correo válido.
+          </small>
+        </div>
+
+        <div class="col-md-6 col-12">
+          <label class="form-label">Teléfono</label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="phoneNumber"
+            placeholder="987654321"
+          />
+        </div>
+
+        <div class="col-md-6 col-12">
+          <label class="form-label">Código / Registro</label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="registrationNumber"
+            placeholder="REG-TP-0001"
+          />
+        </div>
+
+        <div class="col-md-6 col-12">
+          <label class="form-label">Dirección</label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="address"
+            placeholder="Av. Industrial 123, Lima"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer carrier-modal__footer">
+      <button
+        type="button"
+        class="btn ux-btn ux-btn--light"
+        (click)="close()"
+        [disabled]="isSaving"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="btn ux-btn ux-btn--primary"
+        [disabled]="isSaving || isLoading"
+      >
+        <span
+          *ngIf="isSaving"
+          class="spinner-border spinner-border-sm me-2"
+        ></span>
+
+        {{ mode === 'create' ? 'Guardar' : 'Actualizar' }}
+      </button>
+    </div>
+  </form>
+</div>

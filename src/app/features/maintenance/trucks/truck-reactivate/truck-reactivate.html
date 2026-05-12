@@ -1,0 +1,81 @@
+<div class="modal-content reactivate-modal">
+  <div class="reactivate-modal__head">
+    <div class="reactivate-modal__icon">
+      <span class="material-symbols-rounded">restart_alt</span>
+    </div>
+
+    <div>
+      <h5 class="reactivate-modal__title mb-1">Reactivar camión</h5>
+      <p class="reactivate-modal__subtitle mb-0">
+        Esta acción volverá a habilitar el camión seleccionado.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close ms-auto"
+      aria-label="Cerrar"
+      (click)="close()"
+      [disabled]="isReactivating"
+    ></button>
+  </div>
+
+  <div class="reactivate-modal__body">
+    <p class="reactivate-modal__question">
+      ¿Estás seguro de reactivar este camión?
+    </p>
+
+    <div class="reactivate-modal__info">
+      <div>
+        <span>Placa</span>
+        <strong>{{ licensePlate }}</strong>
+      </div>
+
+      <div>
+        <span>Configuración</span>
+        <strong>{{ configuration }}</strong>
+      </div>
+
+      <div>
+        <span>Capacidad</span>
+        <strong>{{ payloadCapacity }}</strong>
+      </div>
+
+      <div>
+        <span>Transportista</span>
+        <strong>{{ carrierName }}</strong>
+      </div>
+    </div>
+
+    <div class="reactivate-modal__notice">
+      <span class="material-symbols-rounded">check_circle</span>
+      <p>
+        El camión volverá a estar disponible para nuevas operaciones.
+      </p>
+    </div>
+  </div>
+
+  <div class="reactivate-modal__footer">
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--light"
+      (click)="close()"
+      [disabled]="isReactivating"
+    >
+      Cancelar
+    </button>
+
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--success"
+      (click)="reactivate()"
+      [disabled]="isReactivating"
+    >
+      <span
+        *ngIf="isReactivating"
+        class="spinner-border spinner-border-sm me-2"
+      ></span>
+      Reactivar
+    </button>
+  </div>
+</div>

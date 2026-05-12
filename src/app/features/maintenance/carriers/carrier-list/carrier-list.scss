@@ -1,0 +1,15 @@
+@import '../../../pesadas/pesada-list/pesada-list.scss';
+
+.ux-status--active {
+  background: #16a34a;
+  color: #fff;
+}
+
+.ux-status--inactive {
+  background: #dc2626;
+  color: #fff;
+}
+
+.ux-action-icon--green {
+  color: #16a34a;
+}

@@ -1,0 +1,211 @@
+<div class="modal-content driver-modal">
+  <div class="modal-header driver-modal__header">
+    <div>
+      <h5 class="modal-title mb-1">{{ title }}</h5>
+      <p class="driver-modal__subtitle mb-0">{{ subtitle }}</p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close"
+      aria-label="Cerrar"
+      (click)="close()"
+      [disabled]="isSaving"
+    ></button>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="modal-body">
+      <div *ngIf="isLoading" class="driver-loading">
+        <div class="spinner-border spinner-border-sm me-2"></div>
+        Cargando información...
+      </div>
+
+      <div class="row g-3" *ngIf="!isLoading">
+        <div class="col-md-6 col-12">
+          <label class="form-label">Transportista <span>*</span></label>
+          <select
+            class="form-select ux-input"
+            formControlName="idBusinessPartnersCarriers"
+          >
+            <option [ngValue]="null">
+              {{ loadingCarriers ? 'Cargando transportistas...' : 'Seleccionar transportista' }}
+            </option>
+
+            <option
+              *ngFor="let carrier of carriers"
+              [ngValue]="carrier.id ?? carrier.idBusinessPartners"
+            >
+              {{ carrier.companyName }}
+            </option>
+          </select>
+
+          <small class="text-danger" *ngIf="isInvalid('idBusinessPartnersCarriers')">
+            Selecciona un transportista.
+          </small>
+        </div>
+
+        <div class="col-md-3 col-12">
+          <label class="form-label">Tipo documento</label>
+          <select class="form-select ux-input" formControlName="idIdentityDocumentTypes">
+            <option [value]="1">DNI</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 col-12">
+          <label class="form-label">Documento <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="documentNumber"
+            placeholder="Documento"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('documentNumber')">
+            El documento es obligatorio.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Nombres <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="name"
+            placeholder="JUAN"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('name')">
+            El nombre es obligatorio.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Apellido paterno <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="fLastname"
+            placeholder="PEREZ"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('fLastname')">
+            El apellido paterno es obligatorio.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Apellido materno</label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="mLastname"
+            placeholder="GOMEZ"
+          />
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Tipo licencia</label>
+          <select class="form-select ux-input" formControlName="idLicenseTypes">
+            <option [value]="1">Licencia principal</option>
+          </select>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Licencia <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="license"
+            placeholder="LIC123456"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('license')">
+            La licencia es obligatoria.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Vigencia <span>*</span></label>
+          <input
+            type="date"
+            class="form-control ux-input"
+            formControlName="effectiveDate"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('effectiveDate')">
+            La fecha de vigencia es obligatoria.
+          </small>
+        </div>
+
+        <div class="col-md-6 col-12">
+          <label class="form-label">Correo electrónico</label>
+          <input
+            type="email"
+            class="form-control ux-input"
+            formControlName="email"
+            placeholder="chofer@empresa.com"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('email')">
+            Ingresa un correo válido.
+          </small>
+        </div>
+
+        <div class="col-md-6 col-12">
+          <label class="form-label">Teléfono</label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="phoneNumber"
+            placeholder="987654321"
+          />
+        </div>
+
+        <div class="col-md-3 col-12">
+          <label class="form-label">Ubigeo</label>
+          <input
+            type="number"
+            class="form-control ux-input"
+            formControlName="idUbigeos"
+            placeholder="1"
+          />
+        </div>
+
+        <div class="col-md-9 col-12">
+          <label class="form-label">Dirección</label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="address"
+            placeholder="Av. Choferes 789, Lima"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer driver-modal__footer">
+      <button
+        type="button"
+        class="btn ux-btn ux-btn--light"
+        (click)="close()"
+        [disabled]="isSaving"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="btn ux-btn ux-btn--primary"
+        [disabled]="isSaving || isLoading"
+      >
+        <span
+          *ngIf="isSaving"
+          class="spinner-border spinner-border-sm me-2"
+        ></span>
+
+        {{ mode === 'create' ? 'Guardar' : 'Actualizar' }}
+      </button>
+    </div>
+  </form>
+</div>

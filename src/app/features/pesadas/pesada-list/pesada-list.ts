@@ -45,18 +45,12 @@ interface PesadaRow {
 export class PesadaList implements OnInit {
   data: PesadaRow[] = [];
 
-  filters: {
-    buyingStationId: number | null;
-    operationId: number | null;
-    ticketId: string;
-    fechaDesde: string | null;
-    fechaHasta: string | null;
-  } = {
-    buyingStationId: null,
-    operationId: null,
+  filters = {
+    buyingStationId: null as number | null,
+    operationId: null as number | null,
     ticketId: '',
-    fechaDesde: null,
-    fechaHasta: null,
+    fechaDesde: null as string | null,
+    fechaHasta: null as string | null,
   };
 
   sedeOptions: BuyingStation[] = [];
@@ -86,10 +80,6 @@ export class PesadaList implements OnInit {
     this.loadBuyingStations();
   }
 
-  /* =========================================================
-     CARGA CATÁLOGOS
-     ========================================================= */
-
   private loadBuyingStations(): void {
     this.isLoading = true;
 
@@ -106,14 +96,12 @@ export class PesadaList implements OnInit {
           return;
         }
 
-        // Seleccionar automáticamente la primera sede
         this.filters.buyingStationId = Number(this.sedeOptions[0].id);
-
-        // Cargar operaciones y luego listar
         this.loadOperationsByStation(this.filters.buyingStationId, true);
       },
       error: (err) => {
         console.error('Error cargando sedes', err);
+
         this.sedeOptions = [];
         this.operacionOptions = [];
         this.filters.buyingStationId = null;
@@ -162,7 +150,6 @@ export class PesadaList implements OnInit {
           return;
         }
 
-        // Seleccionar automáticamente la primera operación
         this.filters.operationId = Number(this.operacionOptions[0].id);
 
         if (autoLoadTickets) {
@@ -173,6 +160,7 @@ export class PesadaList implements OnInit {
       },
       error: (err) => {
         console.error('Error cargando operaciones por sede', err);
+
         this.operacionOptions = [];
         this.filters.operationId = null;
         this.resetGrid();
@@ -196,12 +184,9 @@ export class PesadaList implements OnInit {
     this.filters.ticketId = this.normalizeNumericString(value);
   }
 
-  /* =========================================================
-     LISTADO PRINCIPAL
-     ========================================================= */
-
   applyFilters(): void {
     if (!this.validateDateRange()) return;
+
     this.currentPage = 1;
     this.loadScaleTickets();
   }
@@ -248,9 +233,11 @@ export class PesadaList implements OnInit {
           const items = Array.isArray(resp?.items) ? resp.items : [];
 
           this.data = items.map((item: any) => this.mapRow(item));
+
           this.totalRecords = Number(resp?.total ?? 0);
           this.currentPage = Number(resp?.page ?? this.currentPage);
           this.pageSize = Number(resp?.pageSize ?? this.pageSize);
+
           this.totalPages =
             this.totalRecords > 0
               ? Math.ceil(this.totalRecords / this.pageSize)
@@ -294,9 +281,7 @@ export class PesadaList implements OnInit {
       buyingStationName: String(
         item?.buyingStationName ?? item?.buyingStation?.name ?? '—'
       ),
-      operationName: String(
-        item?.operationName ?? item?.operation?.name ?? '—'
-      ),
+      operationName: String(item?.operationName ?? item?.operation?.name ?? '—'),
       scaleTicketStatusName: String(
         item?.scaleTicketStatusName ?? item?.status?.name ?? '—'
       ),
@@ -321,10 +306,6 @@ export class PesadaList implements OnInit {
     return row.actions.includes(code);
   }
 
-  /* =========================================================
-     PAGINACIÓN / ORDEN
-     ========================================================= */
-
   changePageSize(newSize: number): void {
     this.pageSize = Number(newSize);
     this.currentPage = 1;
@@ -333,6 +314,7 @@ export class PesadaList implements OnInit {
 
   changePage(page: number): void {
     if (page < 1 || page > this.totalPages || page === this.currentPage) return;
+
     this.currentPage = page;
     this.loadScaleTickets();
   }
@@ -354,24 +336,16 @@ export class PesadaList implements OnInit {
 
     range.push(1);
 
-    if (this.currentPage > 4) {
-      range.push(-1);
-    }
+    if (this.currentPage > 4) range.push(-1);
 
     const start = Math.max(2, this.currentPage - 2);
     const end = Math.min(total - 1, this.currentPage + 2);
 
-    for (let i = start; i <= end; i++) {
-      range.push(i);
-    }
+    for (let i = start; i <= end; i++) range.push(i);
 
-    if (this.currentPage < total - 3) {
-      range.push(-2);
-    }
+    if (this.currentPage < total - 3) range.push(-2);
 
-    if (!range.includes(total)) {
-      range.push(total);
-    }
+    if (!range.includes(total)) range.push(total);
 
     return range;
   }
@@ -386,10 +360,6 @@ export class PesadaList implements OnInit {
     return Math.min(this.currentPage * this.pageSize, this.totalRecords);
   }
 
-  /* =========================================================
-     FECHAS
-     ========================================================= */
-
   private validateDateRange(): boolean {
     const { fechaDesde, fechaHasta } = this.filters;
 
@@ -399,6 +369,7 @@ export class PesadaList implements OnInit {
         title: 'Rango inválido',
         text: 'La fecha desde no puede ser mayor que la fecha hasta.',
       });
+
       return false;
     }
 
@@ -450,10 +421,6 @@ export class PesadaList implements OnInit {
     return `${dd}/${mo}/${yy} ${hh}:${mi}`;
   }
 
-  /* =========================================================
-     BADGES
-     ========================================================= */
-
   getEstadoClass(estado: string): string {
     const e = (estado || '').toUpperCase();
 
@@ -465,23 +432,19 @@ export class PesadaList implements OnInit {
     return 'ux-status--otro';
   }
 
-  /* =========================================================
-     ACCIONES
-     ========================================================= */
-
   toggleActions(row: PesadaRow, ev?: MouseEvent): void {
     ev?.stopPropagation();
     ev?.preventDefault();
 
     if (!row.actions?.length) return;
 
-    this.actionsOpenTicket =
-      this.actionsOpenTicket === row.id ? null : row.id;
+    this.actionsOpenTicket = this.actionsOpenTicket === row.id ? null : row.id;
   }
 
   onAction(action: TicketActionCode, row: PesadaRow, ev?: MouseEvent): void {
     ev?.stopPropagation();
     ev?.preventDefault();
+
     this.actionsOpenTicket = null;
 
     if (action === 'PRT') {
@@ -490,13 +453,19 @@ export class PesadaList implements OnInit {
     }
 
     if (action === 'EDT') {
-      this.router.navigateByUrl(`pesadas/editar/${encodeURIComponent(String(row.id))}`);
+      this.verDetalle(row);
       return;
     }
 
     if (action === 'CAN') {
       this.cancelarTicket(row);
     }
+  }
+
+  verDetalle(row: PesadaRow): void {
+    this.router.navigateByUrl(
+      `pesadas/${encodeURIComponent(String(row.id))}/editar`
+    );
   }
 
   private cancelarTicket(row: PesadaRow): void {
@@ -507,10 +476,6 @@ export class PesadaList implements OnInit {
       confirmButtonText: 'Entendido',
     });
   }
-
-  /* =========================================================
-     PDF
-     ========================================================= */
 
   private normalizeEstadoTicket(raw?: string): EstadoTicket | undefined {
     const e = (raw || '').toUpperCase().trim();
@@ -603,6 +568,7 @@ export class PesadaList implements OnInit {
       });
     } catch (e: any) {
       console.error(e);
+
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -617,10 +583,6 @@ export class PesadaList implements OnInit {
     this.router.navigateByUrl('pesadas/nuevo');
   }
 
-  /* =========================================================
-     HELPERS
-     ========================================================= */
-
   private toNumber(value: any): number {
     const n = Number(value);
     return Number.isNaN(n) ? 0 : n;
@@ -628,17 +590,15 @@ export class PesadaList implements OnInit {
 
   private normalizeNumericString(value: any): string {
     const onlyDigits = String(value ?? '').replace(/\D+/g, '');
+
     if (!onlyDigits) return '';
+
     return onlyDigits.replace(/^0+(?=\d)/, '');
   }
 
   trackByRow(_: number, row: PesadaRow): number {
     return row.id;
   }
-
-  /* =========================================================
-     CLOSE MENU
-     ========================================================= */
 
   @HostListener('document:click')
   onDocClick(): void {
@@ -649,9 +609,4 @@ export class PesadaList implements OnInit {
   onEsc(): void {
     this.actionsOpenTicket = null;
   }
-
-  verDetalle(row: PesadaRow): void {
-    this.router.navigateByUrl(`pesadas/${encodeURIComponent(String(row.id))}/editar`);
-  }
-
 }

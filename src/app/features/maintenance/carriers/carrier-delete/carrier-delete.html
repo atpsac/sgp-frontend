@@ -1,0 +1,78 @@
+<div class="modal-content delete-modal">
+  <div class="delete-modal__head">
+    <div class="delete-modal__icon">
+      <span class="material-symbols-rounded">delete</span>
+    </div>
+
+    <div>
+      <h5 class="delete-modal__title mb-1">
+        Eliminar transportista
+      </h5>
+      <p class="delete-modal__subtitle mb-0">
+        Esta acción desactivará el registro seleccionado.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close ms-auto"
+      aria-label="Cerrar"
+      (click)="close()"
+      [disabled]="isDeleting"
+    ></button>
+  </div>
+
+  <div class="delete-modal__body">
+    <p class="delete-modal__question">
+      ¿Estás seguro de eliminar este transportista?
+    </p>
+
+    <div class="delete-modal__info">
+      <div>
+        <span>Razón social</span>
+        <strong>{{ companyName }}</strong>
+      </div>
+
+      <div>
+        <span>RUC</span>
+        <strong>{{ ruc }}</strong>
+      </div>
+
+      <div>
+        <span>Código</span>
+        <strong>{{ code }}</strong>
+      </div>
+    </div>
+
+    <div class="delete-modal__warning">
+      <span class="material-symbols-rounded">warning</span>
+      <p>
+        El transportista quedará como inactivo y no debería estar disponible para nuevas operaciones.
+      </p>
+    </div>
+  </div>
+
+  <div class="delete-modal__footer">
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--light"
+      (click)="close()"
+      [disabled]="isDeleting"
+    >
+      Cancelar
+    </button>
+
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--danger"
+      (click)="delete()"
+      [disabled]="isDeleting"
+    >
+      <span
+        *ngIf="isDeleting"
+        class="spinner-border spinner-border-sm me-2"
+      ></span>
+      Eliminar
+    </button>
+  </div>
+</div>

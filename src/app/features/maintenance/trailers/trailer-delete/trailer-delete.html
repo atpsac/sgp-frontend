@@ -1,0 +1,81 @@
+<div class="modal-content delete-modal">
+  <div class="delete-modal__head">
+    <div class="delete-modal__icon">
+      <span class="material-symbols-rounded">delete</span>
+    </div>
+
+    <div>
+      <h5 class="delete-modal__title mb-1">Eliminar trailer</h5>
+      <p class="delete-modal__subtitle mb-0">
+        Esta acción desactivará el trailer seleccionado.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close ms-auto"
+      aria-label="Cerrar"
+      (click)="close()"
+      [disabled]="isDeleting"
+    ></button>
+  </div>
+
+  <div class="delete-modal__body">
+    <p class="delete-modal__question">
+      ¿Estás seguro de eliminar este trailer?
+    </p>
+
+    <div class="delete-modal__info">
+      <div>
+        <span>Placa</span>
+        <strong>{{ licensePlate }}</strong>
+      </div>
+
+      <div>
+        <span>Capacidad</span>
+        <strong>{{ payloadCapacity }}</strong>
+      </div>
+
+      <div>
+        <span>N° de ejes</span>
+        <strong>{{ axleCount }}</strong>
+      </div>
+
+      <div>
+        <span>Transportista</span>
+        <strong>{{ carrierName }}</strong>
+      </div>
+    </div>
+
+    <div class="delete-modal__warning">
+      <span class="material-symbols-rounded">warning</span>
+      <p>
+        El trailer quedará como inactivo y no debería estar disponible para nuevas operaciones.
+      </p>
+    </div>
+  </div>
+
+  <div class="delete-modal__footer">
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--light"
+      (click)="close()"
+      [disabled]="isDeleting"
+    >
+      Cancelar
+    </button>
+
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--danger"
+      (click)="delete()"
+      [disabled]="isDeleting"
+    >
+      <span
+        *ngIf="isDeleting"
+        class="spinner-border spinner-border-sm me-2"
+      ></span>
+      Eliminar
+    </button>
+  </div>
+</div>

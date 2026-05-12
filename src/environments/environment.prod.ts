@@ -1,4 +1,3 @@
-// src/environments/environment.prod.ts
 export const environment = {
   production: false,
   apiUrl: 'https://atp-sgp.amazonastrading.pe', 

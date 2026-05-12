@@ -15,6 +15,7 @@ export class RbacService {
       'sedes:read',
       'transportista:read',
       'perfil:read',
+      'maintenance:read'
     ]);
 
   can(permission: string): boolean {

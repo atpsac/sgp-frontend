@@ -171,3 +171,54 @@
   right: 24px;
   z-index: 3000;
 }
+
+
+.avatar-initials {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.avatar-initials--lg {
+  width: 42px;
+  height: 42px;
+  font-size: 14px;
+}
+
+.user-mini {
+  line-height: 1.1;
+  color: #fff;
+}
+
+.user-mini strong {
+  font-size: 13px;
+}
+
+.user-mini small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.user-dd-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.user-dd-info strong {
+  color: #fff;
+  font-size: 13px;
+}
+
+.user-dd-info small {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+}

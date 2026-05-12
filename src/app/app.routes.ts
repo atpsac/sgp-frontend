@@ -24,6 +24,17 @@ export const routes: Routes = [
       { path: 'transportista',   loadChildren: () => import('./features/transportistas/routes').then(m => m.TRANSPORTISTA_ROUTES),      data: { permission: 'transportista:read',      breadcrumb: 'Transportistas' } },
       { path: 'perfil',   loadChildren: () => import('./features/perfil/routes').then(m => m.PERFIL_ROUTES),      data: { permission: 'perfil:read',      breadcrumb: 'Perfil' } },
       { path: 'forbidden',  loadComponent: () => import('./shared/components/feedback/not-allowed/not-allowed').then(m => m.NotAllowed), data: { breadcrumb: '403' } },
+
+      {
+        path: 'maintenance',
+        loadChildren: () =>
+          import('./features/maintenance/routes').then(m => m.MAINTENANCE_ROUTES),
+        data: {
+          permission: 'maintenance:read',
+          breadcrumb: 'Mantenimiento',
+        },
+      },
+      
     ],
   },
   { path: '**', loadComponent: () => import('./shared/components/feedback/not-found/not-found').then(m => m.NotFound) },

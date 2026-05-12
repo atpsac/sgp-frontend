@@ -4,11 +4,18 @@ import {
   Output,
   HostListener,
   ViewEncapsulation,
+  OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { NgbModal, NgbModalOptions } from '@ng-bootstrap/ng-bootstrap';
 import { Logout } from '../logout/logout';
+
+interface NavbarUser {
+  id?: number;
+  email?: string;
+  username?: string;
+}
 
 @Component({
   selector: 'app-navbar',
@@ -16,22 +23,21 @@ import { Logout } from '../logout/logout';
   imports: [CommonModule, RouterLink],
   templateUrl: './navbar.html',
   styleUrls: ['./navbar.scss'],
-  encapsulation: ViewEncapsulation.None, // estilos globales para el modal
+  encapsulation: ViewEncapsulation.None,
 })
-export class NavbarComponent {
-  /** Emite para colapsar/expandir el sidebar (desktop y mobile) */
+export class NavbarComponent implements OnInit {
   @Output() toggleSidebar = new EventEmitter<void>();
 
-  /** Menú de usuario (3 puntitos) */
   userMenuOpen = false;
 
-  /** Opciones por defecto para cualquier modal (logout, ver foto, etc.) */
+  user: NavbarUser | null = null;
+
   readonly defaultModalOptions: NgbModalOptions = {
     size: 'lg',
     centered: true,
     scrollable: true,
-    backdrop: true,   // ← permite cerrar haciendo click fuera
-    keyboard: true,   // ← permite cerrar con ESC
+    backdrop: true,
+    keyboard: true,
   };
 
   constructor(
@@ -39,37 +45,80 @@ export class NavbarComponent {
     private modalService: NgbModal
   ) {}
 
-  onToggleSidebar() {
+  ngOnInit(): void {
+    this.loadUserFromStorage();
+  }
+
+  private loadUserFromStorage(): void {
+    const raw = localStorage.getItem('sgp_user');
+
+    if (!raw) {
+      this.user = null;
+      return;
+    }
+
+    try {
+      this.user = JSON.parse(raw);
+    } catch (error) {
+      console.error('Error leyendo sgp_user', error);
+      this.user = null;
+    }
+  }
+
+  get userName(): string {
+    return this.user?.username?.trim() || 'Usuario';
+  }
+
+  get userEmail(): string {
+    return this.user?.email?.trim() || 'Sin correo registrado';
+  }
+
+  get userInitials(): string {
+    const username = this.user?.username?.trim();
+    const email = this.user?.email?.trim();
+
+    if (username) {
+      const clean = username.replace(/[^a-zA-ZÁÉÍÓÚÜÑáéíóúüñ]/g, '');
+
+      if (clean.length >= 2) {
+        return clean.substring(0, 2).toUpperCase();
+      }
+
+      return clean.substring(0, 1).toUpperCase() || 'US';
+    }
+
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+
+    return 'US';
+  }
+
+  onToggleSidebar(): void {
     this.toggleSidebar.emit();
   }
 
-  toggleUserMenu() {
+  toggleUserMenu(event?: MouseEvent): void {
+    event?.stopPropagation();
     this.userMenuOpen = !this.userMenuOpen;
   }
 
-  closeUserMenu() {
+  closeUserMenu(): void {
     this.userMenuOpen = false;
   }
 
-  /** Cierra el menú de usuario al hacer click fuera de él */
   @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent) {
+  onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     const insideUserBox = target.closest('.userbox');
+
     if (!insideUserBox) {
       this.closeUserMenu();
     }
   }
 
-  logout() {
+  logout(): void {
     this.closeUserMenu();
-
-    // Modal de logout: se cierra al hacer click afuera y está por encima de todo
     this.modalService.open(Logout, this.defaultModalOptions);
   }
-
-  /**
-   * Ejemplo si abres un modal de FOTO desde aquí u otro componente:
-   * this.modalService.open(FotoComponent, this.defaultModalOptions);
-   */
 }

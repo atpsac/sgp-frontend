@@ -5,11 +5,16 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 type Item = {
   type: 'item';
   title: string;
-  icon: string;           // solo el nombre del ícono (p.ej. 'home')
+  icon: string;
   url: string;
   exact?: boolean;
 };
-type Group = { type: 'group'; title: string; children: Item[] };
+
+type Group = {
+  type: 'group';
+  title: string;
+  children: Item[];
+};
 
 @Component({
   selector: 'app-navigation',
@@ -19,51 +24,71 @@ type Group = { type: 'group'; title: string; children: Item[] };
   styleUrls: ['./navigation.scss']
 })
 export class NavigationComponent {
-  /** Colapsado en desktop (solo íconos) */
   @Input() collapsed = false;
-  /** Abierto en móvil (offcanvas) */
   @Input() openMobile = false;
-  /** Cierre por overlay */
   @Output() close = new EventEmitter<void>();
 
-  // Menú
   items: Group[] = [
     {
-      type: 'group', title: 'INICIO',
+      type: 'group',
+      title: 'INICIO',
       children: [
-        { type: 'item', title: 'Panel de control', icon: 'home', url: '/dashboard', exact: true }
+        {
+          type: 'item',
+          title: 'Panel de control',
+          icon: 'home',
+          url: '/dashboard',
+          exact: true
+        }
       ]
     },
     {
-      type: 'group', title: 'PESADAS',
+      type: 'group',
+      title: 'PESADAS',
       children: [
-        { type: 'item', title: 'Listado de ticket',  icon: 'list',  url: '/pesadas/listar' },
-        { type: 'item', title: 'Registrar ticket',  icon: 'add',  url: '/pesadas/nuevo' },
-        // { type: 'item', title: 'Balanza prueba',  icon: 'inventory_2',  url: '/pesadas/prueba' },
-        // { type: 'item', title: 'Ticket emitidos',  icon: 'folder',  url: '/reportes' },
+        {
+          type: 'item',
+          title: 'Listado de ticket',
+          icon: 'list',
+          url: '/pesadas/listar'
+        },
+        {
+          type: 'item',
+          title: 'Registrar ticket',
+          icon: 'add',
+          url: '/pesadas/nuevo'
+        }
       ]
     },
-    // {
-    //   type: 'group', title: 'USUARIOS & ACCESO',
-    //   children: [
-    //     { type: 'item', title: 'Usuarios', icon: 'group', url: '/usuarios' },
-    //     { type: 'item', title: 'Roles',    icon: 'badge', url: '/roles' },
-    //     { type: 'item', title: 'Permisos',    icon: 'lock', url: '/permisos' },
-    //   ]
-    // },
-    // {
-    //   type: 'group', title: 'AJUSTES',
-    //   children: [
-    //     { type: 'item', title: 'Empresa',   icon: 'home',       url: '/empresa' },
-    //     { type: 'item', title: 'Sedes',   icon: 'map',       url: '/sedes' },
-    //     { type: 'item', title: 'Transportistas',   icon: 'article',       url: '/transportista' }
-    //   ]
-    // },
-    // {
-    //   type: 'group', title: 'PERFIL',
-    //   children: [
-    //     { type: 'item', title: 'Mi perfil',   icon: 'person',       url: '/perfil' },
-    //   ]
-    // }
+    {
+      type: 'group',
+      title: 'MANTENIMIENTO',
+      children: [
+        {
+          type: 'item',
+          title: 'Transportistas',
+          icon: 'local_shipping',
+          url: '/maintenance/carriers/listar'
+        },
+        {
+          type: 'item',
+          title: 'Choferes',
+          icon: 'badge',
+          url: '/maintenance/drivers/listar'
+        },
+        {
+          type: 'item',
+          title: 'Camiones',
+          icon: 'fire_truck',
+          url: '/maintenance/trucks/listar'
+        },
+        {
+          type: 'item',
+          title: 'Trailers',
+          icon: 'rv_hookup',
+          url: '/maintenance/trailers/listar'
+        }
+      ]
+    }
   ];
 }

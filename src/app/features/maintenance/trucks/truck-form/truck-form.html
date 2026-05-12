@@ -1,0 +1,120 @@
+<div class="modal-content driver-modal">
+  <div class="modal-header driver-modal__header">
+    <div>
+      <h5 class="modal-title mb-1">{{ title }}</h5>
+      <p class="driver-modal__subtitle mb-0">{{ subtitle }}</p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close"
+      aria-label="Cerrar"
+      (click)="close()"
+      [disabled]="isSaving"
+    ></button>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="modal-body">
+      <div *ngIf="isLoading" class="driver-loading">
+        <div class="spinner-border spinner-border-sm me-2"></div>
+        Cargando información...
+      </div>
+
+      <div class="row g-3" *ngIf="!isLoading">
+        <div class="col-md-12 col-12">
+          <label class="form-label">Transportista <span>*</span></label>
+          <select
+            class="form-select ux-input"
+            formControlName="idBusinessPartnersCarriers"
+          >
+            <option [ngValue]="null">
+              {{ loadingCarriers ? 'Cargando transportistas...' : 'Seleccionar transportista' }}
+            </option>
+
+            <option
+              *ngFor="let carrier of carriers"
+              [ngValue]="carrier.id ?? carrier.idBusinessPartners"
+            >
+              {{ carrier.companyName }}
+            </option>
+          </select>
+
+          <small class="text-danger" *ngIf="isInvalid('idBusinessPartnersCarriers')">
+            Selecciona un transportista.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Placa <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="licensePlate"
+            placeholder="ABC-123"
+            maxlength="20"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('licensePlate')">
+            La placa es obligatoria.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Capacidad de carga <span>*</span></label>
+          <input
+            type="number"
+            class="form-control ux-input"
+            formControlName="payloadCapacity"
+            placeholder="Ej: 30000"
+            min="0"
+            step="0.01"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('payloadCapacity')">
+            Ingresa una capacidad válida.
+          </small>
+        </div>
+
+        <div class="col-md-4 col-12">
+          <label class="form-label">Configuración <span>*</span></label>
+          <input
+            type="text"
+            class="form-control ux-input"
+            formControlName="configuration"
+            placeholder="Ej: 6x4 / 8x4"
+            maxlength="50"
+          />
+
+          <small class="text-danger" *ngIf="isInvalid('configuration')">
+            La configuración es obligatoria.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer driver-modal__footer">
+      <button
+        type="button"
+        class="btn ux-btn ux-btn--light"
+        (click)="close()"
+        [disabled]="isSaving"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="btn ux-btn ux-btn--primary"
+        [disabled]="isSaving || isLoading"
+      >
+        <span
+          *ngIf="isSaving"
+          class="spinner-border spinner-border-sm me-2"
+        ></span>
+
+        {{ mode === 'create' ? 'Guardar' : 'Actualizar' }}
+      </button>
+    </div>
+  </form>
+</div>
