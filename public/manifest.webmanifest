@@ -1,0 +1,31 @@
+{
+  "name": "Amazonas Trading - Automated Weigh System",
+  "short_name": "Amazonas Trading",
+  "description": "Sistema de pesada en tiempo real para Amazonas Trading S.A.C.",
+  "theme_color": "#5B3415",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "assets/icon-atp.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-atp.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-atp.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
