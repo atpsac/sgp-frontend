@@ -5,6 +5,9 @@ import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { DomSanitizer } from '@angular/platform-browser';
+
 import { TicketBalanzaPdfService } from '../../../core/pdf/ticket-balanza-pdf.service';
 import {
   TicketBalanzaReport,
@@ -16,6 +19,7 @@ import {
   BuyingStation,
   OperationStation,
 } from '../../../core/services/weighing.service';
+import { PreviewPdf } from '../modals/preview-pdf/preview-pdf';
 
 type TicketActionCode = 'PRT' | 'EDT' | 'CAN';
 type SortDirection = 'asc' | 'desc';
@@ -70,10 +74,16 @@ export class PesadaList implements OnInit {
 
   actionsOpenTicket: number | null = null;
 
+
+
+
+
   constructor(
     private weighingService: WeighingService,
     public router: Router,
-    private pdf: TicketBalanzaPdfService
+    private pdf: TicketBalanzaPdfService,
+      private modalService: NgbModal,
+private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -547,37 +557,21 @@ export class PesadaList implements OnInit {
     };
   }
 
-  generarPdf(row: PesadaRow): void {
-    if (this.downloading) return;
+ generarPdf(row: PesadaRow): void {
+  if (!row?.id) return;
 
-    this.downloading = true;
+  const modalRef = this.modalService.open(PreviewPdf, {
+    size: 'xl',
+    centered: true,
+    backdrop: 'static',
+    keyboard: true,
+    windowClass: 'pdf-preview-window',
+  });
 
-    try {
-      const report = this.buildReportFromRow(row);
-      const blob = this.pdf.generate(report);
+  modalRef.componentInstance.ticketId = row.id;
+  modalRef.componentInstance.ticketLabel = row.ticketLabel;
+}
 
-      this.pdf.download(blob, `TICKET_${row.ticketLabel}.pdf`);
-
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: `PDF generado: ${row.ticketLabel}`,
-        showConfirmButton: false,
-        timer: 1500,
-      });
-    } catch (e: any) {
-      console.error(e);
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: e?.message || 'No se pudo generar el PDF.',
-      });
-    } finally {
-      this.downloading = false;
-    }
-  }
 
   crear(): void {
     this.router.navigateByUrl('pesadas/nuevo');
@@ -609,4 +603,8 @@ export class PesadaList implements OnInit {
   onEsc(): void {
     this.actionsOpenTicket = null;
   }
+
+
+
+  
 }

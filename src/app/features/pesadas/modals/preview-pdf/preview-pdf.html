@@ -1,0 +1,56 @@
+<div class="modal-content pdf-modal">
+  <div class="pdf-modal__head">
+    <div class="pdf-modal__icon">
+      <span class="material-symbols-rounded">picture_as_pdf</span>
+    </div>
+
+    <div>
+      <h5 class="pdf-modal__title mb-1">Vista previa del ticket</h5>
+      <p class="pdf-modal__subtitle mb-0">
+        {{ ticketLabel || filename }}
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-close ms-auto"
+      aria-label="Cerrar"
+      (click)="close()"
+    ></button>
+  </div>
+
+  <div class="pdf-modal__body">
+    <div *ngIf="isLoading" class="pdf-modal__loading">
+      <div class="spinner-border" role="status"></div>
+      <p>Cargando PDF...</p>
+    </div>
+
+    <div *ngIf="!isLoading && errorMessage" class="pdf-modal__empty">
+      <span class="material-symbols-rounded">error</span>
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <iframe
+      *ngIf="!isLoading && !errorMessage && safePdfUrl"
+      class="pdf-modal__iframe"
+      [src]="safePdfUrl"
+      title="Vista previa PDF"
+    ></iframe>
+  </div>
+
+  <div class="pdf-modal__footer">
+    <button type="button" class="btn ux-btn ux-btn--light" (click)="close()">
+      Cerrar
+    </button>
+
+    <button
+      type="button"
+      class="btn ux-btn ux-btn--primary"
+      (click)="download()"
+      [disabled]="isLoading || !pdfBlob"
+    >
+      <span class="material-symbols-rounded">download</span>
+      Descargar
+    </button>
+  </div>
+</div>

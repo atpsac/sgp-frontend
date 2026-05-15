@@ -202,14 +202,14 @@
                     *ngIf="actionsOpenTicket === row.id"
                     (click)="$event.stopPropagation()"
                   >
-                    <button
-                      type="button"
-                      *ngIf="hasAction(row, 'PRT')"
-                      (click)="onAction('PRT', row, $event)"
-                    >
-                      <span class="material-symbols-rounded ux-action-icon--blue">print</span>
-                      <span>Imprimir</span>
-                    </button>
+                   <button
+                    type="button"
+                    *ngIf="hasAction(row, 'PRT')"
+                    (click)="onAction('PRT', row, $event)"
+                  >
+                    <span class="material-symbols-rounded ux-action-icon--blue">print</span>
+                    <span>Imprimir</span>
+                  </button>
 
                     <button
                       type="button"

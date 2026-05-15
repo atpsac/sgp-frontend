@@ -25,6 +25,13 @@ function requireFirstRow<T>(res: ApiResponse<T>, errMsg: string): T {
   return row;
 }
 
+
+export interface ScaleTicketPdfResponse {
+  blob: Blob;
+  filename: string;
+}
+
+
 /* =========================================================
    PAYLOADS / RESPUESTAS GENERALES
    ========================================================= */
@@ -1346,4 +1353,34 @@ export class WeighingService {
         }))
       );
   }
+
+
+
+  getScaleTicketPdf(ticketId: number): Observable<any> {
+  if (!ticketId) {
+    throw new Error('ticketId inválido para generar el PDF del ticket.');
+  }
+
+  return this.http
+    .get(`scale-tickets/${ticketId}/pdf`, {
+      ...(this.withAuthHeader() as any),
+      responseType: 'blob',
+      observe: 'response',
+    })
+    .pipe(
+      map((res: any) => {
+        const contentDisposition = res.headers.get('content-disposition') ?? '';
+
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        const filename = match?.[1] ?? `ticket-balanza-${ticketId}.pdf`;
+
+        return {
+          blob: res.body as Blob,
+          filename,
+        };
+      })
+    );
+}
+
+
 }
