@@ -22,15 +22,17 @@
   },
   "private": true,
   "dependencies": {
-    "-": "^0.0.1",
-    "@angular/animations": "^20.3.9",
-    "@angular/common": "^20.3.0",
-    "@angular/compiler": "^20.3.0",
-    "@angular/core": "^20.3.0",
-    "@angular/forms": "^20.3.0",
-    "@angular/platform-browser": "^20.3.0",
-    "@angular/router": "^20.3.0",
-    "@angular/service-worker": "^20.3.0",
+    "@angular/animations": "20.3.9",
+    "@angular/build": "20.3.9",
+    "@angular/cli": "20.3.9",
+    "@angular/common": "20.3.9",
+    "@angular/compiler": "20.3.9",
+    "@angular/compiler-cli": "20.3.9",
+    "@angular/core": "20.3.9",
+    "@angular/forms": "20.3.9",
+    "@angular/platform-browser": "20.3.9",
+    "@angular/router": "20.3.9",
+    "@angular/service-worker": "20.3.9",
     "@ng-bootstrap/ng-bootstrap": "^19.0.1",
     "@popperjs/core": "^2.11.8",
     "apexcharts": "^5.3.5",
@@ -45,12 +47,10 @@
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.26.3",
     "tslib": "^2.3.0",
+    "typescript": "5.9.3",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
-    "@angular/build": "^20.3.7",
-    "@angular/cli": "^20.3.7",
-    "@angular/compiler-cli": "^20.3.0",
     "@types/jasmine": "~5.1.0",
     "@types/pdfmake": "^0.3.0",
     "jasmine-core": "~5.9.0",
@@ -59,7 +59,6 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "sharp": "^0.34.5",
-    "typescript": "~5.9.2"
+    "sharp": "^0.34.5"
   }
 }
